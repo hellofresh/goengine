@@ -10,7 +10,7 @@
 
 Welcome to HelloFresh GoEngine!!
 
-GoEngine provides you all the capabilities to build an Event sourced application in go
+GoEngine provides you all the capabilities to build an Event sourced application in go.
 This was based on the initial project [Engine](https://github.com/hellofresh/engine) for PHP
 
 ## Components
@@ -20,7 +20,7 @@ Engine is divided in a few small independent components.
 * [CommandBus](src/commandbus/README.md)
 * [EventBus](src/eventbus/README.md)
 * [EventDispatcher](src/eventdispatcher/README.md)
-* [EventSourcing](src/eventsourcing/README.md)
+* [EventSourcing](src/eventsourcing)
 * [EventStore](src/eventstore/README.md)
 
 ## Install
