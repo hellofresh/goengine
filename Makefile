@@ -29,3 +29,9 @@ install:
 clean:
 	@echo "$(OK_COLOR)==> Cleaning project$(NO_COLOR)"
 	if [ -f ${BINARY} ] ; then rm ${BINARY} ; fi
+
+test:
+	@echo "$(OK_COLOR)==> Installign test dependencies"
+	go get github.com/onsi/ginkgo/ginkgo
+	go get github.com/onsi/gomega
+	ginkgo -r
