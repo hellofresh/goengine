@@ -1,0 +1,14 @@
+language: go
+
+services:
+  - docker
+
+go:
+  - 1.6
+  - 1.7
+  - master
+
+install:
+  - docker-compose up -d
+
+script: make test

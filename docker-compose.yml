@@ -1,0 +1,17 @@
+version: 2
+services: 
+
+  app: 
+    build: ./
+    volumes:
+      - ./src/github.com/hellofresh/auth-service:/go/src/github.com/hellofresh/auth-service
+    environment:
+      STORAGE_DSN: 'mongodb://mongo/goengine'
+      
+  redis:
+    image: redis
+
+  mongo:
+      image: mongo
+      ports:
+        - "27017:27017"
