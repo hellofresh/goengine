@@ -17,11 +17,11 @@ This was based on the initial project [Engine](https://github.com/hellofresh/eng
 
 Engine is divided in a few small independent components. 
 
-* [CommandBus](src/commandbus/README.md)
-* [EventBus](src/eventbus/README.md)
-* [EventDispatcher](src/eventdispatcher/README.md)
-* [EventSourcing](src/eventsourcing)
-* [EventStore](src/eventstore/README.md)
+* [CommandBus](commandbus)
+* [EventBus](eventbus)
+* [EventDispatcher](eventdispatcher)
+* [EventSourcing](eventsourcing)
+* [EventStore](eventstore)
 
 ## Install
 
