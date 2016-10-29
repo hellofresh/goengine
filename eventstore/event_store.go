@@ -1,17 +1,17 @@
 package eventstore
 
 type EventStore interface {
-	Append(events *EventStream)
-	GetEventsFor(streamName StreamName, id string) *EventStream
-	FromVersion(streamName StreamName, id string, version int) *EventStream
-	CountEventsFor(streamName StreamName, id string) int
+	Append(events *EventStream) error
+	GetEventsFor(streamName StreamName, id string) (*EventStream, error)
+	FromVersion(streamName StreamName, id string, version int) (*EventStream, error)
+	CountEventsFor(streamName StreamName, id string) (int, error)
 }
 
 type EventStoreAdapter interface {
-	Save(streamName StreamName, events *DomainMessage)
-	GetEventsFor(streamName StreamName, id string) []*DomainMessage
-	FromVersion(streamName StreamName, id string, version int) []*DomainMessage
-	CountEventsFor(streamName StreamName, id string) int
+	Save(streamName StreamName, events *DomainMessage) error
+	GetEventsFor(streamName StreamName, id string) ([]*DomainMessage, error)
+	FromVersion(streamName StreamName, id string, version int) ([]*DomainMessage, error)
+	CountEventsFor(streamName StreamName, id string) (int, error)
 }
 
 type EventStoreImp struct {
@@ -22,23 +22,28 @@ func NewEventStore(adapter EventStoreAdapter) *EventStoreImp {
 	return &EventStoreImp{adapter}
 }
 
-func (es *EventStoreImp) Append(events *EventStream) {
+func (es *EventStoreImp) Append(events *EventStream) error {
 	name := events.Name
 	for _, event := range events.Events {
-		es.adapter.Save(name, event)
+		err := es.adapter.Save(name, event)
+		if nil != err {
+			return err
+		}
 	}
+
+	return nil
 }
 
-func (es *EventStoreImp) FromVersion(streamName StreamName, id string, version int) *EventStream {
-	events := es.adapter.FromVersion(streamName, id, version)
-	return NewEventStream(streamName, events)
+func (es *EventStoreImp) FromVersion(streamName StreamName, id string, version int) (*EventStream, error) {
+	events, err := es.adapter.FromVersion(streamName, id, version)
+	return NewEventStream(streamName, events), err
 }
 
-func (es *EventStoreImp) GetEventsFor(streamName StreamName, id string) *EventStream {
-	events := es.adapter.GetEventsFor(streamName, id)
-	return NewEventStream(streamName, events)
+func (es *EventStoreImp) GetEventsFor(streamName StreamName, id string) (*EventStream, error) {
+	events, err := es.adapter.GetEventsFor(streamName, id)
+	return NewEventStream(streamName, events), err
 }
 
-func (es *EventStoreImp) CountEventsFor(streamName StreamName, id string) int {
+func (es *EventStoreImp) CountEventsFor(streamName StreamName, id string) (int, error) {
 	return es.adapter.CountEventsFor(streamName, id)
 }

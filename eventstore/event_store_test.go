@@ -34,12 +34,14 @@ var _ = Describe("A Event Store", func() {
 
 	Describe("when something happens", func() {
 		It("should save an event", func() {
-			store.Append(eventStream)
+			err := store.Append(eventStream)
+			Expect(err).To(BeNil())
 		})
 
 		It("should retrive the things that happened", func() {
-			expectedEvents := store.GetEventsFor(streamName, aggregateId)
+			expectedEvents, err := store.GetEventsFor(streamName, aggregateId)
 
+			Expect(err).To(BeNil())
 			Expect(expectedEvents.Events).To(HaveLen(3))
 		})
 
@@ -48,8 +50,9 @@ var _ = Describe("A Event Store", func() {
 		})
 
 		It("should retrieve events for version bigger then 1", func() {
-			expectedEvents := store.FromVersion(streamName, aggregateId, 1)
+			expectedEvents, err := store.FromVersion(streamName, aggregateId, 1)
 
+			Expect(err).To(BeNil())
 			Expect(expectedEvents.Events).To(HaveLen(2))
 		})
 	})
