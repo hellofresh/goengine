@@ -5,6 +5,7 @@ import (
 	"time"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/hellofresh/goengine/errors"
 	"github.com/hellofresh/goengine/serializer"
 
 	"gopkg.in/mgo.v2"
@@ -48,7 +49,7 @@ func (s *MongoDbEventStore) Save(streamName StreamName, event *DomainMessage) er
 	}
 
 	if !s.registry.Exists(typeName.String()) {
-		return ErrorTypeNotRegistred
+		return errors.ErrorTypeNotRegistred
 	}
 
 	eventData := &EventData{

@@ -1,8 +1,9 @@
 package serializer
 
 import (
-	"errors"
 	"reflect"
+
+	"github.com/hellofresh/goengine/errors"
 )
 
 // TypeRegistry is a registry for go types
@@ -61,7 +62,7 @@ func (tr *InMemoryTypeRegistry) Get(name string) (interface{}, error) {
 	if typ, ok := tr.types[name]; ok {
 		return reflect.New(typ).Interface(), nil
 	}
-	return nil, errors.New("no one")
+	return nil, errors.ErrorTypeNotFound
 }
 
 // TypeOf returns the type of a struct checking if it's a pointer or not
@@ -74,7 +75,7 @@ func (tr *InMemoryTypeRegistry) TypeOf(i interface{}) (reflect.Type, error) {
 	}
 	// Check if the input is a struct
 	if t.Kind() != reflect.Struct {
-		return nil, errors.New("Input param is not a struct")
+		return nil, errors.ErrorTypeNotStruct
 	}
 
 	return t, nil
