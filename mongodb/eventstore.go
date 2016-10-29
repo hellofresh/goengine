@@ -31,7 +31,74 @@ func NewEventStore(conn *mgo.Session, r reflection.TypeRegistry) *MongoDbEventSt
 	return &MongoDbEventStore{conn, db, r}
 }
 
-func (s *MongoDbEventStore) Save(streamName eventstore.StreamName, event *eventstore.DomainMessage) error {
+func (s *MongoDbEventStore) Append(events *eventstore.EventStream) error {
+	name := events.Name
+	for _, event := range events.Events {
+		err := s.save(name, event)
+		if nil != err {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (s *MongoDbEventStore) GetEventsFor(streamName eventstore.StreamName, id string) (*eventstore.EventStream, error) {
+	var eventsData []*EventData
+	var results []*eventstore.DomainMessage
+
+	coll := s.db.C(string(streamName))
+
+	err := coll.Find(bson.M{"aggregate_id": id}).All(&eventsData)
+
+	for _, eventData := range eventsData {
+		event, err := s.registry.Get(eventData.Type)
+		if nil != err {
+			return nil, err
+		}
+
+		err = json.Unmarshal([]byte(eventData.Payload), event)
+		if nil != err {
+			return nil, err
+		}
+
+		domainMessage := eventstore.NewDomainMessage(eventData.ID, eventData.Version, event.(eventstore.DomainEvent), eventData.RecordedOn)
+		results = append(results, domainMessage)
+	}
+
+	return eventstore.NewEventStream(streamName, results), err
+}
+
+func (s *MongoDbEventStore) FromVersion(streamName eventstore.StreamName, id string, version int) (*eventstore.EventStream, error) {
+	var results []*eventstore.DomainMessage
+	coll := s.db.C(string(streamName))
+
+	err := coll.Find(bson.M{
+		"aggregate_id": id,
+		"version":      bson.M{"$gte": version},
+	}).
+		Sort("-version").
+		All(&results)
+
+	return eventstore.NewEventStream(streamName, results), err
+}
+
+func (s *MongoDbEventStore) CountEventsFor(streamName eventstore.StreamName, id string) (int, error) {
+	return s.db.C(string(streamName)).Find(bson.M{"aggregate_id": string(streamName)}).Count()
+}
+
+func (s *MongoDbEventStore) createIndexes(c *mgo.Collection) error {
+	index := mgo.Index{
+		Key:        []string{"aggregate_id", "version"},
+		Unique:     true,
+		DropDups:   true,
+		Background: true,
+	}
+
+	return c.EnsureIndex(index)
+}
+
+func (s *MongoDbEventStore) save(streamName eventstore.StreamName, event *eventstore.DomainMessage) error {
 	coll := s.db.C(string(streamName))
 	err := s.createIndexes(coll)
 	if nil != err {
@@ -61,59 +128,4 @@ func (s *MongoDbEventStore) Save(streamName eventstore.StreamName, event *events
 	}
 
 	return coll.Insert(eventData)
-}
-
-func (s *MongoDbEventStore) GetEventsFor(streamName eventstore.StreamName, id string) ([]*eventstore.DomainMessage, error) {
-	var eventsData []*EventData
-	var results []*eventstore.DomainMessage
-
-	coll := s.db.C(string(streamName))
-
-	err := coll.Find(bson.M{"aggregate_id": id}).All(&eventsData)
-
-	for _, eventData := range eventsData {
-		event, err := s.registry.Get(eventData.Type)
-		if nil != err {
-			return nil, err
-		}
-
-		err = json.Unmarshal([]byte(eventData.Payload), event)
-		if nil != err {
-			return nil, err
-		}
-
-		domainMessage := eventstore.NewDomainMessage(eventData.ID, eventData.Version, event.(eventstore.DomainEvent), eventData.RecordedOn)
-		results = append(results, domainMessage)
-	}
-
-	return results, err
-}
-
-func (s *MongoDbEventStore) FromVersion(streamName eventstore.StreamName, id string, version int) ([]*eventstore.DomainMessage, error) {
-	var results []*eventstore.DomainMessage
-	coll := s.db.C(string(streamName))
-
-	err := coll.Find(bson.M{
-		"aggregate_id": id,
-		"version":      bson.M{"$gte": version},
-	}).
-		Sort("-version").
-		All(&results)
-
-	return results, err
-}
-
-func (s *MongoDbEventStore) CountEventsFor(streamName eventstore.StreamName, id string) (int, error) {
-	return s.db.C(string(streamName)).Find(bson.M{"aggregate_id": string(streamName)}).Count()
-}
-
-func (s *MongoDbEventStore) createIndexes(c *mgo.Collection) error {
-	index := mgo.Index{
-		Key:        []string{"aggregate_id", "version"},
-		Unique:     true,
-		DropDups:   true,
-		Background: true,
-	}
-
-	return c.EnsureIndex(index)
 }
