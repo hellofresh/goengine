@@ -10,5 +10,6 @@ go:
 
 install:
   # - docker-compose up -d
+    - make deps
   
 script: make test
