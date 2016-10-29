@@ -30,13 +30,15 @@ var _ = Describe("In Memory Event Store", func() {
 		It("should save an event", func() {
 			for version, event := range events {
 				message := RecordNow(aggregateId, version, event)
-				inMemory.Save(streamName, message)
+				err := inMemory.Save(streamName, message)
+				Expect(err).To(BeNil())
 			}
 		})
 
 		It("should retrive the things that happened", func() {
-			expectedEvents := inMemory.GetEventsFor(streamName, aggregateId)
+			expectedEvents, err := inMemory.GetEventsFor(streamName, aggregateId)
 
+			Expect(err).To(BeNil())
 			Expect(expectedEvents).To(HaveLen(4))
 		})
 
@@ -45,8 +47,9 @@ var _ = Describe("In Memory Event Store", func() {
 		})
 
 		It("should retrieve events for version bigger then 1", func() {
-			expectedEvents := inMemory.FromVersion(streamName, aggregateId, 1)
+			expectedEvents, err := inMemory.FromVersion(streamName, aggregateId, 1)
 
+			Expect(err).To(BeNil())
 			Expect(expectedEvents).To(HaveLen(3))
 		})
 	})

@@ -8,7 +8,7 @@ func NewInMemoryEventStore() *InMemoryEventStore {
 	return &InMemoryEventStore{make(map[StreamName]map[string][]*DomainMessage)}
 }
 
-func (s *InMemoryEventStore) Save(streamName StreamName, event *DomainMessage) {
+func (s *InMemoryEventStore) Save(streamName StreamName, event *DomainMessage) error {
 	id := event.ID
 	events, exists := s.events[streamName][id]
 
@@ -17,25 +17,28 @@ func (s *InMemoryEventStore) Save(streamName StreamName, event *DomainMessage) {
 	}
 
 	s.events[streamName][id] = append(events, event)
+
+	return nil
 }
 
-func (s *InMemoryEventStore) GetEventsFor(streamName StreamName, id string) []*DomainMessage {
-	return s.events[streamName][id]
+func (s *InMemoryEventStore) GetEventsFor(streamName StreamName, id string) ([]*DomainMessage, error) {
+	return s.events[streamName][id], nil
 }
 
-func (s *InMemoryEventStore) FromVersion(streamName StreamName, id string, version int) []*DomainMessage {
-	events := s.GetEventsFor(streamName, id)
+func (s *InMemoryEventStore) FromVersion(streamName StreamName, id string, version int) ([]*DomainMessage, error) {
+	events, _ := s.GetEventsFor(streamName, id)
 	var filtered []*DomainMessage
 
 	for _, event := range events {
-		if event.version >= version {
+		if event.Version >= version {
 			filtered = append(filtered, event)
 		}
 	}
 
-	return filtered
+	return filtered, nil
 }
 
-func (s *InMemoryEventStore) CountEventsFor(streamName StreamName, id string) int {
-	return len(s.GetEventsFor(streamName, id))
+func (s *InMemoryEventStore) CountEventsFor(streamName StreamName, id string) (int, error) {
+	result, _ := s.GetEventsFor(streamName, id)
+	return len(result), nil
 }
