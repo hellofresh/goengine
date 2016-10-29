@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/hellofresh/goengine/errors"
+	"github.com/hellofresh/goengine"
 	"github.com/hellofresh/goengine/eventstore"
 	"github.com/hellofresh/goengine/reflection"
 
@@ -23,10 +23,10 @@ type EventData struct {
 type MongoDbEventStore struct {
 	conn     *mgo.Session
 	db       *mgo.Database
-	registry reflection.TypeRegistry
+	registry goengine.TypeRegistry
 }
 
-func NewEventStore(conn *mgo.Session, r reflection.TypeRegistry) *MongoDbEventStore {
+func NewEventStore(conn *mgo.Session, r goengine.TypeRegistry) *MongoDbEventStore {
 	db := conn.DB("")
 	return &MongoDbEventStore{conn, db, r}
 }
@@ -110,14 +110,7 @@ func (s *MongoDbEventStore) save(streamName eventstore.StreamName, event *events
 		return err
 	}
 
-	typeName, err := s.registry.TypeOf(event.Payload)
-	if nil != err {
-		return err
-	}
-
-	if !s.registry.Exists(typeName.String()) {
-		return errors.ErrorTypeNotRegistred
-	}
+	typeName := reflection.TypeOf(event.Payload)
 
 	eventData := &EventData{
 		ID:         event.ID,

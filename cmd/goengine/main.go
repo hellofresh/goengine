@@ -4,9 +4,9 @@ import (
 	"os"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/hellofresh/goengine"
 	"github.com/hellofresh/goengine/eventstore"
 	"github.com/hellofresh/goengine/mongodb"
-	"github.com/hellofresh/goengine/serializer"
 	"github.com/satori/go.uuid"
 
 	"gopkg.in/mgo.v2"
@@ -28,10 +28,10 @@ func main() {
 	session.SetMode(mgo.Monotonic, true)
 
 	log.Info("Setting up the event store")
-	registry := serializer.NewInMemmoryTypeRegistry()
-	registry.Register(&SomethingHappened{})
+	registry := goengine.NewInMemmoryTypeRegistry()
+	registry.RegisterType(&SomethingHappened{})
 
-	es := SetupEventStore(session, registry)
+	es := mongodb.NewEventStore(session, registry)
 
 	log.Info("Creating the event stream")
 	stream := CreateEventStream(streamName, aggregateID.String())
@@ -46,11 +46,6 @@ func main() {
 		log.Error(err)
 	}
 	log.Info(events)
-}
-
-func SetupEventStore(session *mgo.Session, registry serializer.TypeRegistry) eventstore.EventStore {
-	adapter := mongodb.NewEventStore(session, registry)
-	return eventstore.NewEventStore(adapter)
 }
 
 func CreateEventStream(streamName eventstore.StreamName, aggregateId string) *eventstore.EventStream {

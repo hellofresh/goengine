@@ -2,7 +2,6 @@ package eventsourcing
 
 import (
 	"fmt"
-	"reflect"
 
 	"github.com/hellofresh/goengine/eventstore"
 	"github.com/hellofresh/goengine/reflection"
@@ -38,11 +37,7 @@ func (ar *AggregateRoot) GetUncommittedEvents() []*eventstore.DomainMessage {
 }
 
 func (r *AggregateRoot) Apply(event eventstore.DomainEvent) {
-	t := reflect.TypeOf(event)
-	if t.Kind() == reflect.Ptr {
-		t = t.Elem()
-	}
-
+	t := reflection.TypeOf(event)
 	reflection.CallMethod(r.source, fmt.Sprintf("When%s", t.Name()), event)
 }
 

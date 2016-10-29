@@ -18,3 +18,15 @@ func CallMethod(i interface{}, methodName string, args ...interface{}) interface
 	// return or panic, method not found of either type
 	return ""
 }
+
+// TypeOf returns the type of a struct checking if it's a pointer or not
+func TypeOf(i interface{}) reflect.Type {
+	// Convert the interface i to a reflect.Type t
+	t := reflect.TypeOf(i)
+	// Check if the input is a pointer and dereference it if yes
+	if t.Kind() == reflect.Ptr {
+		t = t.Elem()
+	}
+
+	return t
+}
