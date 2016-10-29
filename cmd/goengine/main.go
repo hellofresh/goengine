@@ -5,6 +5,7 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/hellofresh/goengine/eventstore"
+	"github.com/hellofresh/goengine/mongodb"
 	"github.com/hellofresh/goengine/serializer"
 	"github.com/satori/go.uuid"
 
@@ -48,7 +49,7 @@ func main() {
 }
 
 func SetupEventStore(session *mgo.Session, registry serializer.TypeRegistry) eventstore.EventStore {
-	adapter := eventstore.NewMongoDbEventStore(session, registry)
+	adapter := mongodb.NewEventStore(session, registry)
 	return eventstore.NewEventStore(adapter)
 }
 

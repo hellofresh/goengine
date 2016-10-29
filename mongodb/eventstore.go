@@ -1,12 +1,12 @@
-package eventstore
+package mongodb
 
 import (
 	"encoding/json"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/hellofresh/goengine/errors"
-	"github.com/hellofresh/goengine/serializer"
+	"github.com/hellofresh/goengine/eventstore"
+	"github.com/hellofresh/goengine/reflection"
 
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
@@ -23,15 +23,15 @@ type EventData struct {
 type MongoDbEventStore struct {
 	conn     *mgo.Session
 	db       *mgo.Database
-	registry serializer.TypeRegistry
+	registry reflection.TypeRegistry
 }
 
-func NewMongoDbEventStore(conn *mgo.Session, r serializer.TypeRegistry) *MongoDbEventStore {
+func NewEventStore(conn *mgo.Session, r reflection.TypeRegistry) *MongoDbEventStore {
 	db := conn.DB("")
 	return &MongoDbEventStore{conn, db, r}
 }
 
-func (s *MongoDbEventStore) Save(streamName StreamName, event *DomainMessage) error {
+func (s *MongoDbEventStore) Save(streamName eventstore.StreamName, event *eventstore.DomainMessage) error {
 	coll := s.db.C(string(streamName))
 	err := s.createIndexes(coll)
 	if nil != err {
@@ -63,9 +63,9 @@ func (s *MongoDbEventStore) Save(streamName StreamName, event *DomainMessage) er
 	return coll.Insert(eventData)
 }
 
-func (s *MongoDbEventStore) GetEventsFor(streamName StreamName, id string) ([]*DomainMessage, error) {
+func (s *MongoDbEventStore) GetEventsFor(streamName eventstore.StreamName, id string) ([]*eventstore.DomainMessage, error) {
 	var eventsData []*EventData
-	var results []*DomainMessage
+	var results []*eventstore.DomainMessage
 
 	coll := s.db.C(string(streamName))
 
@@ -82,16 +82,15 @@ func (s *MongoDbEventStore) GetEventsFor(streamName StreamName, id string) ([]*D
 			return nil, err
 		}
 
-		domainMessage := NewDomainMessage(eventData.ID, eventData.Version, event.(DomainEvent), eventData.RecordedOn)
-		log.Info(domainMessage.Payload)
+		domainMessage := eventstore.NewDomainMessage(eventData.ID, eventData.Version, event.(eventstore.DomainEvent), eventData.RecordedOn)
 		results = append(results, domainMessage)
 	}
 
 	return results, err
 }
 
-func (s *MongoDbEventStore) FromVersion(streamName StreamName, id string, version int) ([]*DomainMessage, error) {
-	var results []*DomainMessage
+func (s *MongoDbEventStore) FromVersion(streamName eventstore.StreamName, id string, version int) ([]*eventstore.DomainMessage, error) {
+	var results []*eventstore.DomainMessage
 	coll := s.db.C(string(streamName))
 
 	err := coll.Find(bson.M{
@@ -104,7 +103,7 @@ func (s *MongoDbEventStore) FromVersion(streamName StreamName, id string, versio
 	return results, err
 }
 
-func (s *MongoDbEventStore) CountEventsFor(streamName StreamName, id string) (int, error) {
+func (s *MongoDbEventStore) CountEventsFor(streamName eventstore.StreamName, id string) (int, error) {
 	return s.db.C(string(streamName)).Find(bson.M{"aggregate_id": string(streamName)}).Count()
 }
 
