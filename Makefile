@@ -23,7 +23,7 @@ build:
 # Installs our project: copies binaries
 install:
 	@echo "$(OK_COLOR)==> Installing project$(NO_COLOR)"
-	go install -v
+	go install -v ./cmd/goengine
 
 # Cleans our project: deletes binaries
 clean:
