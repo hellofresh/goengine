@@ -24,14 +24,14 @@ func (e RecipeRated) OcurredOn() time.Time {
 }
 
 type Recipe struct {
-	eventsourcing.AggregateRoot
+	*eventsourcing.AggregateRootBased
 	Name   string
 	Rating int
 }
 
 func NewRecipe(name string) *Recipe {
 	recipe := new(Recipe)
-	recipe.AggregateRoot = eventsourcing.NewAggregateRoot(recipe)
+	recipe.AggregateRootBased = eventsourcing.NewAggregateRootBased(recipe)
 	recipe.RecordThat(RecipeCreated{time.Now()})
 
 	return recipe

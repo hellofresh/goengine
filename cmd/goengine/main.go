@@ -5,16 +5,16 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/hellofresh/goengine"
+	"github.com/hellofresh/goengine/eventsourcing"
 	"github.com/hellofresh/goengine/eventstore"
 	"github.com/hellofresh/goengine/mongodb"
-	"github.com/satori/go.uuid"
 
 	"gopkg.in/mgo.v2"
 )
 
 func main() {
+	log.SetLevel(log.DebugLevel)
 	var streamName eventstore.StreamName = "test"
-	aggregateID := uuid.NewV4()
 
 	mongoDSN := os.Getenv("STORAGE_DSN")
 	log.Infof("Connecting to the database %s", mongoDSN)
@@ -27,33 +27,32 @@ func main() {
 	// Optional. Switch the session to a monotonic behavior.
 	session.SetMode(mgo.Monotonic, true)
 
-	log.Info("Setting up the event store")
+	log.Info("Setting up the registry")
 	registry := goengine.NewInMemmoryTypeRegistry()
-	registry.RegisterType(&SomethingHappened{})
+	registry.RegisterType(&RecipeCreated{})
+	registry.RegisterType(&RecipeRated{})
 
+	log.Info("Setting up the event store")
 	es := mongodb.NewEventStore(session, registry)
 
-	log.Info("Creating the event stream")
-	stream := CreateEventStream(streamName, aggregateID.String())
+	log.Info("Creating a recipe")
+	repository := eventsourcing.NewPublisherRepository(es)
 
-	err = es.Append(stream)
-	if nil != err {
-		log.Error(err)
+	log.Info("Creating a recipe")
+	aggregateRoot := CreateScenario(streamName)
+
+	repository.Save(aggregateRoot, streamName)
+
+	history, err := NewRecipeFromHisotry(aggregateRoot.ID, streamName, repository)
+	if err != nil {
+		log.Panic(err)
 	}
 
-	events, err := es.GetEventsFor(streamName, aggregateID.String())
-	if nil != err {
-		log.Error(err)
-	}
-	log.Info(events)
+	log.Info(history)
 }
 
-func CreateEventStream(streamName eventstore.StreamName, aggregateId string) *eventstore.EventStream {
-	var events []*eventstore.DomainMessage
-
-	events = append(events, eventstore.RecordNow(aggregateId, 0, NewSomethingHappened()))
-	events = append(events, eventstore.RecordNow(aggregateId, 1, NewSomethingHappened()))
-	events = append(events, eventstore.RecordNow(aggregateId, 2, NewSomethingHappened()))
-
-	return eventstore.NewEventStream(streamName, events)
+func CreateScenario(streamName eventstore.StreamName) *Recipe {
+	recipe := NewRecipe("Test Recipe")
+	recipe.Rate(4)
+	return recipe
 }

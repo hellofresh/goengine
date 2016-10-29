@@ -3,58 +3,71 @@ package eventsourcing
 import (
 	"fmt"
 
+	log "github.com/Sirupsen/logrus"
 	"github.com/hellofresh/goengine/eventstore"
 	"github.com/hellofresh/goengine/reflection"
 	"github.com/pborman/uuid"
 )
 
-type AggregateRoot struct {
+type AggregateRoot interface {
+	GetID() string
+	GetVersion() int
+	SetVersion(int)
+	Apply(eventstore.DomainEvent)
+	GetUncommittedEvents() []*eventstore.DomainMessage
+}
+
+type AggregateRootBased struct {
 	ID               string
 	version          int
 	source           interface{}
 	uncommitedEvents []*eventstore.DomainMessage
 }
 
-// NewAggregateRoot constructor
-func NewAggregateRoot(source interface{}) AggregateRoot {
+// NewAggregateRootBased constructor
+func NewAggregateRootBased(source interface{}) *AggregateRootBased {
 	return NewEventSourceBasedWithID(source, uuid.New())
 }
 
 // NewEventSourceBasedWithID constructor
-func NewEventSourceBasedWithID(source interface{}, id string) AggregateRoot {
-	return AggregateRoot{id, 0, source, []*eventstore.DomainMessage{}}
+func NewEventSourceBasedWithID(source interface{}, id string) *AggregateRootBased {
+	return &AggregateRootBased{id, 0, source, []*eventstore.DomainMessage{}}
 }
 
-func (ar *AggregateRoot) ReconstituteFromHistory(historyEvents *eventstore.EventStream) {
-
+func (r *AggregateRootBased) GetID() string {
+	return r.ID
 }
 
-func (ar *AggregateRoot) GetUncommittedEvents() []*eventstore.DomainMessage {
-	stream := ar.uncommitedEvents
-	ar.uncommitedEvents = nil
+func (r *AggregateRootBased) GetVersion() int {
+	return r.version
+}
+
+func (r *AggregateRootBased) SetVersion(version int) {
+	r.version = version
+}
+
+func (r *AggregateRootBased) GetUncommittedEvents() []*eventstore.DomainMessage {
+	stream := r.uncommitedEvents
+	r.uncommitedEvents = nil
+	log.Debugf("%d Uncommited events cleaned", len(stream))
 
 	return stream
 }
 
-func (r *AggregateRoot) Apply(event eventstore.DomainEvent) {
+func (r *AggregateRootBased) Apply(event eventstore.DomainEvent) {
 	t := reflection.TypeOf(event)
 	reflection.CallMethod(r.source, fmt.Sprintf("When%s", t.Name()), event)
+	log.Debugf("Event %s applied", t.Name())
 }
 
-func (r *AggregateRoot) RecordThat(event eventstore.DomainEvent) {
+func (r *AggregateRootBased) RecordThat(event eventstore.DomainEvent) {
 	r.version++
 	r.Apply(event)
 	r.Record(event)
 }
 
-func (r *AggregateRoot) Replay(historyEvents *eventstore.EventStream, version int) {
-	for _, event := range historyEvents.Events {
-		r.version = event.Version
-		r.Apply(event.Payload)
-	}
-}
-
-func (ar *AggregateRoot) Record(event eventstore.DomainEvent) {
-	message := eventstore.RecordNow(ar.ID, ar.version, event)
-	ar.uncommitedEvents = append(ar.uncommitedEvents, message)
+func (r *AggregateRootBased) Record(event eventstore.DomainEvent) {
+	message := eventstore.RecordNow(r.ID, r.version, event)
+	r.uncommitedEvents = append(r.uncommitedEvents, message)
+	log.Debug("Event recorded")
 }
