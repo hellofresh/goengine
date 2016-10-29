@@ -1,6 +1,16 @@
-hash: 820280dd6a9cc7f07393743ed26e4b6a5932f544d6dd9562626d52283e2386ea
-updated: 2016-10-27T11:25:26.661198153+02:00
+hash: 938ece1d62c503bb967295ad413b00ad89b712e77e659f0554476b7c756ce305
+updated: 2016-10-29T20:02:02.431531549+02:00
 imports:
+- name: github.com/pborman/uuid
+  version: c55201b036063326c5b1b89ccfe45a184973d073
+- name: github.com/satori/go.uuid
+  version: 879c5887cd475cd7864858769793b2ceb0d44feb
+- name: github.com/Sirupsen/logrus
+  version: 4b6ea7319e214d98c938f12692336f7ca9348d6b
+- name: golang.org/x/sys
+  version: a408501be4d17ee978c04a618e7a1b22af058c0e
+  subpackages:
+  - unix
 - name: gopkg.in/mgo.v2
   version: 3f83fa5005286a7fe593b055f0d7771a7dce4655
   subpackages:
