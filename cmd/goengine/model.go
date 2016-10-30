@@ -3,8 +3,7 @@ package main
 import (
 	"time"
 
-	"github.com/hellofresh/goengine/eventsourcing"
-	"github.com/hellofresh/goengine/eventstore"
+	"github.com/hellofresh/goengine"
 )
 
 type RecipeCreated struct {
@@ -26,22 +25,22 @@ func (e RecipeRated) OcurredOn() time.Time {
 }
 
 type Recipe struct {
-	*eventsourcing.AggregateRootBased
+	*goengine.AggregateRootBased
 	Name   string
 	Rating int
 }
 
 func NewRecipe(name string) *Recipe {
 	recipe := new(Recipe)
-	recipe.AggregateRootBased = eventsourcing.NewAggregateRootBased(recipe)
+	recipe.AggregateRootBased = goengine.NewAggregateRootBased(recipe)
 	recipe.RecordThat(&RecipeCreated{time.Now(), name})
 
 	return recipe
 }
 
-func NewRecipeFromHisotry(id string, streamName eventstore.StreamName, repo eventsourcing.AggregateRepository) (*Recipe, error) {
+func NewRecipeFromHisotry(id string, streamName goengine.StreamName, repo goengine.AggregateRepository) (*Recipe, error) {
 	recipe := new(Recipe)
-	recipe.AggregateRootBased = eventsourcing.NewEventSourceBasedWithID(recipe, id)
+	recipe.AggregateRootBased = goengine.NewEventSourceBasedWithID(recipe, id)
 	err := repo.Reconstitute(id, recipe, streamName)
 
 	return recipe, err

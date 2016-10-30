@@ -1,6 +1,10 @@
-package eventstore
+package goengine
 
 import "time"
+
+type DomainEvent interface {
+	OcurredOn() time.Time
+}
 
 type DomainMessage struct {
 	ID         string      `json:"aggregate_id,omitempty"`

@@ -1,10 +1,9 @@
-package eventsourcing
+package goengine
 
 import (
 	"fmt"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/hellofresh/goengine/eventstore"
 	"github.com/hellofresh/goengine/reflection"
 	"github.com/pborman/uuid"
 )
@@ -13,15 +12,15 @@ type AggregateRoot interface {
 	GetID() string
 	GetVersion() int
 	SetVersion(int)
-	Apply(eventstore.DomainEvent)
-	GetUncommittedEvents() []*eventstore.DomainMessage
+	Apply(DomainEvent)
+	GetUncommittedEvents() []*DomainMessage
 }
 
 type AggregateRootBased struct {
 	ID               string
 	version          int
 	source           interface{}
-	uncommitedEvents []*eventstore.DomainMessage
+	uncommitedEvents []*DomainMessage
 }
 
 // NewAggregateRootBased constructor
@@ -31,7 +30,7 @@ func NewAggregateRootBased(source interface{}) *AggregateRootBased {
 
 // NewEventSourceBasedWithID constructor
 func NewEventSourceBasedWithID(source interface{}, id string) *AggregateRootBased {
-	return &AggregateRootBased{id, 0, source, []*eventstore.DomainMessage{}}
+	return &AggregateRootBased{id, 0, source, []*DomainMessage{}}
 }
 
 func (r *AggregateRootBased) GetID() string {
@@ -46,7 +45,7 @@ func (r *AggregateRootBased) SetVersion(version int) {
 	r.version = version
 }
 
-func (r *AggregateRootBased) GetUncommittedEvents() []*eventstore.DomainMessage {
+func (r *AggregateRootBased) GetUncommittedEvents() []*DomainMessage {
 	stream := r.uncommitedEvents
 	r.uncommitedEvents = nil
 	log.Debugf("%d Uncommited events cleaned", len(stream))
@@ -54,20 +53,20 @@ func (r *AggregateRootBased) GetUncommittedEvents() []*eventstore.DomainMessage 
 	return stream
 }
 
-func (r *AggregateRootBased) Apply(event eventstore.DomainEvent) {
+func (r *AggregateRootBased) Apply(event DomainEvent) {
 	t := reflection.TypeOf(event)
 	reflection.CallMethod(r.source, fmt.Sprintf("When%s", t.Name()), event)
 	log.Debugf("Event %s applied", t.Name())
 }
 
-func (r *AggregateRootBased) RecordThat(event eventstore.DomainEvent) {
+func (r *AggregateRootBased) RecordThat(event DomainEvent) {
 	r.version++
 	r.Apply(event)
 	r.Record(event)
 }
 
-func (r *AggregateRootBased) Record(event eventstore.DomainEvent) {
-	message := eventstore.RecordNow(r.ID, r.version, event)
+func (r *AggregateRootBased) Record(event DomainEvent) {
+	message := RecordNow(r.ID, r.version, event)
 	r.uncommitedEvents = append(r.uncommitedEvents, message)
 	log.Debug("Event recorded")
 }

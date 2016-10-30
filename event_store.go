@@ -1,4 +1,4 @@
-package eventstore
+package goengine
 
 type EventStore interface {
 	Append(events *EventStream) error

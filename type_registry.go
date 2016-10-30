@@ -5,7 +5,6 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/hellofresh/goengine/errors"
-	"github.com/hellofresh/goengine/eventsourcing"
 	"github.com/hellofresh/goengine/reflection"
 )
 
@@ -15,7 +14,7 @@ import (
 // know how to create a type for that string
 type TypeRegistry interface {
 	GetTypeByName(string) (reflect.Type, bool)
-	RegisterAggregate(eventsourcing.AggregateRoot, ...interface{})
+	RegisterAggregate(AggregateRoot, ...interface{})
 	RegisterEvents(...interface{})
 	RegisterType(interface{})
 	Get(string) (interface{}, error)
@@ -39,7 +38,7 @@ func (r *InMemoryTypeRegistry) RegisterType(i interface{}) {
 	log.Debugf("Type %s was registered", rawType.String())
 }
 
-func (r *InMemoryTypeRegistry) RegisterAggregate(aggregate eventsourcing.AggregateRoot, events ...interface{}) {
+func (r *InMemoryTypeRegistry) RegisterAggregate(aggregate AggregateRoot, events ...interface{}) {
 	r.RegisterType(aggregate)
 	log.Debugf("Aggregate %s was registered", aggregate.GetID())
 

@@ -1,7 +1,7 @@
-package eventstore_test
+package goengine_test
 
 import (
-	. "github.com/hellofresh/goengine/eventstore"
+	. "github.com/hellofresh/goengine"
 	"github.com/hellofresh/goengine/inmemory"
 
 	. "github.com/onsi/ginkgo"
@@ -23,7 +23,7 @@ var _ = Describe("A Event Store", func() {
 	})
 
 	JustBeforeEach(func() {
-		var events []*DomainMessage
+		var events []*goengine.DomainMessage
 
 		events = append(events, RecordNow(aggregateId, 0, NewSomethingHappened()))
 		events = append(events, RecordNow(aggregateId, 1, NewSomethingHappened()))

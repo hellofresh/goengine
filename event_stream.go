@@ -1,10 +1,4 @@
-package eventstore
-
-import "time"
-
-type DomainEvent interface {
-	OcurredOn() time.Time
-}
+package goengine
 
 type StreamName string
 

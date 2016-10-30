@@ -1,9 +1,7 @@
-package eventsourcing_test
+package goengine_test
 
 import (
 	"time"
-
-	"github.com/hellofresh/goengine/eventsourcing"
 )
 
 type RecipeCreated struct {
@@ -24,14 +22,14 @@ func (e RecipeRated) OcurredOn() time.Time {
 }
 
 type Recipe struct {
-	*eventsourcing.AggregateRootBased
+	*AggregateRootBased
 	Name   string
 	Rating int
 }
 
 func NewRecipe(name string) *Recipe {
 	recipe := new(Recipe)
-	recipe.AggregateRootBased = eventsourcing.NewAggregateRootBased(recipe)
+	recipe.AggregateRootBased = NewAggregateRootBased(recipe)
 	recipe.RecordThat(RecipeCreated{time.Now()})
 
 	return recipe

@@ -5,9 +5,7 @@ import (
 	"time"
 
 	"github.com/hellofresh/goengine"
-	"github.com/hellofresh/goengine/eventstore"
 	"github.com/hellofresh/goengine/reflection"
-
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 )
@@ -34,7 +32,7 @@ func NewEventStore(conn *mgo.Session, r goengine.TypeRegistry) *MongoDbEventStor
 }
 
 // Append adds an event to the event store
-func (s *MongoDbEventStore) Append(events *eventstore.EventStream) error {
+func (s *MongoDbEventStore) Append(events *goengine.EventStream) error {
 	streamName := string(events.Name)
 	for _, event := range events.Events {
 		mongoEvent, err := s.toMongoEvent(event)
@@ -55,12 +53,12 @@ func (s *MongoDbEventStore) Append(events *eventstore.EventStream) error {
 }
 
 // GetEventsFor gets events for an id on the specified stream
-func (s *MongoDbEventStore) GetEventsFor(streamName eventstore.StreamName, id string) (*eventstore.EventStream, error) {
+func (s *MongoDbEventStore) GetEventsFor(streamName goengine.StreamName, id string) (*goengine.EventStream, error) {
 	var mongoEvents []*MongoEvent
 	coll := s.db.C(string(streamName))
 	err := coll.Find(bson.M{"aggregate_id": id}).All(&mongoEvents)
 
-	var results []*eventstore.DomainMessage
+	var results []*goengine.DomainMessage
 	for _, mongoEvent := range mongoEvents {
 		domainMessage, err := s.fromMongoEvent(mongoEvent)
 		if nil != err {
@@ -70,11 +68,11 @@ func (s *MongoDbEventStore) GetEventsFor(streamName eventstore.StreamName, id st
 		results = append(results, domainMessage)
 	}
 
-	return eventstore.NewEventStream(streamName, results), err
+	return goengine.NewEventStream(streamName, results), err
 }
 
 // FromVersion gets events for an id and version on the specified stream
-func (s *MongoDbEventStore) FromVersion(streamName eventstore.StreamName, id string, version int) (*eventstore.EventStream, error) {
+func (s *MongoDbEventStore) FromVersion(streamName goengine.StreamName, id string, version int) (*goengine.EventStream, error) {
 	var mongoEvents []*MongoEvent
 	coll := s.db.C(string(streamName))
 
@@ -85,7 +83,7 @@ func (s *MongoDbEventStore) FromVersion(streamName eventstore.StreamName, id str
 		Sort("-version").
 		All(&mongoEvents)
 
-	var results []*eventstore.DomainMessage
+	var results []*goengine.DomainMessage
 	for _, mongoEvent := range mongoEvents {
 		domainMessage, err := s.fromMongoEvent(mongoEvent)
 		if nil != err {
@@ -95,11 +93,11 @@ func (s *MongoDbEventStore) FromVersion(streamName eventstore.StreamName, id str
 		results = append(results, domainMessage)
 	}
 
-	return eventstore.NewEventStream(streamName, results), err
+	return goengine.NewEventStream(streamName, results), err
 }
 
 // CountEventsFor counts events for an id on the specified stream
-func (s *MongoDbEventStore) CountEventsFor(streamName eventstore.StreamName, id string) (int, error) {
+func (s *MongoDbEventStore) CountEventsFor(streamName goengine.StreamName, id string) (int, error) {
 	return s.db.C(string(streamName)).Find(bson.M{"aggregate_id": string(streamName)}).Count()
 }
 
@@ -114,7 +112,7 @@ func (s *MongoDbEventStore) createIndexes(c *mgo.Collection) error {
 	return c.EnsureIndex(index)
 }
 
-func (s *MongoDbEventStore) toMongoEvent(event *eventstore.DomainMessage) (*MongoEvent, error) {
+func (s *MongoDbEventStore) toMongoEvent(event *goengine.DomainMessage) (*MongoEvent, error) {
 	serializedPayload, err := json.Marshal(event.Payload)
 	if nil != err {
 		return nil, err
@@ -130,7 +128,7 @@ func (s *MongoDbEventStore) toMongoEvent(event *eventstore.DomainMessage) (*Mong
 	}, nil
 }
 
-func (s *MongoDbEventStore) fromMongoEvent(mongoEvent *MongoEvent) (*eventstore.DomainMessage, error) {
+func (s *MongoDbEventStore) fromMongoEvent(mongoEvent *MongoEvent) (*goengine.DomainMessage, error) {
 	event, err := s.registry.Get(mongoEvent.Type)
 	if nil != err {
 		return nil, err
@@ -141,10 +139,10 @@ func (s *MongoDbEventStore) fromMongoEvent(mongoEvent *MongoEvent) (*eventstore.
 		return nil, err
 	}
 
-	return eventstore.NewDomainMessage(
+	return goengine.NewDomainMessage(
 		mongoEvent.ID,
 		mongoEvent.Version,
-		event.(eventstore.DomainEvent),
+		event.(goengine.DomainEvent),
 		mongoEvent.RecordedOn,
 	), nil
 }

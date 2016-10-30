@@ -1,4 +1,4 @@
-package eventstore_test
+package goengine_test
 
 import (
 	. "github.com/onsi/ginkgo"
@@ -9,5 +9,5 @@ import (
 
 func TestGoengine(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Event Store Suite")
+	RunSpecs(t, "GO Engine Suite")
 }

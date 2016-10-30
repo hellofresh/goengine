@@ -1,7 +1,7 @@
 package inmemory_test
 
 import (
-	. "github.com/hellofresh/goengine/eventstore"
+	. "github.com/hellofresh/goengine"
 	. "github.com/hellofresh/goengine/inmemory"
 
 	. "github.com/onsi/ginkgo"

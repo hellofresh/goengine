@@ -1,4 +1,4 @@
-package eventsourcing_test
+package goengine_test
 
 import (
 	. "github.com/onsi/ginkgo"
