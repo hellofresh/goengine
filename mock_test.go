@@ -2,7 +2,21 @@ package goengine_test
 
 import (
 	"time"
+
+	. "github.com/hellofresh/goengine"
 )
+
+type SomethingHappened struct {
+	ocurredOn time.Time
+}
+
+func NewSomethingHappened() SomethingHappened {
+	return SomethingHappened{time.Now()}
+}
+
+func (e SomethingHappened) OcurredOn() time.Time {
+	return e.ocurredOn
+}
 
 type RecipeCreated struct {
 	ocurredOn time.Time

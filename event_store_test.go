@@ -23,7 +23,7 @@ var _ = Describe("A Event Store", func() {
 	})
 
 	JustBeforeEach(func() {
-		var events []*goengine.DomainMessage
+		var events []*DomainMessage
 
 		events = append(events, RecordNow(aggregateId, 0, NewSomethingHappened()))
 		events = append(events, RecordNow(aggregateId, 1, NewSomethingHappened()))
