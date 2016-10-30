@@ -12,7 +12,8 @@ import (
 	"gopkg.in/mgo.v2/bson"
 )
 
-type EventData struct {
+// MongoEvent represents an event on mongodb
+type MongoEvent struct {
 	ID         string    `bson:"aggregate_id,omitempty"`
 	Version    int       `bson:"version"`
 	Type       string    `bson:"type"`
@@ -20,57 +21,61 @@ type EventData struct {
 	RecordedOn time.Time `bson:"recorded_on"`
 }
 
+// MongoDbEventStore The mongodb event store
 type MongoDbEventStore struct {
 	conn     *mgo.Session
 	db       *mgo.Database
 	registry goengine.TypeRegistry
 }
 
+// NewEventStore creates new MongoDB based event store
 func NewEventStore(conn *mgo.Session, r goengine.TypeRegistry) *MongoDbEventStore {
-	db := conn.DB("")
-	return &MongoDbEventStore{conn, db, r}
+	return &MongoDbEventStore{conn, conn.DB(""), r}
 }
 
+// Append adds an event to the event store
 func (s *MongoDbEventStore) Append(events *eventstore.EventStream) error {
-	name := events.Name
+	streamName := string(events.Name)
 	for _, event := range events.Events {
-		err := s.save(name, event)
+		mongoEvent, err := s.toMongoEvent(event)
 		if nil != err {
 			return err
 		}
+
+		coll := s.db.C(streamName)
+		err = s.createIndexes(coll)
+		if nil != err {
+			return err
+		}
+
+		return coll.Insert(mongoEvent)
 	}
 
 	return nil
 }
 
+// GetEventsFor gets events for an id on the specified stream
 func (s *MongoDbEventStore) GetEventsFor(streamName eventstore.StreamName, id string) (*eventstore.EventStream, error) {
-	var eventsData []*EventData
-	var results []*eventstore.DomainMessage
-
+	var mongoEvents []*MongoEvent
 	coll := s.db.C(string(streamName))
+	err := coll.Find(bson.M{"aggregate_id": id}).All(&mongoEvents)
 
-	err := coll.Find(bson.M{"aggregate_id": id}).All(&eventsData)
-
-	for _, eventData := range eventsData {
-		event, err := s.registry.Get(eventData.Type)
+	var results []*eventstore.DomainMessage
+	for _, mongoEvent := range mongoEvents {
+		domainMessage, err := s.fromMongoEvent(mongoEvent)
 		if nil != err {
 			return nil, err
 		}
 
-		err = json.Unmarshal([]byte(eventData.Payload), event)
-		if nil != err {
-			return nil, err
-		}
-
-		domainMessage := eventstore.NewDomainMessage(eventData.ID, eventData.Version, event.(eventstore.DomainEvent), eventData.RecordedOn)
 		results = append(results, domainMessage)
 	}
 
 	return eventstore.NewEventStream(streamName, results), err
 }
 
+// FromVersion gets events for an id and version on the specified stream
 func (s *MongoDbEventStore) FromVersion(streamName eventstore.StreamName, id string, version int) (*eventstore.EventStream, error) {
-	var results []*eventstore.DomainMessage
+	var mongoEvents []*MongoEvent
 	coll := s.db.C(string(streamName))
 
 	err := coll.Find(bson.M{
@@ -78,11 +83,22 @@ func (s *MongoDbEventStore) FromVersion(streamName eventstore.StreamName, id str
 		"version":      bson.M{"$gte": version},
 	}).
 		Sort("-version").
-		All(&results)
+		All(&mongoEvents)
+
+	var results []*eventstore.DomainMessage
+	for _, mongoEvent := range mongoEvents {
+		domainMessage, err := s.fromMongoEvent(mongoEvent)
+		if nil != err {
+			return nil, err
+		}
+
+		results = append(results, domainMessage)
+	}
 
 	return eventstore.NewEventStream(streamName, results), err
 }
 
+// CountEventsFor counts events for an id on the specified stream
 func (s *MongoDbEventStore) CountEventsFor(streamName eventstore.StreamName, id string) (int, error) {
 	return s.db.C(string(streamName)).Find(bson.M{"aggregate_id": string(streamName)}).Count()
 }
@@ -98,27 +114,37 @@ func (s *MongoDbEventStore) createIndexes(c *mgo.Collection) error {
 	return c.EnsureIndex(index)
 }
 
-func (s *MongoDbEventStore) save(streamName eventstore.StreamName, event *eventstore.DomainMessage) error {
-	coll := s.db.C(string(streamName))
-	err := s.createIndexes(coll)
-	if nil != err {
-		return err
-	}
-
+func (s *MongoDbEventStore) toMongoEvent(event *eventstore.DomainMessage) (*MongoEvent, error) {
 	serializedPayload, err := json.Marshal(event.Payload)
 	if nil != err {
-		return err
+		return nil, err
 	}
 
 	typeName := reflection.TypeOf(event.Payload)
-
-	eventData := &EventData{
+	return &MongoEvent{
 		ID:         event.ID,
 		Version:    event.Version,
 		Type:       typeName.String(),
 		Payload:    string(serializedPayload),
 		RecordedOn: event.RecordedOn,
+	}, nil
+}
+
+func (s *MongoDbEventStore) fromMongoEvent(mongoEvent *MongoEvent) (*eventstore.DomainMessage, error) {
+	event, err := s.registry.Get(mongoEvent.Type)
+	if nil != err {
+		return nil, err
 	}
 
-	return coll.Insert(eventData)
+	err = json.Unmarshal([]byte(mongoEvent.Payload), event)
+	if nil != err {
+		return nil, err
+	}
+
+	return eventstore.NewDomainMessage(
+		mongoEvent.ID,
+		mongoEvent.Version,
+		event.(eventstore.DomainEvent),
+		mongoEvent.RecordedOn,
+	), nil
 }
