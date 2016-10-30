@@ -9,7 +9,8 @@ go:
   - master
 
 install:
-    - go get github.com/onsi/ginkgo/ginkgo
-    - go get github.com/onsi/gomega
+  - go get -v -d
+  - go get github.com/onsi/ginkgo/ginkgo
+  - go get github.com/onsi/gomega
   
 script: ginkgo -r
