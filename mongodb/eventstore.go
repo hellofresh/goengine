@@ -46,7 +46,10 @@ func (s *MongoDbEventStore) Append(events *goengine.EventStream) error {
 			return err
 		}
 
-		return coll.Insert(mongoEvent)
+		err = coll.Insert(mongoEvent)
+		if nil != err {
+			return err
+		}
 	}
 
 	return nil
