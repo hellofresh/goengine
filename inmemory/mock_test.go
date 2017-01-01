@@ -5,13 +5,13 @@ import (
 )
 
 type SomethingHappened struct {
-	ocurredOn time.Time
+	occurredOn time.Time
 }
 
 func NewSomethingHappened() SomethingHappened {
 	return SomethingHappened{time.Now()}
 }
 
-func (e SomethingHappened) OcurredOn() time.Time {
-	return e.ocurredOn
+func (e SomethingHappened) OccurredOn() time.Time {
+	return e.occurredOn
 }
