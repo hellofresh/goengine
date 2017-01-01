@@ -7,32 +7,32 @@ import (
 )
 
 type SomethingHappened struct {
-	ocurredOn time.Time
+	occurredOn time.Time
 }
 
 func NewSomethingHappened() SomethingHappened {
 	return SomethingHappened{time.Now()}
 }
 
-func (e SomethingHappened) OcurredOn() time.Time {
-	return e.ocurredOn
+func (e SomethingHappened) OccurredOn() time.Time {
+	return e.occurredOn
 }
 
 type RecipeCreated struct {
-	ocurredOn time.Time
+	occurredOn time.Time
 }
 
-func (e RecipeCreated) OcurredOn() time.Time {
-	return e.ocurredOn
+func (e RecipeCreated) OccurredOn() time.Time {
+	return e.occurredOn
 }
 
 type RecipeRated struct {
-	ocurredOn time.Time
+	occurredOn time.Time
 	Rating    int
 }
 
-func (e RecipeRated) OcurredOn() time.Time {
-	return e.ocurredOn
+func (e RecipeRated) OccurredOn() time.Time {
+	return e.occurredOn
 }
 
 type Recipe struct {
