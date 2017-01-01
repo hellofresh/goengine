@@ -3,7 +3,7 @@ package goengine
 import "time"
 
 type DomainEvent interface {
-	OcurredOn() time.Time
+	OccurredOn() time.Time
 }
 
 type DomainMessage struct {
