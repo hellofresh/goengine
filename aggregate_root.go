@@ -55,6 +55,7 @@ func (r *AggregateRootBased) GetUncommittedEvents() []*DomainMessage {
 
 func (r *AggregateRootBased) Apply(event DomainEvent) {
 	t := reflection.TypeOf(event)
+	log.Debugf("source: %+v; MethodName: %+v; event: %+v", r.source, fmt.Sprintf("When%s", t.Name()), event)
 	reflection.CallMethod(r.source, fmt.Sprintf("When%s", t.Name()), event)
 	log.Debugf("Event %s applied", t.Name())
 }
