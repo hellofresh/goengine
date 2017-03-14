@@ -4,7 +4,8 @@ import (
 	log "github.com/Sirupsen/logrus"
 )
 
-// VersionedEventDispatchManager is responsible for coordinating receiving messages from event receivers and dispatching them to the event dispatcher.
+// VersionedEventDispatchManager is responsible for coordinating receiving messages
+// from event receivers and dispatching them to the event dispatcher.
 type VersionedEventDispatchManager struct {
 	versionedEventDispatcher *MapBasedVersionedEventDispatcher
 	typeRegistry             TypeRegistry
@@ -47,7 +48,8 @@ func (m *VersionedEventDispatchManager) Listen(stop <-chan bool, exclusive bool)
 	for {
 		// Wait on multiple channels using the select control flow.
 		select {
-		// Version event received channel receives a result with a channel to respond to, signifying successful processing of the message.
+		// Version event received channel receives a result with a channel to respond to,
+		// signifying successful processing of the message.
 		// This should eventually call an event handler. See NewVersionedEventDispatcher()
 		case event := <-receiveEventChannel:
 			log.Debugf("EventDispatchManager.DispatchEvent: %s", event.Event)
