@@ -5,8 +5,8 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/hellofresh/goengine"
-	"github.com/hellofresh/goengine/inmemory"
 	"github.com/hellofresh/goengine/mongodb"
+	"github.com/hellofresh/goengine/rabbit"
 
 	"gopkg.in/mgo.v2"
 )
@@ -32,16 +32,13 @@ func main() {
 	registry.RegisterType(&RecipeRated{})
 
 	log.Info("Setting up the event bus")
-	bus := inmemory.NewInMemoryEventBus()
+	// bus := inmemory.NewInMemoryEventBus()
+	bus := rabbit.NewEventBus(os.Getenv("BROKER_DSN"), "events", "events")
 
 	log.Info("Setting up the event store")
 	es := mongodb.NewEventStore(session, registry)
 
-	log.Info("Creating a recipe")
-	repository := goengine.NewPublisherRepository(es, bus)
-
 	eventDispatcher := goengine.NewVersionedEventDispatchManager(bus, registry)
-
 	eventDispatcher.RegisterEventHandler(&RecipeCreated{}, func(event *goengine.DomainMessage) error {
 		log.Debug("Event received")
 		return nil
@@ -53,17 +50,16 @@ func main() {
 	log.Info("Creating a recipe")
 	aggregateRoot := CreateScenario(streamName)
 
+	repository := goengine.NewPublisherRepository(es, bus)
 	repository.Save(aggregateRoot, streamName)
 
-	history, err := NewRecipeFromHisotry(aggregateRoot.ID, streamName, repository)
+	_, err = NewRecipeFromHisotry(aggregateRoot.ID, streamName, repository)
 	if err != nil {
 		log.Panic(err)
 	}
 
 	log.Println("Stop channel")
 	stopChannel <- true
-
-	log.Info(history)
 }
 
 func CreateScenario(streamName goengine.StreamName) *Recipe {
