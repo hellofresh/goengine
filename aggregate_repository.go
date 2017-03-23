@@ -1,6 +1,7 @@
 package goengine
 
 import (
+	"fmt"
 	log "github.com/Sirupsen/logrus"
 )
 
@@ -57,6 +58,10 @@ func (r *PublisherRepository) Reconstitute(id string, source AggregateRoot, stre
 		return err
 	}
 	events := stream.Events
+
+	if len(events) == 0 {
+		return fmt.Errorf("No events found for id: %s", id)
+	}
 
 	for _, event := range events {
 		source.Apply(event.Payload)
