@@ -1,6 +1,7 @@
 package goengine
 
 import (
+	"fmt"
 	log "github.com/Sirupsen/logrus"
 )
 
