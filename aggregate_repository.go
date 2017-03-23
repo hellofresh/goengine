@@ -58,6 +58,10 @@ func (r *PublisherRepository) Reconstitute(id string, source AggregateRoot, stre
 	}
 	events := stream.Events
 
+	if len(events) == 0 {
+		return errors.New("No events found for this id")
+	}
+
 	for _, event := range events {
 		source.Apply(event.Payload)
 	}
