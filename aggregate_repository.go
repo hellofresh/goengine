@@ -59,7 +59,7 @@ func (r *PublisherRepository) Reconstitute(id string, source AggregateRoot, stre
 	events := stream.Events
 
 	if len(events) == 0 {
-		return errors.New("No events found for this id")
+		return fmt.Errorf("No events found for id: %s", id)
 	}
 
 	for _, event := range events {
