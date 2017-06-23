@@ -26,8 +26,8 @@ type InMemoryTypeRegistry struct {
 	types map[string]reflect.Type
 }
 
-// NewInMemmoryTypeRegistry creates a new in memory registry
-func NewInMemmoryTypeRegistry() *InMemoryTypeRegistry {
+// NewInMemoryTypeRegistry creates a new in memory registry
+func NewInMemoryTypeRegistry() *InMemoryTypeRegistry {
 	return &InMemoryTypeRegistry{make(map[string]reflect.Type)}
 }
 

@@ -33,7 +33,7 @@ go get github.com/hellofresh/goengine
 
 Here you can check a small tutorial of how to use this component in an orders scenario.
 
-[Tutorial] (docs/how_to.md)
+[Tutorial](docs/how_to.md)
 
 ## Contributing
 

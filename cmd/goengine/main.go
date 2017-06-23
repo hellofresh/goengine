@@ -26,7 +26,7 @@ func main() {
 	session.SetMode(mgo.Monotonic, true)
 
 	log.Info("Setting up the registry")
-	registry := goengine.NewInMemmoryTypeRegistry()
+	registry := goengine.NewInMemoryTypeRegistry()
 	registry.RegisterType(&RecipeCreated{})
 	registry.RegisterType(&RecipeRated{})
 
