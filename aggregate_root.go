@@ -3,9 +3,9 @@ package goengine
 import (
 	"fmt"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/hellofresh/goengine/reflection"
 	"github.com/pborman/uuid"
+	log "github.com/sirupsen/logrus"
 )
 
 type AggregateRoot interface {
@@ -17,10 +17,10 @@ type AggregateRoot interface {
 }
 
 type AggregateRootBased struct {
-	ID               string
-	version          int
-	source           interface{}
-	uncommitedEvents []*DomainMessage
+	ID                string
+	version           int
+	source            interface{}
+	uncommittedEvents []*DomainMessage
 }
 
 // NewAggregateRootBased constructor
@@ -46,18 +46,21 @@ func (r *AggregateRootBased) SetVersion(version int) {
 }
 
 func (r *AggregateRootBased) GetUncommittedEvents() []*DomainMessage {
-	stream := r.uncommitedEvents
-	r.uncommitedEvents = nil
-	log.Debugf("%d Uncommited events cleaned", len(stream))
+	stream := r.uncommittedEvents
+	r.uncommittedEvents = nil
+	log.WithField("count", len(stream)).Debug("Uncommitted events cleaned")
 
 	return stream
 }
 
 func (r *AggregateRootBased) Apply(event DomainEvent) {
 	t := reflection.TypeOf(event)
-	log.Debugf("source: %+v; MethodName: %+v; event: %+v", r.source, fmt.Sprintf("When%s", t.Name()), event)
-	reflection.CallMethod(r.source, fmt.Sprintf("When%s", t.Name()), event)
-	log.Debugf("Event %s applied", t.Name())
+	methodName := fmt.Sprintf("When%s", t.Name())
+
+	entry := log.WithFields(log.Fields{"source": fmt.Sprintf("%+v", r.source), "method": methodName, "event": fmt.Sprintf("%+v", event)})
+	entry.Debug("Applying event")
+	reflection.CallMethod(r.source, methodName, event)
+	entry.Debug("Event applied")
 }
 
 func (r *AggregateRootBased) RecordThat(event DomainEvent) {
@@ -68,6 +71,6 @@ func (r *AggregateRootBased) RecordThat(event DomainEvent) {
 
 func (r *AggregateRootBased) Record(event DomainEvent) {
 	message := RecordNow(r.ID, r.version, event)
-	r.uncommitedEvents = append(r.uncommitedEvents, message)
+	r.uncommittedEvents = append(r.uncommittedEvents, message)
 	log.Debug("Event recorded")
 }

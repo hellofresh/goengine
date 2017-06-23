@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/hellofresh/goengine"
 	"github.com/hellofresh/goengine/reflection"
+	log "github.com/sirupsen/logrus"
 	"github.com/streadway/amqp"
 )
 
@@ -136,7 +136,7 @@ func (bus *EventBus) ReceiveEvents(options goengine.VersionedEventReceiverOption
 								conn, c, events, err = connR, cR, eventsR, errR
 							}
 
-							log.Debug(err)
+							log.WithError(err).Debug("Failed to reconnect to RabbitMQ")
 
 							return errR
 						}, 5)

@@ -1,7 +1,7 @@
 package goengine
 
 import (
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 )
 
 // VersionedEventDispatchManager is responsible for coordinating receiving messages
@@ -52,22 +52,25 @@ func (m *VersionedEventDispatchManager) Listen(stop <-chan bool, exclusive bool)
 		// signifying successful processing of the message.
 		// This should eventually call an event handler. See NewVersionedEventDispatcher()
 		case event := <-receiveEventChannel:
-			log.Debugf("EventDispatchManager.DispatchEvent: %s", event.Event)
+			entry := log.WithField("event", event.Event)
+			entry.Debugf("EventDispatchManager.DispatchEvent")
 			if err := m.versionedEventDispatcher.DispatchEvent(event.Event); err != nil {
-				log.Println("Error dispatching event: ", err)
+				entry.WithError(err).Error("Error dispatching event")
 			}
 
 			event.ProcessedSuccessfully <- true
-			log.Debug("EventDispatchManager.DispatchSuccessful")
+			entry.Debug("EventDispatchManager.DispatchSuccessful")
+
 		case <-stop:
 			log.Debug("EventDispatchManager.Stopping")
 			closeSignal := make(chan error)
 			closeChannel <- closeSignal
-			defer log.Debug("EventDispatchManager.Stopped")
+			log.Debug("EventDispatchManager.Stopped")
 			return <-closeSignal
-		// Receiving on this channel signifys an error has occured worker processor side
+
+		// Receiving on this channel signifys an error has occurred worker processor side
 		case err := <-errorChannel:
-			log.Debugf("EventDispatchManager.ErrorReceived: %s", err)
+			log.WithError(err).Debugf("EventDispatchManager.ErrorReceived")
 			return err
 		}
 	}
