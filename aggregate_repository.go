@@ -2,7 +2,8 @@ package goengine
 
 import (
 	"fmt"
-	log "github.com/Sirupsen/logrus"
+
+	log "github.com/sirupsen/logrus"
 )
 
 type AggregateRepository interface {
@@ -21,7 +22,7 @@ func NewPublisherRepository(eventStore EventStore, eventBus VersionedEventPublis
 }
 
 func (r *PublisherRepository) Load(id string, streamName StreamName) (*EventStream, error) {
-	log.Debugf("Loading events from %s stream for aggregate %s", streamName, id)
+	log.WithFields(log.Fields{"stream": streamName, "id": id}).Debug("Loading events from stream for aggregate")
 	stream, err := r.EventStore.GetEventsFor(streamName, id)
 	if nil != err {
 		return nil, err
@@ -33,14 +34,14 @@ func (r *PublisherRepository) Load(id string, streamName StreamName) (*EventStre
 func (r *PublisherRepository) Save(aggregateRoot AggregateRoot, streamName StreamName) error {
 	events := aggregateRoot.GetUncommittedEvents()
 	eventStream := NewEventStream(streamName, events)
-	log.Debugf("Saving %d events to %s stream", len(events), streamName)
+	log.WithFields(log.Fields{"count": len(events), "stream": streamName}).Debug("Saving events to stream")
 	err := r.EventStore.Append(eventStream)
 	if nil != err {
 		return err
 	}
 
 	if nil == r.EventBus {
-		log.Debug("Event bus not detected, skiping publishing events")
+		log.Debug("Event bus not detected, skipping publishing events")
 		return nil
 	}
 
@@ -52,7 +53,7 @@ func (r *PublisherRepository) Save(aggregateRoot AggregateRoot, streamName Strea
 }
 
 func (r *PublisherRepository) Reconstitute(id string, source AggregateRoot, streamName StreamName) error {
-	log.Debugf("Reconstituting aggregate %s from %s stream", id, streamName)
+	log.WithFields(log.Fields{"stream": streamName, "id": id}).Debug("Reconstituting aggregate from stream")
 	stream, err := r.Load(id, streamName)
 	if nil != err {
 		return err
@@ -68,6 +69,6 @@ func (r *PublisherRepository) Reconstitute(id string, source AggregateRoot, stre
 	}
 
 	source.SetVersion(events[len(events)-1].Version)
-	log.Debugf("Aggregate %s reconstituted", id)
+	log.WithField("id", id).Debug("Aggregate reconstituted")
 	return nil
 }

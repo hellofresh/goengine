@@ -3,11 +3,10 @@ package main
 import (
 	"os"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/hellofresh/goengine"
 	"github.com/hellofresh/goengine/mongodb"
 	"github.com/hellofresh/goengine/rabbit"
-
+	log "github.com/sirupsen/logrus"
 	"gopkg.in/mgo.v2"
 )
 
@@ -16,7 +15,7 @@ func main() {
 	var streamName goengine.StreamName = "test"
 
 	mongoDSN := os.Getenv("STORAGE_DSN")
-	log.Infof("Connecting to the database %s", mongoDSN)
+	log.WithField("dsn", mongoDSN).Debug("Connecting to the database")
 	session, err := mgo.Dial(mongoDSN)
 	if err != nil {
 		log.Panic(err)
