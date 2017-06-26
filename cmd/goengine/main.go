@@ -6,47 +6,47 @@ import (
 	"github.com/hellofresh/goengine"
 	"github.com/hellofresh/goengine/mongodb"
 	"github.com/hellofresh/goengine/rabbit"
-	log "github.com/sirupsen/logrus"
 	"gopkg.in/mgo.v2"
 )
 
 func main() {
-	log.SetLevel(log.DebugLevel)
 	var streamName goengine.StreamName = "test"
 
 	mongoDSN := os.Getenv("STORAGE_DSN")
-	log.WithField("dsn", mongoDSN).Debug("Connecting to the database")
+	goengine.Log("Connecting to the database", map[string]interface{}{"dsn": mongoDSN}, nil)
 	session, err := mgo.Dial(mongoDSN)
 	if err != nil {
-		log.Panic(err)
+		goengine.Log("Failed to connect to Mongo", nil, err)
+		panic(err)
 	}
 	defer session.Close()
 
 	// Optional. Switch the session to a monotonic behavior.
 	session.SetMode(mgo.Monotonic, true)
 
-	log.Info("Setting up the registry")
+	goengine.Log("Setting up the registry", nil, nil)
 	registry := goengine.NewInMemoryTypeRegistry()
 	registry.RegisterType(&RecipeCreated{})
 	registry.RegisterType(&RecipeRated{})
 
-	log.Info("Setting up the event bus")
 	// bus := inmemory.NewInMemoryEventBus()
-	bus := rabbit.NewEventBus(os.Getenv("BROKER_DSN"), "events", "events")
+	brokerDSN := os.Getenv("BROKER_DSN")
+	goengine.Log("Setting up the event bus", map[string]interface{}{"dsn": brokerDSN}, nil)
+	bus := rabbit.NewEventBus(brokerDSN, "events", "events")
 
-	log.Info("Setting up the event store")
+	goengine.Log("Setting up the event store", nil, nil)
 	es := mongodb.NewEventStore(session, registry)
 
 	eventDispatcher := goengine.NewVersionedEventDispatchManager(bus, registry)
 	eventDispatcher.RegisterEventHandler(&RecipeCreated{}, func(event *goengine.DomainMessage) error {
-		log.Debug("Event received")
+		goengine.Log("Event received", nil, nil)
 		return nil
 	})
 
 	stopChannel := make(chan bool)
 	go eventDispatcher.Listen(stopChannel, false)
 
-	log.Info("Creating a recipe")
+	goengine.Log("Creating a recipe", nil, nil)
 	aggregateRoot := CreateScenario(streamName)
 
 	repository := goengine.NewPublisherRepository(es, bus)
@@ -54,10 +54,11 @@ func main() {
 
 	_, err = NewRecipeFromHisotry(aggregateRoot.ID, streamName, repository)
 	if err != nil {
-		log.Panic(err)
+		goengine.Log("Failed to connect to Mongo", nil, err)
+		panic(err)
 	}
 
-	log.Println("Stop channel")
+	goengine.Log("Stopping channel", nil, err)
 	stopChannel <- true
 }
 

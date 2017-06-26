@@ -2,8 +2,6 @@ package goengine
 
 import (
 	"fmt"
-
-	log "github.com/sirupsen/logrus"
 )
 
 type AggregateRepository interface {
@@ -22,7 +20,7 @@ func NewPublisherRepository(eventStore EventStore, eventBus VersionedEventPublis
 }
 
 func (r *PublisherRepository) Load(id string, streamName StreamName) (*EventStream, error) {
-	log.WithFields(log.Fields{"stream": streamName, "id": id}).Debug("Loading events from stream for aggregate")
+	Log("Loading events from stream for aggregate", map[string]interface{}{"stream": streamName, "id": id}, nil)
 	stream, err := r.EventStore.GetEventsFor(streamName, id)
 	if nil != err {
 		return nil, err
@@ -34,14 +32,15 @@ func (r *PublisherRepository) Load(id string, streamName StreamName) (*EventStre
 func (r *PublisherRepository) Save(aggregateRoot AggregateRoot, streamName StreamName) error {
 	events := aggregateRoot.GetUncommittedEvents()
 	eventStream := NewEventStream(streamName, events)
-	log.WithFields(log.Fields{"count": len(events), "stream": streamName}).Debug("Saving events to stream")
+	Log("Saving events to stream", map[string]interface{}{"count": len(events), "stream": streamName}, nil)
+
 	err := r.EventStore.Append(eventStream)
 	if nil != err {
 		return err
 	}
 
 	if nil == r.EventBus {
-		log.Debug("Event bus not detected, skipping publishing events")
+		Log("Event bus not detected, skipping publishing events", nil, nil)
 		return nil
 	}
 
@@ -53,7 +52,8 @@ func (r *PublisherRepository) Save(aggregateRoot AggregateRoot, streamName Strea
 }
 
 func (r *PublisherRepository) Reconstitute(id string, source AggregateRoot, streamName StreamName) error {
-	log.WithFields(log.Fields{"stream": streamName, "id": id}).Debug("Reconstituting aggregate from stream")
+	Log("Reconstituting aggregate from stream", map[string]interface{}{"stream": streamName, "id": id}, nil)
+
 	stream, err := r.Load(id, streamName)
 	if nil != err {
 		return err
@@ -69,6 +69,6 @@ func (r *PublisherRepository) Reconstitute(id string, source AggregateRoot, stre
 	}
 
 	source.SetVersion(events[len(events)-1].Version)
-	log.WithField("id", id).Debug("Aggregate reconstituted")
+	Log("Aggregate reconstituted", map[string]interface{}{"id": id}, nil)
 	return nil
 }

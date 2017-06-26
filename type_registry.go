@@ -5,7 +5,6 @@ import (
 
 	"github.com/hellofresh/goengine/errors"
 	"github.com/hellofresh/goengine/reflection"
-	log "github.com/sirupsen/logrus"
 )
 
 // TypeRegistry is a registry for go types
@@ -35,16 +34,18 @@ func NewInMemoryTypeRegistry() *InMemoryTypeRegistry {
 func (r *InMemoryTypeRegistry) RegisterType(i interface{}) {
 	rawType := reflection.TypeOf(i)
 	r.types[rawType.String()] = rawType
-	log.WithField("type", rawType.String()).Debug("Type was registered")
+	Log("Type was registered", map[string]interface{}{"type": rawType.String()}, nil)
 }
 
 func (r *InMemoryTypeRegistry) RegisterAggregate(aggregate AggregateRoot, events ...interface{}) {
 	r.RegisterType(aggregate)
-	entry := log.WithField("aggregate", aggregate.GetID())
-	entry.Debug("Aggregate was registered")
+
+	fields := map[string]interface{}{"aggregate": aggregate.GetID()}
+	Log("Aggregate was registered", fields, nil)
 
 	r.RegisterEvents(events)
-	entry.WithField("count", len(events)).Debug("Events were registered for aggregate")
+	fields["count"] = len(events)
+	Log("Events were registered for aggregate", fields, nil)
 }
 
 func (r *InMemoryTypeRegistry) RegisterEvents(events ...interface{}) {
@@ -67,6 +68,6 @@ func (r *InMemoryTypeRegistry) Get(name string) (interface{}, error) {
 		return reflect.New(typ).Interface(), nil
 	}
 
-	log.WithField("type", name).Debug("Type not found")
+	Log("Type not found", map[string]interface{}{"type": name}, nil)
 	return nil, errors.ErrorTypeNotFound
 }

@@ -8,7 +8,6 @@ import (
 
 	"github.com/hellofresh/goengine"
 	"github.com/hellofresh/goengine/reflection"
-	log "github.com/sirupsen/logrus"
 	"github.com/streadway/amqp"
 )
 
@@ -115,20 +114,20 @@ func (bus *EventBus) ReceiveEvents(options goengine.VersionedEventReceiverOption
 					} else {
 						domainEvent, err := bus.fromRawEvent(options.TypeRegistry, &raw)
 						if nil != err {
-							log.Debugf("EventBus.Cannot find event type %s", raw.Type)
+							goengine.Log("EventBus.Cannot find event type", map[string]interface{}{"type": raw.Type}, nil)
 							options.Error <- errors.New("Cannot find event type " + raw.Type)
 							message.Ack(true)
 						} else {
 							ackCh := make(chan bool)
 
-							log.Debug("EventBus.Dispatching Message")
+							goengine.Log("EventBus.Dispatching Message", nil, nil)
 							options.ReceiveEvent <- goengine.VersionedEventTransactedAccept{Event: domainEvent, ProcessedSuccessfully: ackCh}
 							result := <-ackCh
 							message.Ack(result)
 						}
 					}
 				} else {
-					log.Debug("RabbitMQ: Could have been disconnected")
+					goengine.Log("RabbitMQ: Could have been disconnected", nil, nil)
 					for {
 						retryError := exponential(func() error {
 							connR, cR, eventsR, errR := bus.consumeEventsQueue(options.Exclusive)
@@ -136,8 +135,7 @@ func (bus *EventBus) ReceiveEvents(options goengine.VersionedEventReceiverOption
 								conn, c, events, err = connR, cR, eventsR, errR
 							}
 
-							log.WithError(err).Debug("Failed to reconnect to RabbitMQ")
-
+							goengine.Log("Failed to reconnect to RabbitMQ", nil, err)
 							return errR
 						}, 5)
 

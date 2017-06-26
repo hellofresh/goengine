@@ -1,9 +1,5 @@
 package goengine
 
-import (
-	log "github.com/sirupsen/logrus"
-)
-
 // VersionedEventDispatchManager is responsible for coordinating receiving messages
 // from event receivers and dispatching them to the event dispatcher.
 type VersionedEventDispatchManager struct {
@@ -52,25 +48,25 @@ func (m *VersionedEventDispatchManager) Listen(stop <-chan bool, exclusive bool)
 		// signifying successful processing of the message.
 		// This should eventually call an event handler. See NewVersionedEventDispatcher()
 		case event := <-receiveEventChannel:
-			entry := log.WithField("event", event.Event)
-			entry.Debugf("EventDispatchManager.DispatchEvent")
+			fields := map[string]interface{}{"event": event.Event}
+			Log("EventDispatchManager.DispatchEvent", fields, nil)
 			if err := m.versionedEventDispatcher.DispatchEvent(event.Event); err != nil {
-				entry.WithError(err).Error("Error dispatching event")
+				Log("Error dispatching event", fields, err)
 			}
 
 			event.ProcessedSuccessfully <- true
-			entry.Debug("EventDispatchManager.DispatchSuccessful")
+			Log("EventDispatchManager.DispatchSuccessful", fields, nil)
 
 		case <-stop:
-			log.Debug("EventDispatchManager.Stopping")
+			Log("EventDispatchManager.Stopping", nil, nil)
 			closeSignal := make(chan error)
 			closeChannel <- closeSignal
-			log.Debug("EventDispatchManager.Stopped")
+			Log("EventDispatchManager.Stopped", nil, nil)
 			return <-closeSignal
 
 		// Receiving on this channel signifys an error has occurred worker processor side
 		case err := <-errorChannel:
-			log.WithError(err).Debugf("EventDispatchManager.ErrorReceived")
+			Log("EventDispatchManager.ErrorReceived", nil, err)
 			return err
 		}
 	}
