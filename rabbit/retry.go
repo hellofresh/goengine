@@ -4,7 +4,7 @@ import (
 	"math"
 	"time"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/hellofresh/goengine"
 )
 
 type function func() error
@@ -26,7 +26,7 @@ func exponential(operation function, maxRetries int) error {
 
 		sleepTime := time.Duration(sleepMs) * time.Millisecond
 		time.Sleep(sleepTime)
-		log.WithFields(log.Fields{"attempt": i, "sleep": sleepTime.String()}).Debug("Retry exponential")
+		goengine.Log("Retry exponential", map[string]interface{}{"attempt": i, "sleep": sleepTime.String()}, err)
 	}
 
 	return err

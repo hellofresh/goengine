@@ -26,7 +26,7 @@ Engine is divided in a few small independent components.
 ## Install
 
 ```sh
-go get github.com/hellofresh/goengine
+go get -u github.com/hellofresh/goengine
 ```
 
 ## Usage

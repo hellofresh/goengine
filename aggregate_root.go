@@ -5,7 +5,6 @@ import (
 
 	"github.com/hellofresh/goengine/reflection"
 	"github.com/pborman/uuid"
-	log "github.com/sirupsen/logrus"
 )
 
 type AggregateRoot interface {
@@ -48,7 +47,7 @@ func (r *AggregateRootBased) SetVersion(version int) {
 func (r *AggregateRootBased) GetUncommittedEvents() []*DomainMessage {
 	stream := r.uncommittedEvents
 	r.uncommittedEvents = nil
-	log.WithField("count", len(stream)).Debug("Uncommitted events cleaned")
+	Log("Uncommitted events cleaned", map[string]interface{}{"count": len(stream)}, nil)
 
 	return stream
 }
@@ -57,10 +56,10 @@ func (r *AggregateRootBased) Apply(event DomainEvent) {
 	t := reflection.TypeOf(event)
 	methodName := fmt.Sprintf("When%s", t.Name())
 
-	entry := log.WithFields(log.Fields{"source": fmt.Sprintf("%+v", r.source), "method": methodName, "event": fmt.Sprintf("%+v", event)})
-	entry.Debug("Applying event")
+	fields := map[string]interface{}{"source": fmt.Sprintf("%+v", r.source), "method": methodName, "event": fmt.Sprintf("%+v", event)}
+	Log("Applying event", fields, nil)
 	reflection.CallMethod(r.source, methodName, event)
-	entry.Debug("Event applied")
+	Log("Event applied", fields, nil)
 }
 
 func (r *AggregateRootBased) RecordThat(event DomainEvent) {
@@ -72,5 +71,5 @@ func (r *AggregateRootBased) RecordThat(event DomainEvent) {
 func (r *AggregateRootBased) Record(event DomainEvent) {
 	message := RecordNow(r.ID, r.version, event)
 	r.uncommittedEvents = append(r.uncommittedEvents, message)
-	log.Debug("Event recorded")
+	Log("Event recorded", nil, nil)
 }
