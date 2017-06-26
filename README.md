@@ -35,6 +35,42 @@ Here you can check a small tutorial of how to use this component in an orders sc
 
 [Tutorial](docs/how_to.md)
 
+## Logging
+
+GoEngine uses default `log` package for debug logging. If you want to use your own logger - `goengine.SetLogHandler()`
+is available. Here is how you can use, e.g. `github.com/sirupsen/logrus` for logging:
+
+```go
+package main
+
+import (
+    "github.com/hellofresh/goengine"
+    log "github.com/sirupsen/logrus"
+)
+
+func main() {
+    goengine.SetLogHandler(func(msg string, fields map[string]interface{}, err error) {
+        if nil == fields && nil == err {
+            log.Debug(msg)
+        } else {
+            var entry *log.Entry
+            if fields != nil {
+                entry = log.WithFields(log.Fields(fields))
+                if nil != err {
+                    entry = entry.WithError(err)
+                }
+            } else {
+                entry = log.WithError(err)
+            }
+
+            entry.Debug(msg)
+        }
+    })
+
+    // do your application stuff
+}
+```
+
 ## Contributing
 
 Please see [CONTRIBUTING](CONTRIBUTING.md) for details.
