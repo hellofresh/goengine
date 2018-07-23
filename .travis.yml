@@ -4,14 +4,13 @@ services:
   - docker
 
 go:
-  - 1.6
-  - 1.7
-  - 1.8
+  - "1.10.x"
   - master
 
-install:
-  - go get -v -d
-  - go get -u github.com/onsi/ginkgo/ginkgo
-  - go get -u github.com/onsi/gomega
+before_install:
+  - curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
 
-script: ginkgo -r
+install:
+  - dep ensure
+
+script: go test -race -v ./...
