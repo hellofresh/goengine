@@ -29,6 +29,18 @@
   name = "github.com/google/uuid"
   version = "0.2.0"
 
+[[constraint]]
+  name = "github.com/onsi/ginkgo"
+  version = "v1.6.0"
+
+[[constraint]]
+  name = "github.com/onsi/gomega"
+  version = "v1.4.1"
+
+[[override]]
+  name = "gopkg.in/fsnotify.v1"
+  source = "https://github.com/fsnotify/fsnotify.git"
+
 [prune]
   go-tests = true
   unused-packages = true
