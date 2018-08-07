@@ -30,7 +30,7 @@ func TestRecordChange(t *testing.T) {
 
 		root := &mocks.AggregateRoot{}
 		root.On("AggregateID").Return(rootID)
-		root.On("Apply", mock.Anything).Once()
+		root.On("Apply", mock.AnythingOfType("*aggregate.Changed"))
 
 		// Record the change
 		err := aggregate.RecordChange(root, domainEvent)
@@ -40,18 +40,9 @@ func TestRecordChange(t *testing.T) {
 		asserts.Empty(err, "No error should be returned")
 
 		root.AssertExpectations(t)
-		for _, call := range root.Calls {
-			if call.Method != "Apply" {
-				continue
-			}
-
-			asserts.IsType(
-				(*aggregate.Changed)(nil),
-				call.Arguments[0],
-				"Expected Apply to be called with Changed reference",
-			)
-
-			msg := call.Arguments[0].(*aggregate.Changed)
+		calls := mocks.FetchFuncCalls(root.Calls, "Apply")
+		if asserts.Len(calls, 1) {
+			msg := calls[0].Arguments[0].(*aggregate.Changed)
 			asserts.Equal(rootID, msg.AggregateID())
 			asserts.Equal(domainEvent, msg.Payload())
 			asserts.Equal(uint(1), msg.Version())
