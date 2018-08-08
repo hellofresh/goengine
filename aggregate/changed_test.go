@@ -20,7 +20,7 @@ func TestReconstituteChange(t *testing.T) {
 		}{order: 1}
 		msgMeta := metadata.New()
 		msgMeta = metadata.WithValue(msgMeta, "auth", "none")
-		createdOn := aggregate.CurrentTime()
+		createdOn := time.Now().UTC()
 		version := uint(10)
 
 		// Reconstitute Change message
@@ -49,7 +49,7 @@ func TestReconstituteChange(t *testing.T) {
 		}{order: 1}
 		msgMeta := metadata.New()
 		msgMeta = metadata.WithValue(msgMeta, "auth", "none")
-		createdOn := aggregate.CurrentTime()
+		createdOn := time.Now().UTC()
 		version := uint(10)
 
 		// Define the test cases
