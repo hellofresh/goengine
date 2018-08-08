@@ -1,17 +1,13 @@
 package aggregate
 
-import (
-	"github.com/google/uuid"
-)
-
-var (
-	// GenerateID creates a new random UUID or panics
-	GenerateID = func() ID {
-		return ID(uuid.New().String())
-	}
-)
+import "github.com/google/uuid"
 
 type (
 	// ID an UUID for a aggregate.Root instance
 	ID string
 )
+
+// GenerateID creates a new random UUID or panics
+func GenerateID() ID {
+	return ID(uuid.New().String())
+}
