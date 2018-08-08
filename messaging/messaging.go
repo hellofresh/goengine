@@ -31,7 +31,10 @@ type (
 	}
 )
 
-// GenerateUUID creates a new random UUID or panics
 func GenerateUUID() UUID {
 	return UUID(uuid.New())
+}
+
+func IsUUIDEmpty(uuid UUID) bool {
+	return uuid == UUID{}
 }

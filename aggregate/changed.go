@@ -41,7 +41,7 @@ func ReconstituteChange(
 	if aggregateID == "" {
 		return nil, ErrMissingAggregateID
 	}
-	if uuid == messaging.UUID([16]byte{}) {
+	if messaging.IsUUIDEmpty(uuid) {
 		return nil, ErrMissingChangeUUID
 	}
 	if payload == nil {
