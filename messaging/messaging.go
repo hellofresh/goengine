@@ -35,7 +35,7 @@ type (
 		// Metadata return the message metadata
 		Metadata() Metadata
 
-		// WithAddedMetadata Returns new instance of the message with key and value added to metadata
-		WithAddedMetadata(key string, value interface{}) Message
+		// WithMetadata Returns new instance of the message with key and value added to metadata
+		WithMetadata(key string, value interface{}) Message
 	}
 )
