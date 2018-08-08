@@ -6,13 +6,6 @@ import (
 	"github.com/google/uuid"
 )
 
-var (
-	// GenerateUUID creates a new random UUID or panics
-	GenerateUUID = func() UUID {
-		return UUID(uuid.New())
-	}
-)
-
 type (
 	// UUID is a 128 bit (16 byte) Universal Unique IDentifier as defined in RFC4122
 	UUID [16]byte
@@ -39,3 +32,8 @@ type (
 		WithMetadata(key string, value interface{}) Message
 	}
 )
+
+// GenerateUUID creates a new random UUID or panics
+func GenerateUUID() UUID {
+	return UUID(uuid.New())
+}
