@@ -22,8 +22,6 @@ func TestGenerateID(t *testing.T) {
 }
 
 func TestRecordChange(t *testing.T) {
-	t.Parallel()
-
 	t.Run("A change is recorded", func(t *testing.T) {
 		rootID := aggregate.GenerateID()
 		domainEvent := struct{}{}
@@ -50,36 +48,40 @@ func TestRecordChange(t *testing.T) {
 	})
 
 	t.Run("Check required arguments", func(t *testing.T) {
-		t.Parallel()
+		errorTestCases := []struct {
+			title         string
+			expectedError error
+			aggregateID   aggregate.ID
+			domainEvent   interface{}
+		}{
+			{
+				title:         "aggregateID is required",
+				expectedError: aggregate.ErrMissingAggregateID,
+				aggregateID:   aggregate.ID(""),
+				domainEvent:   struct{}{},
+			},
+			{
+				title:         "message payload is required",
+				expectedError: aggregate.ErrInvalidChangePayload,
+				aggregateID:   aggregate.GenerateID(),
+				domainEvent:   nil,
+			},
+		}
 
-		t.Run("aggregateID is required", func(t *testing.T) {
-			root := &mocks.AggregateRoot{}
-			root.On("AggregateID").Return(aggregate.ID(""))
-			root.On("Apply", mock.Anything)
+		for _, testCase := range errorTestCases {
+			t.Run(testCase.title, func(t *testing.T) {
+				root := &mocks.AggregateRoot{}
+				root.On("AggregateID").Return(testCase.aggregateID)
+				root.On("Apply", mock.AnythingOfType("*aggregate.Changed"))
 
-			domainEvent := struct{}{}
+				// Record the change
+				err := aggregate.RecordChange(root, testCase.domainEvent)
 
-			// Record the change
-			err := aggregate.RecordChange(root, domainEvent)
-
-			// Check error
-			asserts := assert.New(t)
-			asserts.Equal(aggregate.ErrMissingAggregateID, err)
-			root.AssertNotCalled(t, "Apply", mock.Anything)
-		})
-
-		t.Run("message payload is required", func(t *testing.T) {
-			root := &mocks.AggregateRoot{}
-			root.On("AggregateID").Return(aggregate.GenerateID())
-			root.On("Apply", mock.Anything)
-
-			// Record the change
-			err := aggregate.RecordChange(root, nil)
-
-			// Check error
-			asserts := assert.New(t)
-			asserts.Equal(aggregate.ErrInvalidChangePayload, err)
-			root.AssertNotCalled(t, "Apply", mock.Anything)
-		})
+				// Check error
+				asserts := assert.New(t)
+				asserts.Equal(testCase.expectedError, err)
+				root.AssertNotCalled(t, "Apply", mock.Anything)
+			})
+		}
 	})
 }
