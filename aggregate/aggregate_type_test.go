@@ -9,8 +9,6 @@ import (
 )
 
 func TestType(t *testing.T) {
-	t.Parallel()
-
 	mockInitiator := func() aggregate.Root {
 		return &mocks.AggregateRoot{}
 	}
@@ -26,30 +24,38 @@ func TestType(t *testing.T) {
 		}
 		asserts.NotEmpty(aggregateType, "A aggregate.Type should be returned")
 		asserts.Equal("mock", aggregateType.String(), "Expected name to be set")
+		asserts.True(
+			aggregateType.IsImplementedBy(&mocks.AggregateRoot{}),
+			"Expected the same aggregate type to be valid",
+		)
 
-		t.Run("IsImplementedBy", func(t *testing.T) {
-			asserts := assert.New(t)
-			asserts.True(
-				aggregateType.IsImplementedBy(&mocks.AggregateRoot{}),
-				"Expected the same aggregate type to be valid",
-			)
-			asserts.False(
-				aggregateType.IsImplementedBy(&mocks.AnotherAggregateRoot{}),
-				"Expected another aggregate to not be of this type",
-			)
-			asserts.False(
-				aggregateType.IsImplementedBy(mocks.AggregateRoot{}),
-				"Expected a reference to an aggregate",
-			)
-			asserts.False(
-				aggregateType.IsImplementedBy(nil),
-				"Expected nil to not be of this type",
-			)
-			asserts.False(
-				aggregateType.IsImplementedBy(&map[string]interface{}{}),
-				"Expected anything that is not a struct reference to not be of this type",
-			)
-		})
+		invalidImplementations := []struct {
+			title string
+			value interface{}
+		}{
+			{
+				title: "another aggregate is not of this type",
+				value: &mocks.AnotherAggregateRoot{},
+			},
+			{
+				title: "not a reference is not of this type",
+				value: mocks.AggregateRoot{},
+			},
+			{
+				title: "nil is not of this type",
+				value: nil,
+			},
+			{
+				title: "anything that is not a struct reference is not of this type",
+				value: &map[string]interface{}{},
+			},
+		}
+
+		for _, testCase := range invalidImplementations {
+			t.Run(testCase.title, func(t *testing.T) {
+				assert.False(t, aggregateType.IsImplementedBy(testCase.value))
+			})
+		}
 
 		t.Run("CreateInstance", func(t *testing.T) {
 			newInstance := aggregateType.CreateInstance()
@@ -64,34 +70,44 @@ func TestType(t *testing.T) {
 	})
 
 	t.Run("Check new required arguments", func(t *testing.T) {
-		t.Parallel()
+		errorTestCases := []struct {
+			title         string
+			expectedError error
+			name          string
+			initiator     aggregate.Initiator
+		}{
+			{
+				title:         "name is required",
+				expectedError: aggregate.ErrTypeNameRequired,
+				name:          "",
+				initiator:     mockInitiator,
+			},
+			{
+				title:         "initializer may not return nil",
+				expectedError: aggregate.ErrInitiatorMustReturnRoot,
+				name:          "init",
+				initiator: func() aggregate.Root {
+					return nil
+				},
+			},
+			{
+				title:         "initializer may not return a nil pointer",
+				expectedError: aggregate.ErrInitiatorMustReturnRoot,
+				name:          "init",
+				initiator: func() aggregate.Root {
+					return (*mocks.AggregateRoot)(nil)
+				},
+			},
+		}
 
-		t.Run("name is required", func(t *testing.T) {
-			aggregateType, err := aggregate.NewType("", mockInitiator)
+		for _, testCase := range errorTestCases {
+			t.Run(testCase.title, func(t *testing.T) {
+				aggregateType, err := aggregate.NewType(testCase.name, testCase.initiator)
 
-			asserts := assert.New(t)
-			asserts.Equal(aggregate.ErrTypeNameRequired, err, "Expect missing name error")
-			asserts.Empty(aggregateType, "No type should be returned")
-		})
-
-		t.Run("initializer may not return nil", func(t *testing.T) {
-			aggregateType, err := aggregate.NewType("init", func() aggregate.Root {
-				return nil
+				asserts := assert.New(t)
+				asserts.Equal(testCase.expectedError, err, "Expect error")
+				asserts.Nil(aggregateType, "No type should be returned")
 			})
-
-			asserts := assert.New(t)
-			asserts.Equal(aggregate.ErrInitiatorMustReturnRoot, err, "Expect invalid initializer")
-			asserts.Empty(aggregateType, "No type should be returned")
-		})
-
-		t.Run("initializer may not return a nil pointer", func(t *testing.T) {
-			aggregateType, err := aggregate.NewType("init", func() aggregate.Root {
-				return (*mocks.AggregateRoot)(nil)
-			})
-
-			asserts := assert.New(t)
-			asserts.Equal(aggregate.ErrInitiatorMustReturnRoot, err, "Expect invalid initializer")
-			asserts.Empty(aggregateType, "No type should be returned")
-		})
+		}
 	})
 }
