@@ -66,17 +66,14 @@ func (b *BankAccount) AggregateID() aggregate.ID {
 
 // Apply changes the state of the BankAccount based on the aggregate.Changed message
 func (b *BankAccount) Apply(change *aggregate.Changed) {
-	switch change.Payload().(type) {
+	switch event := change.Payload().(type) {
 	case AccountOpened:
-		event := change.Payload().(AccountOpened)
 		b.accountID = event.AccountID
 		break
 	case AccountCredited:
-		event := change.Payload().(AccountCredited)
 		b.balance += event.Amount
 		break
 	case AccountDebited:
-		event := change.Payload().(AccountDebited)
 		b.balance -= event.Amount
 		break
 	}
