@@ -2,6 +2,7 @@ package aggregate_test
 
 import (
 	"testing"
+	"time"
 
 	"github.com/hellofresh/goengine/aggregate"
 	"github.com/hellofresh/goengine/messaging"
@@ -10,8 +11,6 @@ import (
 )
 
 func TestReconstituteChange(t *testing.T) {
-	t.Parallel()
-
 	t.Run("It reconstitutes a Change message", func(t *testing.T) {
 		// Mock message data
 		id := aggregate.GenerateID()
@@ -42,8 +41,6 @@ func TestReconstituteChange(t *testing.T) {
 	})
 
 	t.Run("Check required arguments", func(t *testing.T) {
-		t.Parallel()
-
 		// Mock message data
 		id := aggregate.GenerateID()
 		messageID := messaging.GenerateUUID()
@@ -55,79 +52,76 @@ func TestReconstituteChange(t *testing.T) {
 		createdOn := aggregate.CurrentTime()
 		version := uint(10)
 
-		t.Run("aggregateID is required", func(t *testing.T) {
-			invalidID := aggregate.ID("")
+		// Define the test cases
+		errorCases := []struct {
+			title         string
+			aggregateID   aggregate.ID
+			uuid          messaging.UUID
+			payload       interface{}
+			metadata      metadata.Metadata
+			createdAt     time.Time
+			version       uint
+			expectedError error
+		}{
+			{
+				title:         "aggregateID is required",
+				expectedError: aggregate.ErrMissingAggregateID,
+				aggregateID:   aggregate.ID(""),
+				uuid:          messageID,
+				payload:       payload,
+				metadata:      msgMeta,
+				createdAt:     createdOn,
+				version:       version,
+			},
+			{
+				title:         "message UUID is required",
+				expectedError: aggregate.ErrMissingChangeUUID,
+				aggregateID:   id,
+				uuid:          messaging.UUID{},
+				payload:       payload,
+				metadata:      msgMeta,
+				createdAt:     createdOn,
+				version:       version,
+			},
+			{
+				title:         "message payload is required",
+				expectedError: aggregate.ErrInvalidChangePayload,
+				aggregateID:   id,
+				uuid:          messageID,
+				payload:       nil,
+				metadata:      msgMeta,
+				createdAt:     createdOn,
+				version:       version,
+			},
+			{
+				title:         "message version is required",
+				expectedError: aggregate.ErrInvalidChangeVersion,
+				aggregateID:   id,
+				uuid:          messageID,
+				payload:       payload,
+				metadata:      msgMeta,
+				createdAt:     createdOn,
+				version:       0,
+			},
+		}
 
-			// Reconstitute Change message
-			msg, err := aggregate.ReconstituteChange(
-				invalidID,
-				messageID,
-				payload,
-				msgMeta,
-				createdOn,
-				version,
-			)
+		for _, test := range errorCases {
+			t.Run(test.title, func(t *testing.T) {
+				// Reconstitute Change message
+				msg, err := aggregate.ReconstituteChange(
+					test.aggregateID,
+					test.uuid,
+					test.payload,
+					test.metadata,
+					test.createdAt,
+					test.version,
+				)
 
-			// Check error
-			asserts := assert.New(t)
-			asserts.Equal(aggregate.ErrMissingAggregateID, err, "Expected aggregate.ID error")
-			asserts.Empty(msg, "No message should be returned")
-		})
-
-		t.Run("message UUID is required", func(t *testing.T) {
-			invalidMessageID := messaging.UUID{}
-
-			// Reconstitute Change message
-			msg, err := aggregate.ReconstituteChange(
-				id,
-				invalidMessageID,
-				payload,
-				msgMeta,
-				createdOn,
-				version,
-			)
-
-			// Check error
-			asserts := assert.New(t)
-			asserts.Equal(aggregate.ErrMissingChangeUUID, err, "Expected messaging.ID error")
-			asserts.Empty(msg, "No message should be returned")
-		})
-
-		t.Run("message payload is required", func(t *testing.T) {
-			// Reconstitute Change message
-			msg, err := aggregate.ReconstituteChange(
-				id,
-				messageID,
-				nil,
-				msgMeta,
-				createdOn,
-				version,
-			)
-
-			// Check error
-			asserts := assert.New(t)
-			asserts.Equal(aggregate.ErrInvalidChangePayload, err, "Expected invalid payload error")
-			asserts.Empty(msg, "No message should be returned")
-		})
-
-		t.Run("message version is required", func(t *testing.T) {
-			// Mock message data
-			var invalidVersion uint
-
-			// Reconstitute Change message
-			msg, err := aggregate.ReconstituteChange(
-				id,
-				messageID,
-				payload,
-				msgMeta,
-				createdOn,
-				invalidVersion,
-			)
-
-			// Check error
-			asserts := assert.New(t)
-			asserts.Equal(aggregate.ErrInvalidChangeVersion, err, "Expected messaging version error")
-			asserts.Empty(msg, "No message should be returned")
-		})
+				// Check error
+				asserts := assert.New(t)
+				asserts.Equal(test.expectedError, err, "Expected error")
+				asserts.Empty(msg, "No message should be returned")
+			})
+		}
 	})
 }
