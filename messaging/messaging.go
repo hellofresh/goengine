@@ -4,14 +4,12 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/hellofresh/goengine/metadata"
 )
 
 type (
 	// UUID is a 128 bit (16 byte) Universal Unique IDentifier as defined in RFC4122
 	UUID [16]byte
-
-	// Metadata is a container of metadata information
-	Metadata map[string]interface{}
 
 	// Message is a interface describing a message.
 	// A message can be a command, domain event or some other type of message.
@@ -26,7 +24,7 @@ type (
 		Payload() interface{}
 
 		// Metadata return the message metadata
-		Metadata() Metadata
+		Metadata() metadata.Metadata
 
 		// WithMetadata Returns new instance of the message with key and value added to metadata
 		WithMetadata(key string, value interface{}) Message
