@@ -46,7 +46,7 @@ func TestWithValue(t *testing.T) {
 
 func TestAsMap(t *testing.T) {
 	t.Run("empty metadata", func(t *testing.T) {
-		mMap := metadata.AsMap(metadata.New())
+		mMap := metadata.New().AsMap()
 
 		assert.Len(t, mMap, 0)
 	})
@@ -59,7 +59,7 @@ func TestAsMap(t *testing.T) {
 		var m metadata.Metadata
 		m = metadata.WithValue(m, "test", 1.1)
 
-		mMap := metadata.AsMap(m)
+		mMap := m.AsMap()
 
 		assert.Len(t, mMap, 1)
 		assert.Equal(t, expectedMap, mMap)
@@ -75,7 +75,7 @@ func TestAsMap(t *testing.T) {
 		m = metadata.WithValue(m, "test", nil)
 		m = metadata.WithValue(m, "another", "value")
 
-		mMap := metadata.AsMap(m)
+		mMap := m.AsMap()
 
 		assert.Len(t, mMap, 2)
 		assert.Equal(t, expectedMap, mMap)
@@ -92,22 +92,9 @@ func TestAsMap(t *testing.T) {
 		m = metadata.WithValue(m, "another", "value")
 		m = metadata.WithValue(m, "another", "another_value")
 
-		mMap := metadata.AsMap(m)
+		mMap := m.AsMap()
 
 		assert.Len(t, mMap, 2)
 		assert.Equal(t, expectedMap, mMap)
 	})
-
-	t.Run("panic for custom metadata type", func(t *testing.T) {
-		assert.Panics(t, func() {
-			metadata.AsMap(&customMetadata{})
-		})
-	})
-}
-
-type customMetadata struct {
-}
-
-func (m *customMetadata) Value(key string) interface{} {
-	return nil
 }

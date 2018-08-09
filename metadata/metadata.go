@@ -7,6 +7,9 @@ type (
 		// if no value is associated with key. Successive calls to Value with
 		// the same key returns the same result.
 		Value(key string) interface{}
+
+		// AsMap return the Metadata as a map[string]interface{}
+		AsMap() map[string]interface{}
 	}
 
 	emptyData int
@@ -28,30 +31,12 @@ func WithValue(parent Metadata, key string, val interface{}) Metadata {
 	return &valueData{parent, key, val}
 }
 
-// AsMap return the Metadata as a map[string]interface{}
-//
-// Warning: If you are using a custom implementation of Metadata this will panic
-func AsMap(metadata Metadata) map[string]interface{} {
-	res := map[string]interface{}{}
-	for {
-		switch m := metadata.(type) {
-		case nil,
-			*emptyData:
-			return res
-		case *valueData:
-			if _, exists := res[m.key]; !exists {
-				res[m.key] = m.val
-			}
-
-			metadata = m.Metadata
-		default:
-			panic("unsupported Metadata type")
-		}
-	}
-}
-
 func (*emptyData) Value(key string) interface{} {
 	return nil
+}
+
+func (*emptyData) AsMap() map[string]interface{} {
+	return map[string]interface{}{}
 }
 
 func (v *valueData) Value(key string) interface{} {
@@ -60,4 +45,17 @@ func (v *valueData) Value(key string) interface{} {
 	}
 
 	return v.Metadata.Value(key)
+}
+
+func (v *valueData) AsMap() map[string]interface{} {
+	var m map[string]interface{}
+	if v.Metadata == nil {
+		m = map[string]interface{}{}
+	} else {
+		m = v.Metadata.AsMap()
+	}
+
+	m[v.key] = v.val
+
+	return m
 }
