@@ -10,6 +10,9 @@
 // TODO write something nice about every sub package
 package goengine_dev
 
+// In order to avoid lots having to manually write similar code use `go generate` to generate the code
+//go:generate go run tools/metadata_compare.go
+
 // blank imports help docs.
 import (
 	// aggregate package
