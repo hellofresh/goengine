@@ -11,7 +11,7 @@
 package goengine_dev
 
 // In order to avoid lots having to manually write similar code use `go generate` to generate the code
-//go:generate go run tools/metadata_compare.go
+//go:generate go run tools/eventstore_inmemory_gen.go
 
 // blank imports help docs.
 import (
