@@ -13,6 +13,9 @@ package goengine_dev
 // In order to avoid lots having to manually write similar code use `go generate` to generate the code
 //go:generate go run tools/eventstore_inmemory_gen.go
 
+// In order to make sure that we have the same mocks we can regenerate them using `go generate`
+//go:generate go run vendor/github.com/vektra/mockery/cmd/mockery/mockery.go -dir eventstore/ -name=EventStore -outpkg mocks -output ./mocks -case underscore
+
 // blank imports help docs.
 import (
 	// aggregate package
