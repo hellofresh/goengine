@@ -26,6 +26,17 @@
   version = "v1.0.0"
 
 [[projects]]
+  digest = "1:107b2ac5dd768f2605128e603a358eec5681ee898559ea0361732fe2b7aa8a1f"
+  name = "github.com/sirupsen/logrus"
+  packages = [
+    ".",
+    "hooks/test",
+  ]
+  pruneopts = "UT"
+  revision = "3e01752db0189b9157070a0e1668a620f9a85da2"
+  version = "v1.0.6"
+
+[[projects]]
   digest = "1:ac83cf90d08b63ad5f7e020ef480d319ae890c208f8524622a2f3136e2686b02"
   name = "github.com/stretchr/objx"
   packages = ["."]
@@ -57,6 +68,25 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:3f3a05ae0b95893d90b9b3b5afdb79a9b3d96e4e36e099d841ae602e4aca0da8"
+  name = "golang.org/x/crypto"
+  packages = ["ssh/terminal"]
+  pruneopts = "UT"
+  revision = "de0752318171da717af4ce24d0a2e8626afaeb11"
+
+[[projects]]
+  branch = "master"
+  digest = "1:a60cae5be8993938498243605b120290533a5208fd5cac81c932afbad3642fb0"
+  name = "golang.org/x/sys"
+  packages = [
+    "unix",
+    "windows",
+  ]
+  pruneopts = "UT"
+  revision = "98c5dad5d1a0e8a73845ecc8897d0bd56586511d"
+
+[[projects]]
+  branch = "master"
   digest = "1:02bfebf263d1e285a24c804c87abe5bbe1a88d0da4496256524a2482adeb5a97"
   name = "golang.org/x/tools"
   packages = [
@@ -75,6 +105,8 @@
   analyzer-version = 1
   input-imports = [
     "github.com/google/uuid",
+    "github.com/sirupsen/logrus",
+    "github.com/sirupsen/logrus/hooks/test",
     "github.com/stretchr/testify/assert",
     "github.com/stretchr/testify/mock",
     "github.com/vektra/mockery/cmd/mockery",
