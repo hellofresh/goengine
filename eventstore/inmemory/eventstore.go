@@ -13,12 +13,14 @@ import (
 )
 
 var (
-	// ErrStreamExistsAlready occurs when create is called for a already created stream
+	// ErrStreamExistsAlready occurs when create is called for an already created stream
 	ErrStreamExistsAlready = errors.New("stream already exists")
-	// ErrStreamNotFound occurs when a unknown streamName is provided
+	// ErrStreamNotFound occurs when an unknown streamName is provided
 	ErrStreamNotFound = errors.New("unknown stream")
 	// ErrNilMessage occurs when a messaging.Message that is being appended to a stream is nil or a reference to nil
 	ErrNilMessage = errors.New("nil is not a valid message")
+	// Ensure that we satisfy the eventstore.EventStore interface
+	_ eventstore.EventStore = &EventStore{}
 )
 
 // EventStore a in memory event store implementation

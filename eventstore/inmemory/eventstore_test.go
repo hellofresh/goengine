@@ -17,9 +17,7 @@ func TestNewEventStore(t *testing.T) {
 	t.Run("Create event store", func(t *testing.T) {
 		store := inmemory.NewEventStore(nil)
 
-		asserts := assert.New(t)
-		asserts.IsType((*inmemory.EventStore)(nil), store)
-		asserts.Implements((*eventstore.EventStore)(nil), store)
+		assert.IsType(t, (*inmemory.EventStore)(nil), store)
 	})
 
 	t.Run("Create event store without logger", func(t *testing.T) {
