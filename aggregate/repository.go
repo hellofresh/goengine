@@ -10,16 +10,16 @@ import (
 )
 
 const (
-	// AggregateTypeKey is the metadata key to identify the aggregate type
-	AggregateTypeKey = "_aggregate_type"
-	// AggregateIDKey is the metadata key to identify the aggregate id
-	AggregateIDKey = "_aggregate_id"
-	// AggregateVersionKey is the metadata key to identify the aggregate version
-	AggregateVersionKey = "_aggregate_version"
+	// TypeKey is the metadata key to identify the aggregate type
+	TypeKey = "_aggregate_type"
+	// IDKey is the metadata key to identify the aggregate id
+	IDKey = "_aggregate_id"
+	// VersionKey is the metadata key to identify the aggregate version
+	VersionKey = "_aggregate_version"
 )
 
 var (
-	// ErrStreamNameRequired occurs when a empty stream name is provided
+	// ErrStreamNameRequired occurs when an empty stream name is provided
 	ErrStreamNameRequired = errors.New("a StreamName may not be empty")
 	// ErrEventStoreRequired occurs when a nil event store is provided
 	ErrEventStoreRequired = errors.New("a EventStore may not be nil")
@@ -27,15 +27,15 @@ var (
 	ErrTypeRequired = errors.New("a AggregateType may not be nil")
 	// ErrUnsupportedAggregateType occurs when the given aggregateType is not handled by the AggregateRepository
 	ErrUnsupportedAggregateType = errors.New("the given AggregateRoot is of a unsupported type")
-	// ErrUnexpectedMessageType occurs when the event store returns a message that is not a *aggregate.Changed
-	ErrUnexpectedMessageType = errors.New("event store returned a unsupported message type")
+	// ErrUnexpectedMessageType occurs when the event store returns a message that is not an *aggregate.Changed
+	ErrUnexpectedMessageType = errors.New("event store returned an unsupported message type")
 )
 
 type (
 	// Repository a repository to save and load aggregate.Root's of a specific type
 	Repository struct {
-		eventStore    eventstore.EventStore
 		aggregateType *Type
+		eventStore    eventstore.EventStore
 		streamName    eventstore.StreamName
 	}
 )
@@ -67,6 +67,7 @@ func NewRepository(
 	return repository, nil
 }
 
+// SaveAggregateRoot stores the state changes of the aggregate.Root
 func (r *Repository) SaveAggregateRoot(ctx context.Context, aggregateRoot Root) error {
 	if !r.aggregateType.IsImplementedBy(aggregateRoot) {
 		return ErrUnsupportedAggregateType
@@ -92,8 +93,8 @@ func (r *Repository) SaveAggregateRoot(ctx context.Context, aggregateRoot Root) 
 // GetAggregateRoot returns nil if no stream events can be found for aggregate id otherwise the reconstituted aggregate root
 func (r *Repository) GetAggregateRoot(ctx context.Context, aggregateID ID) (Root, error) {
 	matcher := metadata.NewMatcher()
-	matcher = metadata.WithConstraint(matcher, AggregateTypeKey, metadata.Equals, r.aggregateType.String())
-	matcher = metadata.WithConstraint(matcher, AggregateIDKey, metadata.Equals, aggregateID)
+	matcher = metadata.WithConstraint(matcher, TypeKey, metadata.Equals, r.aggregateType.String())
+	matcher = metadata.WithConstraint(matcher, IDKey, metadata.Equals, aggregateID)
 
 	streamEvents, err := r.eventStore.Load(ctx, r.streamName, 1, nil, matcher)
 	if err != nil {
@@ -118,9 +119,9 @@ func (r *Repository) GetAggregateRoot(ctx context.Context, aggregateID ID) (Root
 
 // enrichEventMetadata add's aggregate_id and aggregate_type as metadata to domainEvent
 func (r *Repository) enrichMetadata(aggregateEvent *Changed, aggregateID ID) *Changed {
-	domainEvent := aggregateEvent.WithMetadata(AggregateIDKey, aggregateID)
-	domainEvent = domainEvent.WithMetadata(AggregateTypeKey, r.aggregateType.String())
-	domainEvent = domainEvent.WithMetadata(AggregateVersionKey, aggregateEvent.Version())
+	domainEvent := aggregateEvent.WithMetadata(IDKey, aggregateID)
+	domainEvent = domainEvent.WithMetadata(TypeKey, r.aggregateType.String())
+	domainEvent = domainEvent.WithMetadata(VersionKey, aggregateEvent.Version())
 
 	return domainEvent.(*Changed)
 }

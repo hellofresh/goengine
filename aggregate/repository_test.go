@@ -128,9 +128,9 @@ func TestRepository_SaveAggregateRoot(t *testing.T) {
 			msgMeta := msg.Metadata()
 
 			asserts.Equalf(events[i], msg.Payload(), "Expect payload to equal event %d", i)
-			asserts.Equal(rootID, msgMeta.Value(aggregate.AggregateIDKey))
-			asserts.Equal("mock", msgMeta.Value(aggregate.AggregateTypeKey))
-			asserts.Equal(uint(i+1), msgMeta.Value(aggregate.AggregateVersionKey))
+			asserts.Equal(rootID, msgMeta.Value(aggregate.IDKey))
+			asserts.Equal("mock", msgMeta.Value(aggregate.TypeKey))
+			asserts.Equal(uint(i+1), msgMeta.Value(aggregate.VersionKey))
 		}
 	})
 
@@ -198,11 +198,11 @@ func TestRepository_GetAggregateRoot(t *testing.T) {
 					expected := metadata.WithConstraint(
 						metadata.WithConstraint(
 							metadata.NewMatcher(),
-							aggregate.AggregateTypeKey,
+							aggregate.TypeKey,
 							metadata.Equals,
 							"mock",
 						),
-						aggregate.AggregateIDKey,
+						aggregate.IDKey,
 						metadata.Equals,
 						rootID,
 					)
