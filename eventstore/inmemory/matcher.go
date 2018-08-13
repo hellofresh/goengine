@@ -1,7 +1,9 @@
 package inmemory
 
 import (
+	"bytes"
 	"errors"
+	"fmt"
 	"reflect"
 
 	"github.com/hellofresh/goengine/metadata"
@@ -19,7 +21,13 @@ type (
 	// IncompatibleMatcherError is an error that constraints multiple errors.
 	// This error is returned when a metadata.Matcher contains constraints that are
 	// not supported by the inmemory.MetadataMatcher
-	IncompatibleMatcherError []error
+	IncompatibleMatcherError []IncompatibleConstraintError
+
+	// IncompatibleConstraintError is an error indicating that a constraint is incompatible.
+	IncompatibleConstraintError struct {
+		Parent     error
+		Constraint metadata.Constraint
+	}
 
 	// MetadataMatcher an in memory metadata matcher implementation
 	MetadataMatcher struct {
@@ -43,12 +51,12 @@ func NewMetadataMatcher(matcher metadata.Matcher, logger logrus.FieldLogger) (*M
 	matcher.Iterate(func(c metadata.Constraint) {
 		cVal, err := asScalar(c.Value())
 		if err != nil {
-			constraintErrors = append(constraintErrors, err)
+			constraintErrors = append(constraintErrors, IncompatibleConstraintError{err, c})
 			return
 		}
 
 		if !isSupportedOperator(cVal, c.Operator()) {
-			constraintErrors = append(constraintErrors, ErrUnsupportedOperator)
+			constraintErrors = append(constraintErrors, IncompatibleConstraintError{ErrUnsupportedOperator, c})
 			return
 		}
 
@@ -108,6 +116,23 @@ func (c *metadataConstraint) Matches(val interface{}) (bool, error) {
 }
 
 // Error an error message
-func (IncompatibleMatcherError) Error() string {
-	return "incompatible metadata.Matcher"
+func (e IncompatibleMatcherError) Error() string {
+	msg := bytes.NewBufferString("incompatible metadata.Matcher")
+	for _, err := range e {
+		msg.WriteRune('\n')
+		msg.WriteString(err.Error())
+	}
+
+	return msg.String()
+}
+
+// Error an error message
+func (e *IncompatibleConstraintError) Error() string {
+	return fmt.Sprintf(
+		"constaint %s %s %v is incompatible %s",
+		e.Constraint.Field(),
+		e.Constraint.Operator(),
+		e.Constraint.Value(),
+		e.Parent.Error(),
+	)
 }

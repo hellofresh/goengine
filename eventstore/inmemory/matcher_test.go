@@ -1,6 +1,7 @@
 package inmemory_test
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/hellofresh/goengine/eventstore/inmemory"
@@ -55,7 +56,7 @@ func TestNewMetadataMatcher(t *testing.T) {
 		type incompatibleMatcherTestCase struct {
 			title         string
 			matcher       metadata.Matcher
-			expectedError inmemory.IncompatibleMatcherError
+			expectedError string
 		}
 
 		testCases := []incompatibleMatcherTestCase{
@@ -67,9 +68,7 @@ func TestNewMetadataMatcher(t *testing.T) {
 					metadata.GreaterThan,
 					true,
 				),
-				inmemory.IncompatibleMatcherError{
-					inmemory.ErrUnsupportedOperator,
-				},
+				fmt.Sprintf("constaint bool > true is incompatible %s", inmemory.ErrUnsupportedOperator),
 			},
 			{
 				"unsupported value (struct is not supported)",
@@ -79,9 +78,7 @@ func TestNewMetadataMatcher(t *testing.T) {
 					metadata.Equals,
 					struct{}{},
 				),
-				inmemory.IncompatibleMatcherError{
-					inmemory.ErrUnsupportedType,
-				},
+				fmt.Sprintf("constaint key = {} is incompatible %s", inmemory.ErrUnsupportedType),
 			},
 		}
 
@@ -92,7 +89,11 @@ func TestNewMetadataMatcher(t *testing.T) {
 				matcher, err := inmemory.NewMetadataMatcher(testCase.matcher, logger)
 
 				asserts := assert.New(t)
-				asserts.Equal(testCase.expectedError, err)
+				if !asserts.IsType(inmemory.IncompatibleMatcherError{}, err) {
+					return
+				}
+
+				asserts.Equal("incompatible metadata.Matcher\n"+testCase.expectedError, err.Error())
 				asserts.Nil(matcher)
 				asserts.Len(loggerHook.Entries, 0)
 			})
