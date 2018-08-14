@@ -35,8 +35,14 @@ deps:
 #-----------------------------------------------------------------------------------------------------------------------
 .PHONY: test test-unit
 
-test: test-unit
+test: test-unit test-examples
 
 test-unit:
 	echo "Running unit tests"
 	go test -v -race ./...
+
+test-examples:
+	echo "Running examples"
+	go run -race example/aggregate/*.go
+	go run -race example/repository/*.go
+
