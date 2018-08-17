@@ -1,8 +1,8 @@
 package metadata_test
 
 import (
+	"encoding/json"
 	"testing"
-
 	"time"
 
 	"github.com/hellofresh/goengine/metadata"
@@ -103,6 +103,75 @@ func TestAsMap(t *testing.T) {
 			mMap := m.AsMap()
 
 			assert.Equal(t, testCase.expectedMap, mMap)
+		})
+	}
+}
+
+var jsonTestCases = []struct {
+	title    string
+	metadata func() metadata.Metadata
+	json     string
+}{
+	{
+		"empty metadata",
+		func() metadata.Metadata {
+			return metadata.New()
+		},
+		`{}`,
+	},
+	{
+		"metadata with multiple values",
+		func() metadata.Metadata {
+			m := metadata.New()
+			m = metadata.WithValue(m, "test", nil)
+			return metadata.WithValue(m, "another", "value")
+		},
+		`{
+			"test": null,
+			"another": "value"
+		}`,
+	},
+}
+
+func TestMetadata_MarshalJSON(t *testing.T) {
+	for _, testCase := range jsonTestCases {
+		t.Run(testCase.title, func(t *testing.T) {
+			m := testCase.metadata()
+
+			mJSON, err := json.Marshal(m)
+
+			asserts := assert.New(t)
+			asserts.JSONEq(testCase.json, string(mJSON))
+			asserts.Nil(err)
+		})
+	}
+}
+
+func TestJSONMetadata_MarshalJSON(t *testing.T) {
+	for _, testCase := range jsonTestCases {
+		t.Run(testCase.title, func(t *testing.T) {
+			m := metadata.JSONMetadata{
+				Metadata: testCase.metadata(),
+			}
+
+			mJSON, err := json.Marshal(m)
+
+			asserts := assert.New(t)
+			asserts.JSONEq(testCase.json, string(mJSON))
+			asserts.Nil(err)
+		})
+	}
+}
+
+func TestJSONMetadata_UnmarshalJSON(t *testing.T) {
+	for _, testCase := range jsonTestCases {
+		t.Run(testCase.title, func(t *testing.T) {
+			var m metadata.JSONMetadata
+			err := json.Unmarshal([]byte(testCase.json), &m)
+
+			asserts := assert.New(t)
+			asserts.Equal(testCase.metadata(), m.Metadata)
+			asserts.NoError(err)
 		})
 	}
 }
