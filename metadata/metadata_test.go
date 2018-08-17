@@ -45,56 +45,64 @@ func TestWithValue(t *testing.T) {
 }
 
 func TestAsMap(t *testing.T) {
-	t.Run("empty metadata", func(t *testing.T) {
-		mMap := metadata.New().AsMap()
+	type mapTestCase struct {
+		title       string
+		setup       func() metadata.Metadata
+		expectedMap map[string]interface{}
+	}
 
-		assert.Len(t, mMap, 0)
-	})
+	testCases := []mapTestCase{
+		{
+			"empty metadata",
+			func() metadata.Metadata {
+				return metadata.New()
+			},
+			map[string]interface{}{},
+		},
+		{
+			"nil parent metadata",
+			func() metadata.Metadata {
+				var m metadata.Metadata
+				return metadata.WithValue(m, "test", 1.1)
+			},
+			map[string]interface{}{
+				"test": 1.1,
+			},
+		},
+		{
+			"metadata with multiple values",
+			func() metadata.Metadata {
+				m := metadata.New()
+				m = metadata.WithValue(m, "test", nil)
+				return metadata.WithValue(m, "another", "value")
+			},
+			map[string]interface{}{
+				"test":    nil,
+				"another": "value",
+			},
+		},
+		{
+			"metadata with overridden values",
+			func() metadata.Metadata {
+				m := metadata.New()
+				m = metadata.WithValue(m, "test", nil)
+				m = metadata.WithValue(m, "another", "value")
+				return metadata.WithValue(m, "another", "another_value")
+			},
+			map[string]interface{}{
+				"test":    nil,
+				"another": "another_value",
+			},
+		},
+	}
 
-	t.Run("nil parent metadata", func(t *testing.T) {
-		expectedMap := map[string]interface{}{
-			"test": 1.1,
-		}
+	for _, testCase := range testCases {
+		t.Run(testCase.title, func(t *testing.T) {
+			m := testCase.setup()
 
-		var m metadata.Metadata
-		m = metadata.WithValue(m, "test", 1.1)
+			mMap := m.AsMap()
 
-		mMap := m.AsMap()
-
-		assert.Len(t, mMap, 1)
-		assert.Equal(t, expectedMap, mMap)
-	})
-
-	t.Run("metadata with multiple values", func(t *testing.T) {
-		expectedMap := map[string]interface{}{
-			"test":    nil,
-			"another": "value",
-		}
-
-		m := metadata.New()
-		m = metadata.WithValue(m, "test", nil)
-		m = metadata.WithValue(m, "another", "value")
-
-		mMap := m.AsMap()
-
-		assert.Len(t, mMap, 2)
-		assert.Equal(t, expectedMap, mMap)
-	})
-
-	t.Run("metadata with overridden values", func(t *testing.T) {
-		expectedMap := map[string]interface{}{
-			"test":    nil,
-			"another": "another_value",
-		}
-
-		m := metadata.New()
-		m = metadata.WithValue(m, "test", nil)
-		m = metadata.WithValue(m, "another", "value")
-		m = metadata.WithValue(m, "another", "another_value")
-
-		mMap := m.AsMap()
-
-		assert.Len(t, mMap, 2)
-		assert.Equal(t, expectedMap, mMap)
-	})
+			assert.Equal(t, testCase.expectedMap, mMap)
+		})
+	}
 }
