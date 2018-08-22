@@ -1,12 +1,16 @@
 package aggregate
 
 import (
+	"errors"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/hellofresh/goengine/messaging"
 	"github.com/hellofresh/goengine/metadata"
 )
+
+// ErrInvalidID occurs when a string is not a valid ID
+var ErrInvalidID = errors.New("an aggregate.ID must be a valid UUID")
 
 type (
 	// ID an UUID for a aggregate.Root instance
@@ -43,6 +47,16 @@ type (
 // GenerateID creates a new random UUID or panics
 func GenerateID() ID {
 	return ID(uuid.New().String())
+}
+
+// IDFromString creates a ID from a string
+func IDFromString(str string) (ID, error) {
+	id, err := uuid.Parse(str)
+	if err != nil {
+		return "", ErrInvalidID
+	}
+
+	return ID(id.String()), nil
 }
 
 // RecordChange record the given event onto the aggregate.Root by wrapping it in an aggregate.Changed
