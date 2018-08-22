@@ -21,6 +21,13 @@ const (
 	NotEquals Operator = "!="
 )
 
+var (
+	// Ensure emptyMatcher implements the Matcher interface
+	_ Matcher = new(emptyMatcher)
+	// Ensure constraintMatcher implements the Matcher interface
+	_ Matcher = &constraintMatcher{}
+)
+
 type (
 	// Operator represents a operation for a constraint
 	Operator string

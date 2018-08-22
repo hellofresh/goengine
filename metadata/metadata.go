@@ -26,6 +26,13 @@ func WithValue(parent Metadata, key string, val interface{}) Metadata {
 // emptyData represents the empty root of a metadata chain
 type emptyData int
 
+var (
+	// Ensure emptyData implements the Metadata interface
+	_ Metadata = new(emptyData)
+	// Ensure valueData implements the json.Marshaler interface
+	_ json.Marshaler = new(emptyData)
+)
+
 func (*emptyData) Value(key string) interface{} {
 	return nil
 }
@@ -44,6 +51,13 @@ type valueData struct {
 	key string
 	val interface{}
 }
+
+var (
+	// Ensure valueData implements the Metadata interface
+	_ Metadata = new(valueData)
+	// Ensure valueData implements the json.Marshaler interface
+	_ json.Marshaler = new(valueData)
+)
 
 func (v *valueData) Value(key string) interface{} {
 	if v.key == key {
@@ -74,6 +88,13 @@ func (v *valueData) MarshalJSON() ([]byte, error) {
 type JSONMetadata struct {
 	Metadata Metadata
 }
+
+var (
+	// Ensure JSONMetadata implements the json.Marshaler interface
+	_ json.Marshaler = &JSONMetadata{}
+	// Ensure JSONMetadata implements the json.Unmarshaler interface
+	_ json.Unmarshaler = &JSONMetadata{}
+)
 
 // MarshalJSON returns a json representation of the wrapped Metadata
 func (j JSONMetadata) MarshalJSON() ([]byte, error) {

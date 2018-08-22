@@ -4,6 +4,13 @@ import (
 	"sync"
 )
 
+var (
+	// Ensure BaseRoot implements the eventProducer interface
+	_ eventProducer = &BaseRoot{}
+	// Ensure BaseRoot implements the eventSourced interface
+	_ eventSourced = &BaseRoot{}
+)
+
 // BaseRoot is the base struct to be embedded for any aggregate root
 type BaseRoot struct {
 	sync.Mutex

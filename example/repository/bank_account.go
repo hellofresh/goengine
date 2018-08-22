@@ -9,6 +9,8 @@ import (
 var (
 	// ErrInsufficientMoney occurs when a bank account has insufficient funds
 	ErrInsufficientMoney = errors.New("insufficient money")
+	// Ensure BankAccount implements the aggregate.Root interface
+	_ aggregate.Root = &BankAccount{}
 )
 
 type (
