@@ -106,6 +106,44 @@ func TestJSONPayloadFactory_CreatePayload(t *testing.T) {
 			})
 		}
 	})
+
+	t.Run("invalid data", func(t *testing.T) {
+		type invalidTestCase struct {
+			title            string
+			payloadInitiator eventstore.PayloadInitiator
+			payloadData      interface{}
+		}
+
+		testCases := []invalidTestCase{
+			{
+				"bad json",
+				func() interface{} {
+					return simpleType{}
+				},
+				`{ bad: json }`,
+			},
+			{
+				"bad json for a reference type",
+				func() interface{} {
+					return &simpleType{}
+				},
+				[]byte(`["comma to much",]`),
+			},
+		}
+
+		for _, testCase := range testCases {
+			t.Run(testCase.title, func(t *testing.T) {
+				factory := eventstore.NewJSONPayloadFactory()
+				factory.RegisterPayload("tests", testCase.payloadInitiator)
+
+				payload, err := factory.CreatePayload("tests", testCase.payloadData)
+
+				asserts := assert.New(t)
+				asserts.IsType((*json.SyntaxError)(nil), err)
+				asserts.Nil(payload)
+			})
+		}
+	})
 }
 
 func TestJSONPayloadFactory_RegisterPayload(t *testing.T) {

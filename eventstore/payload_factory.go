@@ -21,7 +21,9 @@ var (
 )
 
 type (
+	// PayloadFactory is used to reconstruct message payloads
 	PayloadFactory interface {
+		// CreatePayload returns a reconstructed payload or a error
 		CreatePayload(payloadType string, data interface{}) (interface{}, error)
 	}
 
@@ -29,9 +31,12 @@ type (
 	// this instance can then be used to Unmarshal
 	PayloadInitiator func() interface{}
 
+	// JSONPayloadFactory is a payload factory that can reconstruct payload from JSON
 	JSONPayloadFactory struct {
 		types map[string]JSONPayloadType
 	}
+
+	// JSONPayloadType represents a payload and the way to create it
 	JSONPayloadType struct {
 		initiator      PayloadInitiator
 		isPtr          bool
@@ -39,12 +44,14 @@ type (
 	}
 )
 
+// NewJSONPayloadFactory returns a new instance of the JSONPayloadFactory
 func NewJSONPayloadFactory() *JSONPayloadFactory {
 	return &JSONPayloadFactory{
 		types: map[string]JSONPayloadType{},
 	}
 }
 
+// RegisterPayload registers a payload type and the way to initialize it with the factory
 func (f *JSONPayloadFactory) RegisterPayload(payloadType string, initiator PayloadInitiator) error {
 	if _, known := f.types[payloadType]; known {
 		return ErrDuplicatePayloadType
@@ -70,6 +77,7 @@ func (f *JSONPayloadFactory) RegisterPayload(payloadType string, initiator Paylo
 	return nil
 }
 
+// CreatePayload reconstructs a payload based on it's type and the json data
 func (f *JSONPayloadFactory) CreatePayload(typeName string, data interface{}) (interface{}, error) {
 	var dataBytes []byte
 	switch d := data.(type) {
