@@ -16,6 +16,8 @@ import (
 var (
 	// ErrPayloadFactoryRequired occurs when a nil PayloadFactory is provided
 	ErrPayloadFactoryRequired = errors.New("a PayloadFactory may not be nil")
+	// ErrRowsRequired occurs when the rows passed to MessageFactory.CreateFromRows is nil
+	ErrRowsRequired = errors.New("the provided rows may not be nil")
 	// Ensure that AggregateChangedFactory satisfies the MessageFactory interface
 	_ MessageFactory = &AggregateChangedFactory{}
 )
@@ -46,11 +48,11 @@ func NewAggregateChangedFactory(factory eventstore.PayloadFactory) (*AggregateCh
 
 // CreateFromRows reconstruct the aggregate.Changed messages from the sql.Rows
 func (f *AggregateChangedFactory) CreateFromRows(rows *sql.Rows) ([]messaging.Message, error) {
-	messages := []messaging.Message{}
 	if rows == nil {
-		return messages, nil
+		return nil, ErrRowsRequired
 	}
 
+	messages := []messaging.Message{}
 	for rows.Next() {
 		var (
 			eventID      messaging.UUID

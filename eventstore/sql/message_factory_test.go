@@ -115,6 +115,23 @@ func TestAggregateChangedFactory_CreateFromRows(t *testing.T) {
 		}
 	})
 
+	t.Run("no rows", func(t *testing.T) {
+		asserts := assert.New(t)
+
+		// Create the factory
+		messageFactory, err := sql.NewAggregateChangedFactory(&mocks.PayloadFactory{})
+		if !asserts.Nil(err) {
+			return
+		}
+
+		// Finally recreate the messages
+		msgs, err := messageFactory.CreateFromRows(nil)
+
+		// Check result
+		asserts.Equal(sql.ErrRowsRequired, err)
+		asserts.Nil(msgs)
+	})
+
 	t.Run("invalid row", func(t *testing.T) {
 		type invalidTestCase struct {
 			title                string
