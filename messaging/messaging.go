@@ -9,7 +9,7 @@ import (
 
 type (
 	// UUID is a 128 bit (16 byte) Universal Unique IDentifier as defined in RFC4122
-	UUID [16]byte
+	UUID uuid.UUID
 
 	// Message is a interface describing a message.
 	// A message can be a command, domain event or some other type of message.
