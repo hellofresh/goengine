@@ -30,4 +30,10 @@ type (
 		// Load returns a list of events based on the provided conditions
 		Load(ctx context.Context, streamName StreamName, fromNumber int, count *uint, metadataMatcher metadata.Matcher) ([]messaging.Message, error)
 	}
+
+	// PayloadConverter an interface describing converting payload data
+	PayloadConverter interface {
+		// ConvertPayload generates unique name for the event_name
+		ConvertPayload(payload interface{}) (string, []byte, error)
+	}
 )
