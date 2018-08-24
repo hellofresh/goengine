@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
-	"time"
+	"strings"
 
 	"github.com/hellofresh/goengine/eventstore"
 	"github.com/hellofresh/goengine/messaging"
@@ -84,9 +84,9 @@ func (s *SingleStreamStrategy) PrepareData(messages []messaging.Message) ([]inte
 		out = append(out,
 			msg.UUID(),
 			payloadType,
-			string(payloadData),
-			string(meta),
-			time.Now(),
+			payloadData,
+			meta,
+			msg.CreatedAt(),
 		)
 	}
 	return out, nil
@@ -97,9 +97,20 @@ func (s *SingleStreamStrategy) GenerateTableName(streamName eventstore.StreamNam
 	if len(streamName) == 0 {
 		return "", ErrorEmptyStreamName
 	}
-	reg, err := regexp.Compile("[^a-zA-Z0-9_]+")
+	// remove underscore at the end
+	regLastUnderScores, err := regexp.Compile("_+$")
 	if err != nil {
 		return "", err
 	}
-	return fmt.Sprintf("%s_events", reg.ReplaceAllString(string(streamName), "")), nil
+
+	// remove not allowed symbols
+	regNotAllowed, err := regexp.Compile("[^a-z0-9_]+")
+	if err != nil {
+		return "", err
+	}
+
+	name := strings.ToLower(string(streamName))
+	name = regNotAllowed.ReplaceAllString(name, "")
+	name = regLastUnderScores.ReplaceAllString(name, "")
+	return fmt.Sprintf("events_%s", name), nil
 }

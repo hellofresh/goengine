@@ -1,6 +1,7 @@
 package postgres_test
 
 import (
+	"encoding/json"
 	"errors"
 	"testing"
 	"time"
@@ -32,61 +33,74 @@ func TestGenerateTableName(t *testing.T) {
 		{
 			"no escaping: letters",
 			"order",
-			"order_events",
+			"events_order",
 			nil,
 		},
 		{
 			"no escaping: letters, numbers",
 			"order1",
-			"order1_events",
+			"events_order1",
 			nil,
 		},
 		{
 			"no escaping: letters, numbers",
 			"order1",
-			"order1_events",
+			"events_order1",
 			nil,
 		},
 		{
 			"no escaping: underscores",
 			"order_1_",
-			"order_1__events",
+			"events_order_1",
 			nil,
 		},
 		{
 			"escaping: brackets []",
 			"order[1]",
-			"order1_events",
+			"events_order1",
 			nil,
 		},
 		{
 			"escaping: brackets ()",
 			"order(1)",
-			"order1_events",
+			"events_order1",
 			nil,
 		},
 		{
 			"escaping: special symbols",
 			"order%1#?",
-			"order1_events",
+			"events_order1",
 			nil,
 		},
 		{
 			"escaping: special symbols",
 			"o.r,d;e:r%1#?",
-			"order1_events",
+			"events_order1",
 			nil,
 		},
 		{
 			"escaping: quotes",
 			"order'1\"",
-			"order1_events",
+			"events_order1",
 			nil,
 		},
 		{
 			"escaping: dash, slash",
 			"order\\-1-",
-			"order1_events",
+			"events_order1",
+			nil,
+		},
+		{
+			"escaping: dash, slash",
+			"or_de_r___",
+			"events_or_de_r",
+			nil,
+		},
+
+		{
+			"escaping: dash, slash",
+			"or_de_r__&@#_",
+			"events_or_de_r",
 			nil,
 		},
 	}
@@ -132,16 +146,19 @@ func TestPrepareData(t *testing.T) {
 		id3 := messaging.GenerateUUID()
 
 		meta1 := getMeta(map[string]interface{}{"type": "m1", "version": 1})
+		metab1, _ := json.Marshal(meta1)
 		meta2 := getMeta(map[string]interface{}{"type": "m1", "version": 2})
+		metab2, _ := json.Marshal(meta2)
 		meta3 := getMeta(map[string]interface{}{"type": "m1", "version": 3})
+		metab3, _ := json.Marshal(meta3)
 
 		payload1 := []byte(`{"Name":"alice","Balance":0}`)
 		payload2 := []byte(`{"Add":1}`)
 		payload3 := []byte(`{"Add":2}`)
 
-		m1 := getMessage(id1, payload1, meta1)
-		m2 := getMessage(id2, payload2, meta2)
-		m3 := getMessage(id3, payload3, meta3)
+		m1 := getMessage(id1, payload1, meta1, time.Now())
+		m2 := getMessage(id2, payload2, meta2, time.Now())
+		m3 := getMessage(id3, payload3, meta3, time.Now())
 
 		pc := &mocks.PayloadConverter{}
 		pc.On("ConvertPayload", payload1).Return("PayloadFirst", payload1, nil)
@@ -165,14 +182,14 @@ func TestPrepareData(t *testing.T) {
 		assert.Equal(t, "PayloadThird", data[11])
 
 		// check payload
-		assert.Equal(t, `{"Name":"alice","Balance":0}`, data[2])
-		assert.Equal(t, `{"Add":1}`, data[7])
-		assert.Equal(t, `{"Add":2}`, data[12])
+		assert.Equal(t, payload1, data[2])
+		assert.Equal(t, payload2, data[7])
+		assert.Equal(t, payload3, data[12])
 
 		// check metadata
-		assert.Equal(t, `{"type":"m1","version":1}`, data[3])
-		assert.Equal(t, `{"type":"m1","version":2}`, data[8])
-		assert.Equal(t, `{"type":"m1","version":3}`, data[13])
+		assert.Equal(t, metab1, data[3])
+		assert.Equal(t, metab2, data[8])
+		assert.Equal(t, metab3, data[13])
 
 		// check dates
 		assert.IsTypef(t, time.Time{}, data[4], "type of time")
@@ -185,7 +202,7 @@ func TestPrepareData(t *testing.T) {
 		meta := getMeta(map[string]interface{}{"type": "m1", "version": 1})
 		payload := []byte(`{"Name":"alice","Balance":0}`)
 
-		m := getMessage(id, payload, meta)
+		m := getMessage(id, payload, meta, time.Now())
 		pc := &mocks.PayloadConverter{}
 		expectedErr := errors.New("Converter error")
 		pc.On("ConvertPayload", payload).Return("PayloadFirst", nil, expectedErr)
@@ -198,11 +215,12 @@ func TestPrepareData(t *testing.T) {
 	})
 }
 
-func getMessage(id messaging.UUID, payload []byte, meta interface{}) *mocks.Message {
+func getMessage(id messaging.UUID, payload []byte, meta interface{}, time time.Time) *mocks.Message {
 	m := &mocks.Message{}
 	m.On("UUID").Return(id)
 	m.On("Payload").Return(payload)
 	m.On("Metadata").Return(meta)
+	m.On("CreatedAt").Return(time)
 	return m
 }
 
