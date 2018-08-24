@@ -15,6 +15,20 @@ import (
 	"github.com/hellofresh/goengine/mocks"
 )
 
+func TestNewPostgresStrategy(t *testing.T) {
+	t.Run("error on no converter provided", func(t *testing.T) {
+		s, err := postgres.NewPostgresStrategy(nil)
+		assert.Error(t, postgres.ErrorNoPayloadConverter, err)
+		assert.Nil(t, s)
+	})
+
+	t.Run("error on no converter provided", func(t *testing.T) {
+		s, err := postgres.NewPostgresStrategy(&mocks.PayloadConverter{})
+		assert.IsTypef(t, &postgres.SingleStreamStrategy{}, s, "")
+		assert.Nil(t, err)
+	})
+}
+
 func TestGenerateTableName(t *testing.T) {
 	type testCase struct {
 		title    string
@@ -96,7 +110,6 @@ func TestGenerateTableName(t *testing.T) {
 			"events_or_de_r",
 			nil,
 		},
-
 		{
 			"escaping: dash, slash",
 			"or_de_r__&@#_",
@@ -107,7 +120,8 @@ func TestGenerateTableName(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.title, func(t *testing.T) {
-			s := postgres.NewPostgresStrategy(&mocks.PayloadConverter{})
+			s, err := postgres.NewPostgresStrategy(&mocks.PayloadConverter{})
+			assert.Nil(t, err)
 			tableName, err := s.GenerateTableName(testCase.input)
 			assert.Equal(t, testCase.err, err)
 			assert.Equal(t, testCase.expected, tableName)
@@ -117,8 +131,9 @@ func TestGenerateTableName(t *testing.T) {
 
 func TestColumnNames(t *testing.T) {
 	expected := []string{"event_id", "event_name", "payload", "metadata", "created_at"}
-	s := postgres.NewPostgresStrategy(&mocks.PayloadConverter{})
+	s, err := postgres.NewPostgresStrategy(&mocks.PayloadConverter{})
 	t.Run("get expected columns", func(t *testing.T) {
+		assert.Nil(t, err)
 		cols := s.ColumnNames()
 		assert.Equal(t, cols, expected)
 	})
@@ -133,9 +148,11 @@ func TestColumnNames(t *testing.T) {
 
 func TestCreateSchema(t *testing.T) {
 	t.Run("output statement elements count", func(t *testing.T) {
-		s := postgres.NewPostgresStrategy(&mocks.PayloadConverter{}).CreateSchema("abc")
-		assert.Equal(t, 3, len(s))
-		assert.Contains(t, s[0], `CREATE TABLE "abc"`)
+		s, err := postgres.NewPostgresStrategy(&mocks.PayloadConverter{})
+		assert.Nil(t, err)
+		cs := s.CreateSchema("abc")
+		assert.Equal(t, 3, len(cs))
+		assert.Contains(t, cs[0], `CREATE TABLE "abc"`)
 	})
 }
 
@@ -166,7 +183,9 @@ func TestPrepareData(t *testing.T) {
 		pc.On("ConvertPayload", payload3).Return("PayloadThird", payload3, nil)
 
 		messages := []messaging.Message{m1, m2, m3}
-		data, err := postgres.NewPostgresStrategy(pc).PrepareData(messages)
+		s, err := postgres.NewPostgresStrategy(pc)
+		assert.Nil(t, err)
+		data, err := s.PrepareData(messages)
 
 		assert.Equal(t, 15, len(data))
 		assert.Equal(t, nil, err)
@@ -208,7 +227,8 @@ func TestPrepareData(t *testing.T) {
 		pc.On("ConvertPayload", payload).Return("PayloadFirst", nil, expectedErr)
 
 		messages := []messaging.Message{m}
-		s := postgres.NewPostgresStrategy(pc)
+		s, err := postgres.NewPostgresStrategy(pc)
+		assert.Nil(t, err)
 		data, err := s.PrepareData(messages)
 		assert.Error(t, expectedErr, err)
 		assert.Nil(t, data)

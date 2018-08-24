@@ -14,20 +14,24 @@ import (
 var (
 	// ErrorEmptyStreamName error on empty stream name
 	ErrorEmptyStreamName = errors.New("stream name cannot be empty")
+
+	// ErrorNoPayloadConverter error on no payload converter provided
+	ErrorNoPayloadConverter = errors.New("payload converter should be provided")
 )
 
-type (
-	// SingleStreamStrategy struct represents eventstore with single stream
-	SingleStreamStrategy struct {
-		converter eventstore.PayloadConverter
-	}
-)
+// SingleStreamStrategy struct represents eventstore with single stream
+type SingleStreamStrategy struct {
+	converter eventstore.PayloadConverter
+}
 
 // NewPostgresStrategy is the constructor postgres for PersistenceStrategy interface
-func NewPostgresStrategy(converter eventstore.PayloadConverter) eventstore.PersistenceStrategy {
+func NewPostgresStrategy(converter eventstore.PayloadConverter) (eventstore.PersistenceStrategy, error) {
+	if converter == nil {
+		return nil, ErrorNoPayloadConverter
+	}
 	return &SingleStreamStrategy{
 		converter: converter,
-	}
+	}, nil
 }
 
 // CreateSchema returns a valid set of SQL statements to create the event store tables and indexes
