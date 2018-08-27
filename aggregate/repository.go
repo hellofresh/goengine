@@ -29,6 +29,8 @@ var (
 	ErrUnsupportedAggregateType = errors.New("the given AggregateRoot is of a unsupported type")
 	// ErrUnexpectedMessageType occurs when the event store returns a message that is not an *aggregate.Changed
 	ErrUnexpectedMessageType = errors.New("event store returned an unsupported message type")
+	// ErrEmptyEventStream occurs when the event stream returned by the event store eis empty
+	ErrEmptyEventStream = errors.New("event stream cannot be empty")
 )
 
 type (
@@ -99,6 +101,10 @@ func (r *Repository) GetAggregateRoot(ctx context.Context, aggregateID ID) (Root
 	streamEvents, err := r.eventStore.Load(ctx, r.streamName, 1, nil, matcher)
 	if err != nil {
 		return nil, err
+	}
+
+	if len(streamEvents) == 0 {
+		return nil, ErrEmptyEventStream
 	}
 
 	changedStream := make([]*Changed, len(streamEvents))

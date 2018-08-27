@@ -258,6 +258,12 @@ func TestRepository_GetAggregateRoot(t *testing.T) {
 				nil,
 				aggregate.ErrUnexpectedMessageType,
 			},
+			{
+				"fail to load when the eventstore returns empty events",
+				[]messaging.Message{},
+				nil,
+				aggregate.ErrEmptyEventStream,
+			},
 		}
 
 		for _, testCase := range badTestCases {
