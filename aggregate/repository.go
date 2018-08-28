@@ -29,8 +29,8 @@ var (
 	ErrUnsupportedAggregateType = errors.New("the given AggregateRoot is of a unsupported type")
 	// ErrUnexpectedMessageType occurs when the event store returns a message that is not an *aggregate.Changed
 	ErrUnexpectedMessageType = errors.New("event store returned an unsupported message type")
-	// ErrEmptyEventStream occurs when the event stream returned by the event store eis empty
-	ErrEmptyEventStream = errors.New("event stream cannot be empty")
+	// ErrEmptyEventStream occurs when the event stream returned by the event store is empty
+	ErrEmptyEventStream = errors.New("unsupported empty event stream")
 )
 
 type (
