@@ -8,32 +8,20 @@ import (
 )
 
 var (
-	// ErrUnsupportedJSONPayloadData occurs when the data type is not supported by the JSONPayloadFactory
+	// ErrUnsupportedJSONPayloadData occurs when the data type is not supported by the JSONPayloadTransformer
 	ErrUnsupportedJSONPayloadData = errors.New("payload data was expected to be a []byte, json.RawMessage or string")
-	// ErrUnknownPayloadType occurs when a payload type is unknown
-	ErrUnknownPayloadType = errors.New("unknown payload type provided")
-	// ErrInitiatorInvalidResult occurs when a PayloadInitiator returns a reference to nil
-	ErrInitiatorInvalidResult = errors.New("initializer must return a pointer that is not nil")
-	// ErrDuplicatePayloadType occurs when a payload type is already registered
-	ErrDuplicatePayloadType = errors.New("this payload type is already registered")
-	// Ensure that JSONPayloadFactory satisfies the PayloadFactory interface
-	_ PayloadFactory = &JSONPayloadFactory{}
+
+	// Ensure that JSONPayloadTransformer satisfies the PayloadFactory interface
+	_ PayloadFactory = &JSONPayloadTransformer{}
+	// Ensure that JSONPayloadTransformer satisfies the PayloadConverter interface
+	_ PayloadConverter = &JSONPayloadTransformer{}
 )
 
 type (
-	// PayloadFactory is used to reconstruct message payloads
-	PayloadFactory interface {
-		// CreatePayload returns a reconstructed payload or a error
-		CreatePayload(payloadType string, data interface{}) (interface{}, error)
-	}
-
-	// PayloadInitiator creates a new empty instance of a Payload
-	// this instance can then be used to Unmarshal
-	PayloadInitiator func() interface{}
-
-	// JSONPayloadFactory is a payload factory that can reconstruct payload from JSON
-	JSONPayloadFactory struct {
+	// JSONPayloadTransformer is a payload factory that can reconstruct payload from and to JSON
+	JSONPayloadTransformer struct {
 		types map[string]JSONPayloadType
+		names map[string]string
 	}
 
 	// JSONPayloadType represents a payload and the way to create it
@@ -44,16 +32,31 @@ type (
 	}
 )
 
-// NewJSONPayloadFactory returns a new instance of the JSONPayloadFactory
-func NewJSONPayloadFactory() *JSONPayloadFactory {
-	return &JSONPayloadFactory{
+// NewJSONPayloadTransformer returns a new instance of the JSONPayloadTransformer
+func NewJSONPayloadTransformer() *JSONPayloadTransformer {
+	return &JSONPayloadTransformer{
 		types: map[string]JSONPayloadType{},
+		names: map[string]string{},
 	}
 }
 
+func (j *JSONPayloadTransformer) ConvertPayload(payload interface{}) (string, []byte, error) {
+	payloadName, ok := j.names[reflect.TypeOf(payload).String()]
+	if !ok {
+		return "", nil, ErrPayloadNotRegistered
+	}
+
+	data, err := json.Marshal(payload)
+	if err != nil {
+		return "", nil, ErrPayloadCannotBeSerialized
+	}
+
+	return payloadName, data, nil
+}
+
 // RegisterPayload registers a payload type and the way to initialize it with the factory
-func (f *JSONPayloadFactory) RegisterPayload(payloadType string, initiator PayloadInitiator) error {
-	if _, known := f.types[payloadType]; known {
+func (j *JSONPayloadTransformer) RegisterPayload(payloadType string, initiator PayloadInitiator) error {
+	if _, known := j.types[payloadType]; known {
 		return ErrDuplicatePayloadType
 	}
 
@@ -68,7 +71,13 @@ func (f *JSONPayloadFactory) RegisterPayload(payloadType string, initiator Paylo
 		return ErrInitiatorInvalidResult
 	}
 
-	f.types[payloadType] = JSONPayloadType{
+	// This will store the fully qualified name of the event
+	//
+	// e.g: for a struct named OrderCreated located into file /events/events.go
+	// this function will return events.OrderCreated
+	j.names[rv.Type().String()] = payloadType
+
+	j.types[payloadType] = JSONPayloadType{
 		initiator:      initiator,
 		isPtr:          isPtr,
 		reflectionType: rv.Type(),
@@ -78,7 +87,7 @@ func (f *JSONPayloadFactory) RegisterPayload(payloadType string, initiator Paylo
 }
 
 // CreatePayload reconstructs a payload based on it's type and the json data
-func (f *JSONPayloadFactory) CreatePayload(typeName string, data interface{}) (interface{}, error) {
+func (j *JSONPayloadTransformer) CreatePayload(typeName string, data interface{}) (interface{}, error) {
 	var dataBytes []byte
 	switch d := data.(type) {
 	case []byte:
@@ -91,7 +100,7 @@ func (f *JSONPayloadFactory) CreatePayload(typeName string, data interface{}) (i
 		return nil, ErrUnsupportedJSONPayloadData
 	}
 
-	payloadType, found := f.types[typeName]
+	payloadType, found := j.types[typeName]
 	if !found {
 		return nil, ErrUnknownPayloadType
 	}

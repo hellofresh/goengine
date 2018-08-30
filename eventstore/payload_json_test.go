@@ -1,9 +1,8 @@
 package eventstore_test
 
 import (
-	"testing"
-
 	"encoding/json"
+	"testing"
 
 	"github.com/hellofresh/goengine/eventstore"
 	"github.com/stretchr/testify/assert"
@@ -14,7 +13,7 @@ type simpleType struct {
 	Order int
 }
 
-func TestJSONPayloadFactory_CreatePayload(t *testing.T) {
+func TestJSONPayloadTransformer_CreatePayload(t *testing.T) {
 	t.Run("payload creation", func(t *testing.T) {
 		type validTestCase struct {
 			title            string
@@ -58,7 +57,7 @@ func TestJSONPayloadFactory_CreatePayload(t *testing.T) {
 			t.Run(testCase.title, func(t *testing.T) {
 				asserts := assert.New(t)
 
-				factory := eventstore.NewJSONPayloadFactory()
+				factory := eventstore.NewJSONPayloadTransformer()
 				err := factory.RegisterPayload(testCase.payloadType, testCase.payloadInitiator)
 				if !asserts.Nil(err) {
 					return
@@ -97,7 +96,7 @@ func TestJSONPayloadFactory_CreatePayload(t *testing.T) {
 
 		for _, testCase := range testCases {
 			t.Run(testCase.title, func(t *testing.T) {
-				factory := eventstore.NewJSONPayloadFactory()
+				factory := eventstore.NewJSONPayloadTransformer()
 				payload, err := factory.CreatePayload(testCase.payloadType, testCase.payloadData)
 
 				asserts := assert.New(t)
@@ -133,7 +132,7 @@ func TestJSONPayloadFactory_CreatePayload(t *testing.T) {
 
 		for _, testCase := range testCases {
 			t.Run(testCase.title, func(t *testing.T) {
-				factory := eventstore.NewJSONPayloadFactory()
+				factory := eventstore.NewJSONPayloadTransformer()
 				factory.RegisterPayload("tests", testCase.payloadInitiator)
 
 				payload, err := factory.CreatePayload("tests", testCase.payloadData)
@@ -146,17 +145,17 @@ func TestJSONPayloadFactory_CreatePayload(t *testing.T) {
 	})
 }
 
-func TestJSONPayloadFactory_RegisterPayload(t *testing.T) {
+func TestJSONPayloadTransformer_RegisterPayload(t *testing.T) {
 	t.Run("register a type", func(t *testing.T) {
-		factory := eventstore.NewJSONPayloadFactory()
-		err := factory.RegisterPayload("test", func() interface{} {
+		transformer := eventstore.NewJSONPayloadTransformer()
+		err := transformer.RegisterPayload("test", func() interface{} {
 			return &struct{ order int }{}
 		})
 
 		assert.Nil(t, err)
 
 		t.Run("duplicate registration", func(t *testing.T) {
-			err := factory.RegisterPayload("test", func() interface{} {
+			err := transformer.RegisterPayload("test", func() interface{} {
 				return &struct{ order int }{}
 			})
 
@@ -193,8 +192,8 @@ func TestJSONPayloadFactory_RegisterPayload(t *testing.T) {
 
 		for _, testCase := range testCases {
 			t.Run(testCase.title, func(t *testing.T) {
-				factory := eventstore.NewJSONPayloadFactory()
-				err := factory.RegisterPayload(testCase.payloadType, testCase.payloadInitiator)
+				transformer := eventstore.NewJSONPayloadTransformer()
+				err := transformer.RegisterPayload(testCase.payloadType, testCase.payloadInitiator)
 
 				assert.Equal(t, testCase.expectedError, err)
 			})
