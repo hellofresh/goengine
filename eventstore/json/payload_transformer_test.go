@@ -1,10 +1,10 @@
-package eventstore_test
+package json_test
 
 import (
 	"encoding/json"
 	"testing"
 
-	"github.com/hellofresh/goengine/eventstore"
+	eventstorejson "github.com/hellofresh/goengine/eventstore/json"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -18,7 +18,7 @@ func TestJSONPayloadTransformer_CreatePayload(t *testing.T) {
 		type validTestCase struct {
 			title            string
 			payloadType      string
-			payloadInitiator eventstore.PayloadInitiator
+			payloadInitiator eventstorejson.PayloadInitiator
 			payloadData      interface{}
 			expectedData     interface{}
 		}
@@ -57,7 +57,7 @@ func TestJSONPayloadTransformer_CreatePayload(t *testing.T) {
 			t.Run(testCase.title, func(t *testing.T) {
 				asserts := assert.New(t)
 
-				factory := eventstore.NewJSONPayloadTransformer()
+				factory := eventstorejson.NewPayloadTransformer()
 				err := factory.RegisterPayload(testCase.payloadType, testCase.payloadInitiator)
 				if !asserts.Nil(err) {
 					return
@@ -84,19 +84,19 @@ func TestJSONPayloadTransformer_CreatePayload(t *testing.T) {
 				"struct payload data",
 				"test",
 				struct{}{},
-				eventstore.ErrUnsupportedJSONPayloadData,
+				eventstorejson.ErrUnsupportedJSONPayloadData,
 			},
 			{
 				"unknown payload type",
 				"test",
 				[]byte{},
-				eventstore.ErrUnknownPayloadType,
+				eventstorejson.ErrUnknownPayloadType,
 			},
 		}
 
 		for _, testCase := range testCases {
 			t.Run(testCase.title, func(t *testing.T) {
-				factory := eventstore.NewJSONPayloadTransformer()
+				factory := eventstorejson.NewPayloadTransformer()
 				payload, err := factory.CreatePayload(testCase.payloadType, testCase.payloadData)
 
 				asserts := assert.New(t)
@@ -109,7 +109,7 @@ func TestJSONPayloadTransformer_CreatePayload(t *testing.T) {
 	t.Run("invalid data", func(t *testing.T) {
 		type invalidTestCase struct {
 			title            string
-			payloadInitiator eventstore.PayloadInitiator
+			payloadInitiator eventstorejson.PayloadInitiator
 			payloadData      interface{}
 		}
 
@@ -132,7 +132,7 @@ func TestJSONPayloadTransformer_CreatePayload(t *testing.T) {
 
 		for _, testCase := range testCases {
 			t.Run(testCase.title, func(t *testing.T) {
-				factory := eventstore.NewJSONPayloadTransformer()
+				factory := eventstorejson.NewPayloadTransformer()
 				factory.RegisterPayload("tests", testCase.payloadInitiator)
 
 				payload, err := factory.CreatePayload("tests", testCase.payloadData)
@@ -147,7 +147,7 @@ func TestJSONPayloadTransformer_CreatePayload(t *testing.T) {
 
 func TestJSONPayloadTransformer_RegisterPayload(t *testing.T) {
 	t.Run("register a type", func(t *testing.T) {
-		transformer := eventstore.NewJSONPayloadTransformer()
+		transformer := eventstorejson.NewPayloadTransformer()
 		err := transformer.RegisterPayload("test", func() interface{} {
 			return &struct{ order int }{}
 		})
@@ -159,7 +159,7 @@ func TestJSONPayloadTransformer_RegisterPayload(t *testing.T) {
 				return &struct{ order int }{}
 			})
 
-			assert.Equal(t, eventstore.ErrDuplicatePayloadType, err)
+			assert.Equal(t, eventstorejson.ErrDuplicatePayloadType, err)
 		})
 	})
 
@@ -167,7 +167,7 @@ func TestJSONPayloadTransformer_RegisterPayload(t *testing.T) {
 		type invalidTestCase struct {
 			title            string
 			payloadType      string
-			payloadInitiator eventstore.PayloadInitiator
+			payloadInitiator eventstorejson.PayloadInitiator
 			expectedError    error
 		}
 
@@ -178,7 +178,7 @@ func TestJSONPayloadTransformer_RegisterPayload(t *testing.T) {
 				func() interface{} {
 					return nil
 				},
-				eventstore.ErrInitiatorInvalidResult,
+				eventstorejson.ErrInitiatorInvalidResult,
 			},
 			{
 				"nil reference initiator",
@@ -186,13 +186,13 @@ func TestJSONPayloadTransformer_RegisterPayload(t *testing.T) {
 				func() interface{} {
 					return (*invalidTestCase)(nil)
 				},
-				eventstore.ErrInitiatorInvalidResult,
+				eventstorejson.ErrInitiatorInvalidResult,
 			},
 		}
 
 		for _, testCase := range testCases {
 			t.Run(testCase.title, func(t *testing.T) {
-				transformer := eventstore.NewJSONPayloadTransformer()
+				transformer := eventstorejson.NewPayloadTransformer()
 				err := transformer.RegisterPayload(testCase.payloadType, testCase.payloadInitiator)
 
 				assert.Equal(t, testCase.expectedError, err)
