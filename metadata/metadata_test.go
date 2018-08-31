@@ -170,7 +170,8 @@ func TestJSONMetadata_UnmarshalJSON(t *testing.T) {
 			err := json.Unmarshal([]byte(testCase.json), &m)
 
 			asserts := assert.New(t)
-			asserts.Equal(testCase.metadata(), m.Metadata)
+			// Need to use AsMap otherwise we can have inconsistent tests results.
+			asserts.Equal(testCase.metadata().AsMap(), m.Metadata.AsMap())
 			asserts.NoError(err)
 		})
 	}
