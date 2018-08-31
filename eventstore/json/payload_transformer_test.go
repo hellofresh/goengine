@@ -5,12 +5,30 @@ import (
 	"testing"
 
 	eventstorejson "github.com/hellofresh/goengine/eventstore/json"
+	anotherpayload "github.com/hellofresh/goengine/eventstore/json/internal/another/payload"
+	"github.com/hellofresh/goengine/eventstore/json/internal/payload"
 	"github.com/stretchr/testify/assert"
 )
 
 type simpleType struct {
 	Test  string
 	Order int
+}
+
+func TestPayloadTransformer(t *testing.T) {
+	t.Run("same type on different packages", func(t *testing.T) {
+		asserts := assert.New(t)
+
+		transformer := eventstorejson.NewPayloadTransformer()
+		transformer.RegisterPayload("payload", func() interface{} {
+			return payload.Payload{}
+		})
+
+		name, data, err := transformer.ConvertPayload(anotherpayload.Payload{})
+		asserts.Equal(err, eventstorejson.ErrPayloadNotRegistered)
+		asserts.Equal("", name)
+		asserts.Equal([]byte(nil), data)
+	})
 }
 
 func TestPayloadTransformer_ConvertPayload(t *testing.T) {
@@ -21,8 +39,7 @@ func TestPayloadTransformer_ConvertPayload(t *testing.T) {
 			payloadType      string
 			payloadInitiator eventstorejson.PayloadInitiator
 			payloadData      interface{}
-			expectedName     string
-			expectedData     interface{}
+			expectedData     string
 		}
 
 		testCases := []testCase{
@@ -33,8 +50,7 @@ func TestPayloadTransformer_ConvertPayload(t *testing.T) {
 					return &simpleType{}
 				},
 				&simpleType{Test: "test", Order: 1},
-				"tests",
-				[]byte(`{"Test":"test","Order":1}`),
+				`{"Test":"test","Order":1}`,
 			},
 		}
 
@@ -46,8 +62,8 @@ func TestPayloadTransformer_ConvertPayload(t *testing.T) {
 
 				name, data, err := transformer.ConvertPayload(tc.payloadData)
 				asserts.NoError(err)
-				asserts.Equal(tc.expectedName, name)
-				asserts.Equal(tc.expectedData, data)
+				asserts.Equal(tc.payloadType, name)
+				asserts.JSONEq(tc.expectedData, string(data))
 			})
 		}
 	})
@@ -55,41 +71,29 @@ func TestPayloadTransformer_ConvertPayload(t *testing.T) {
 	t.Run("invalid tests", func(t *testing.T) {
 		type testCase struct {
 			title            string
-			payloadType      string
-			registerPayload  bool
 			payloadInitiator eventstorejson.PayloadInitiator
 			payloadData      interface{}
 			expectedError    error
-			expectedName     string
-			expectedData     interface{}
 		}
 
 		testCases := []testCase{
 			{
 				"not registered convert payload",
-				"",
-				false,
 				func() interface{} {
 					// not necessary for this test case
 					return nil
 				},
 				&simpleType{Test: "test", Order: 1},
 				eventstorejson.ErrPayloadNotRegistered,
-				"",
-				[]byte(nil),
 			},
 			{
 				"error marshalling payload",
-				"tests",
-				true,
 				func() interface{} {
 					// Need to register something that is not json serializable.
 					return func() {}
 				},
 				func() {},
 				eventstorejson.ErrPayloadCannotBeSerialized,
-				"",
-				[]byte(nil),
 			},
 		}
 
@@ -98,14 +102,12 @@ func TestPayloadTransformer_ConvertPayload(t *testing.T) {
 				asserts := assert.New(t)
 				transformer := eventstorejson.NewPayloadTransformer()
 
-				if tc.registerPayload {
-					transformer.RegisterPayload(tc.payloadType, tc.payloadInitiator)
-				}
+				transformer.RegisterPayload("tests", tc.payloadInitiator)
 
 				name, data, err := transformer.ConvertPayload(tc.payloadData)
 				asserts.Equal(tc.expectedError, err)
-				asserts.Equal(tc.expectedName, name)
-				asserts.Equal(tc.expectedData, data)
+				asserts.Equal("", name)
+				asserts.Equal([]byte(nil), data)
 			})
 		}
 	})

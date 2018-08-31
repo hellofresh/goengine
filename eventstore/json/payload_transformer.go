@@ -56,9 +56,9 @@ func NewPayloadTransformer() *PayloadTransformer {
 	}
 }
 
-// ConvertPayload marshall the payload into JSON returning the payload name and the serialized data.
+// ConvertPayload marshall the payload into JSON returning the payload fullpkgPath and the serialized data.
 func (p *PayloadTransformer) ConvertPayload(payload interface{}) (string, []byte, error) {
-	payloadName, ok := p.names[reflect.TypeOf(payload).String()]
+	payloadName, ok := p.names[fullPkgPath(reflect.TypeOf(payload))]
 	if !ok {
 		return "", nil, ErrPayloadNotRegistered
 	}
@@ -88,11 +88,7 @@ func (p *PayloadTransformer) RegisterPayload(payloadType string, initiator Paylo
 		return ErrInitiatorInvalidResult
 	}
 
-	// This will store the fully qualified name of the event
-	//
-	// e.g: for a struct named OrderCreated located into file /events/events.go
-	// this function will return events.OrderCreated
-	p.names[rv.Type().String()] = payloadType
+	p.names[fullPkgPath(rv.Type())] = payloadType
 
 	p.types[payloadType] = PayloadType{
 		initiator:      initiator,
@@ -138,4 +134,11 @@ func (p *PayloadTransformer) CreatePayload(typeName string, data interface{}) (i
 	}
 
 	return vp.Elem().Interface(), nil
+}
+
+// fullPkgPath returns the full qualified name of a reflect.Type
+//
+// The fully qualified name is the combination of the type PkgPath and its Name.
+func fullPkgPath(t reflect.Type) string {
+	return t.PkgPath() + "." + t.Name()
 }
