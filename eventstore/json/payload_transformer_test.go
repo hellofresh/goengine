@@ -13,6 +13,104 @@ type simpleType struct {
 	Order int
 }
 
+func TestPayloadTransformer_ConvertPayload(t *testing.T) {
+
+	t.Run("valid tests", func(t *testing.T) {
+		type testCase struct {
+			title            string
+			payloadType      string
+			payloadInitiator eventstorejson.PayloadInitiator
+			payloadData      interface{}
+			expectedName     string
+			expectedData     interface{}
+		}
+
+		testCases := []testCase{
+			{
+				"convert payload",
+				"tests",
+				func() interface{} {
+					return &simpleType{}
+				},
+				&simpleType{Test: "test", Order: 1},
+				"tests",
+				[]byte(`{"Test":"test","Order":1}`),
+			},
+		}
+
+		for _, tc := range testCases {
+			t.Run(tc.title, func(t *testing.T) {
+				asserts := assert.New(t)
+				transformer := eventstorejson.NewPayloadTransformer()
+				transformer.RegisterPayload(tc.payloadType, tc.payloadInitiator)
+
+				name, data, err := transformer.ConvertPayload(tc.payloadData)
+				asserts.NoError(err)
+				asserts.Equal(tc.expectedName, name)
+				asserts.Equal(tc.expectedData, data)
+			})
+		}
+	})
+
+	t.Run("invalid tests", func(t *testing.T) {
+		type testCase struct {
+			title            string
+			payloadType      string
+			registerPayload  bool
+			payloadInitiator eventstorejson.PayloadInitiator
+			payloadData      interface{}
+			expectedError    error
+			expectedName     string
+			expectedData     interface{}
+		}
+
+		testCases := []testCase{
+			{
+				"not registered convert payload",
+				"",
+				false,
+				func() interface{} {
+					// not necessary for this test case
+					return nil
+				},
+				&simpleType{Test: "test", Order: 1},
+				eventstorejson.ErrPayloadNotRegistered,
+				"",
+				[]byte(nil),
+			},
+			{
+				"error marshalling payload",
+				"tests",
+				true,
+				func() interface{} {
+					// Need to register something that is not json serializable.
+					return func() {}
+				},
+				func() {},
+				eventstorejson.ErrPayloadCannotBeSerialized,
+				"",
+				[]byte(nil),
+			},
+		}
+
+		for _, tc := range testCases {
+			t.Run(tc.title, func(t *testing.T) {
+				asserts := assert.New(t)
+				transformer := eventstorejson.NewPayloadTransformer()
+
+				if tc.registerPayload {
+					transformer.RegisterPayload(tc.payloadType, tc.payloadInitiator)
+				}
+
+				name, data, err := transformer.ConvertPayload(tc.payloadData)
+				asserts.Equal(tc.expectedError, err)
+				asserts.Equal(tc.expectedName, name)
+				asserts.Equal(tc.expectedData, data)
+			})
+		}
+	})
+}
+
 func TestJSONPayloadTransformer_CreatePayload(t *testing.T) {
 	t.Run("payload creation", func(t *testing.T) {
 		type validTestCase struct {
