@@ -18,7 +18,7 @@ import (
 func TestNewPostgresStrategy(t *testing.T) {
 	t.Run("error on no converter provided", func(t *testing.T) {
 		s, err := postgres.NewPostgresStrategy(nil)
-		assert.Error(t, postgres.ErrorNoPayloadConverter, err)
+		assert.Error(t, postgres.ErrNoPayloadConverter, err)
 		assert.Nil(t, s)
 	})
 
@@ -42,7 +42,7 @@ func TestGenerateTableName(t *testing.T) {
 			"Empty stream name",
 			"",
 			"",
-			postgres.ErrorEmptyStreamName,
+			postgres.ErrEmptyStreamName,
 		},
 		{
 			"no escaping: letters",
@@ -173,9 +173,9 @@ func TestPrepareData(t *testing.T) {
 		payload2 := []byte(`{"Add":1}`)
 		payload3 := []byte(`{"Add":2}`)
 
-		m1 := getMessage(id1, payload1, meta1, time.Now())
-		m2 := getMessage(id2, payload2, meta2, time.Now())
-		m3 := getMessage(id3, payload3, meta3, time.Now())
+		m1 := mockMessage(id1, payload1, meta1, time.Now())
+		m2 := mockMessage(id2, payload2, meta2, time.Now())
+		m3 := mockMessage(id3, payload3, meta3, time.Now())
 
 		pc := &mocks.PayloadConverter{}
 		pc.On("ConvertPayload", payload1).Return("PayloadFirst", payload1, nil)
@@ -221,7 +221,7 @@ func TestPrepareData(t *testing.T) {
 		meta := getMeta(map[string]interface{}{"type": "m1", "version": 1})
 		payload := []byte(`{"Name":"alice","Balance":0}`)
 
-		m := getMessage(id, payload, meta, time.Now())
+		m := mockMessage(id, payload, meta, time.Now())
 		pc := &mocks.PayloadConverter{}
 		expectedErr := errors.New("Converter error")
 		pc.On("ConvertPayload", payload).Return("PayloadFirst", nil, expectedErr)
@@ -235,7 +235,7 @@ func TestPrepareData(t *testing.T) {
 	})
 }
 
-func getMessage(id messaging.UUID, payload []byte, meta interface{}, time time.Time) *mocks.Message {
+func mockMessage(id messaging.UUID, payload []byte, meta interface{}, time time.Time) *mocks.Message {
 	m := &mocks.Message{}
 	m.On("UUID").Return(id)
 	m.On("Payload").Return(payload)

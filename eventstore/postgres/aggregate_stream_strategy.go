@@ -12,11 +12,11 @@ import (
 )
 
 var (
-	// ErrorEmptyStreamName error on empty stream name
-	ErrorEmptyStreamName = errors.New("stream name cannot be empty")
+	// ErrEmptyStreamName error on empty stream name
+	ErrEmptyStreamName = errors.New("stream name cannot be empty")
 
-	// ErrorNoPayloadConverter error on no payload converter provided
-	ErrorNoPayloadConverter = errors.New("payload converter should be provided")
+	// ErrNoPayloadConverter error on no payload converter provided
+	ErrNoPayloadConverter = errors.New("payload converter should be provided")
 )
 
 // SingleStreamStrategy struct represents eventstore with single stream
@@ -27,7 +27,7 @@ type SingleStreamStrategy struct {
 // NewPostgresStrategy is the constructor postgres for PersistenceStrategy interface
 func NewPostgresStrategy(converter eventstore.PayloadConverter) (eventstore.PersistenceStrategy, error) {
 	if converter == nil {
-		return nil, ErrorNoPayloadConverter
+		return nil, ErrNoPayloadConverter
 	}
 	return &SingleStreamStrategy{
 		converter: converter,
@@ -99,7 +99,7 @@ func (s *SingleStreamStrategy) PrepareData(messages []messaging.Message) ([]inte
 // GenerateTableName returns a valid table name for postgres
 func (s *SingleStreamStrategy) GenerateTableName(streamName eventstore.StreamName) (string, error) {
 	if len(streamName) == 0 {
-		return "", ErrorEmptyStreamName
+		return "", ErrEmptyStreamName
 	}
 	// remove underscore at the end
 	regLastUnderScores, err := regexp.Compile("_+$")
