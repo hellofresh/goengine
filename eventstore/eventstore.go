@@ -16,7 +16,7 @@ type (
 		ReadOnlyEventStore
 
 		// Create creates an event stream
-		Create(streamName StreamName) error
+		Create(ctx context.Context, streamName StreamName) error
 
 		// AppendTo appends the provided messages to the stream
 		AppendTo(ctx context.Context, streamName StreamName, streamEvents []messaging.Message) error
@@ -25,7 +25,7 @@ type (
 	// ReadOnlyEventStore an interface describing a readonly event store
 	ReadOnlyEventStore interface {
 		// HasStream returns true if the stream exists
-		HasStream(streamName StreamName) bool
+		HasStream(ctx context.Context, streamName StreamName) bool
 
 		// Load returns a list of events based on the provided conditions
 		Load(ctx context.Context, streamName StreamName, fromNumber int, count *uint, metadataMatcher metadata.Matcher) ([]messaging.Message, error)

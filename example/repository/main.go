@@ -16,7 +16,7 @@ func main() {
 	store := inmemory.NewEventStore(logger)
 
 	eventStream := eventstore.StreamName("event_stream")
-	store.Create(eventStream)
+	store.Create(ctx, eventStream)
 
 	repository, err := NewBankAccountRepository(store, eventStream)
 	failOnErr(err)

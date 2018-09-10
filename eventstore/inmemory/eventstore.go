@@ -40,7 +40,7 @@ func NewEventStore(logger logrus.FieldLogger) *EventStore {
 }
 
 // Create creates a event stream
-func (i *EventStore) Create(streamName eventstore.StreamName) error {
+func (i *EventStore) Create(ctx context.Context, streamName eventstore.StreamName) error {
 	if _, found := i.streams[streamName]; found {
 		return ErrStreamExistsAlready
 	}
@@ -51,7 +51,7 @@ func (i *EventStore) Create(streamName eventstore.StreamName) error {
 }
 
 // HasStream returns true if the stream exists
-func (i *EventStore) HasStream(streamName eventstore.StreamName) bool {
+func (i *EventStore) HasStream(ctx context.Context, streamName eventstore.StreamName) bool {
 	_, found := i.streams[streamName]
 
 	return found

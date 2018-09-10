@@ -26,13 +26,13 @@ func (_m *EventStore) AppendTo(ctx context.Context, streamName eventstore.Stream
 	return r0
 }
 
-// Create provides a mock function with given fields: streamName
-func (_m *EventStore) Create(streamName eventstore.StreamName) error {
-	ret := _m.Called(streamName)
+// Create provides a mock function with given fields: ctx, streamName
+func (_m *EventStore) Create(ctx context.Context, streamName eventstore.StreamName) error {
+	ret := _m.Called(ctx, streamName)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(eventstore.StreamName) error); ok {
-		r0 = rf(streamName)
+	if rf, ok := ret.Get(0).(func(context.Context, eventstore.StreamName) error); ok {
+		r0 = rf(ctx, streamName)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -40,13 +40,13 @@ func (_m *EventStore) Create(streamName eventstore.StreamName) error {
 	return r0
 }
 
-// HasStream provides a mock function with given fields: streamName
-func (_m *EventStore) HasStream(streamName eventstore.StreamName) bool {
-	ret := _m.Called(streamName)
+// HasStream provides a mock function with given fields: ctx, streamName
+func (_m *EventStore) HasStream(ctx context.Context, streamName eventstore.StreamName) bool {
+	ret := _m.Called(ctx, streamName)
 
 	var r0 bool
-	if rf, ok := ret.Get(0).(func(eventstore.StreamName) bool); ok {
-		r0 = rf(streamName)
+	if rf, ok := ret.Get(0).(func(context.Context, eventstore.StreamName) bool); ok {
+		r0 = rf(ctx, streamName)
 	} else {
 		r0 = ret.Get(0).(bool)
 	}

@@ -31,14 +31,15 @@ func TestEventStore_Create(t *testing.T) {
 	logger, loggerHooks := test.NewNullLogger()
 	store := inmemory.NewEventStore(logger)
 
-	err := store.Create("event_stream")
+	ctx := context.Background()
+	err := store.Create(ctx, "event_stream")
 
 	asserts := assert.New(t)
 	asserts.Nil(err)
 	asserts.Len(loggerHooks.Entries, 0)
 
 	t.Run("Cannot create a stream twice", func(t *testing.T) {
-		err := store.Create("event_stream")
+		err := store.Create(ctx, "event_stream")
 
 		asserts := assert.New(t)
 		asserts.Equal(inmemory.ErrStreamExistsAlready, err)
@@ -52,14 +53,15 @@ func TestEventStore_HasStream(t *testing.T) {
 
 	logger, loggerHooks := test.NewNullLogger()
 	store := inmemory.NewEventStore(logger)
+	ctx := context.Background()
 
 	asserts := assert.New(t)
-	asserts.False(store.HasStream(createThisStream))
-	asserts.False(store.HasStream(unkownStream))
+	asserts.False(store.HasStream(ctx, createThisStream))
+	asserts.False(store.HasStream(ctx, unkownStream))
 
-	store.Create(createThisStream)
-	asserts.True(store.HasStream(createThisStream))
-	asserts.False(store.HasStream(unkownStream))
+	store.Create(ctx, createThisStream)
+	asserts.True(store.HasStream(ctx, createThisStream))
+	asserts.False(store.HasStream(ctx, unkownStream))
 
 	asserts.Len(loggerHooks.Entries, 0)
 }
@@ -142,7 +144,7 @@ func TestEventStore_Load(t *testing.T) {
 			store := inmemory.NewEventStore(logger)
 
 			for stream, events := range testStreams {
-				if err := store.Create(stream); !assert.Nil(t, err) {
+				if err := store.Create(ctx, stream); !assert.Nil(t, err) {
 					t.FailNow()
 				}
 
@@ -246,9 +248,10 @@ func TestEventStore_AppendTo(t *testing.T) {
 
 func createEventStoreWithStream(t *testing.T, name eventstore.StreamName) (*inmemory.EventStore, *test.Hook) {
 	logger, loggerHooks := test.NewNullLogger()
+	ctx := context.Background()
 	store := inmemory.NewEventStore(logger)
 
-	err := store.Create(name)
+	err := store.Create(ctx, name)
 	if !assert.Nil(t, err) {
 		t.FailNow()
 	}
