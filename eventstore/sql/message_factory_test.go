@@ -79,8 +79,9 @@ func TestAggregateChangedFactory_CreateFromRows(t *testing.T) {
 						return
 					}
 
+					uuid, _ := msg.UUID().MarshalBinary()
 					payloadFactory.On("CreatePayload", "name_changed", rowPayload).Once().Return(msg.Payload(), nil)
-					mockRows.AddRow(msg.UUID(), "name_changed", rowPayload, rowMetadata, msg.CreatedAt())
+					mockRows.AddRow(uuid, "name_changed", rowPayload, rowMetadata, msg.CreatedAt())
 				}
 
 				// A little overhead but we need to query in order to get sql.Rows
@@ -153,8 +154,9 @@ func TestAggregateChangedFactory_CreateFromRows(t *testing.T) {
 			{
 				"bad metadata json",
 				func(t *testing.T) (*sqlmock.Rows, *mocks.PayloadFactory) {
+					uuid, _ := messaging.GenerateUUID().MarshalBinary()
 					mockRows := sqlmock.NewRows([]string{"event_id", "event_name", "payload", "metadata", "created_at"})
-					mockRows.AddRow(messaging.GenerateUUID(), "some", []byte("{}"), []byte(`[ "missing array end" `), time.Now().UTC())
+					mockRows.AddRow(uuid, "some", []byte("{}"), []byte(`[ "missing array end" `), time.Now().UTC())
 
 					return mockRows, &mocks.PayloadFactory{}
 				},
@@ -163,9 +165,10 @@ func TestAggregateChangedFactory_CreateFromRows(t *testing.T) {
 			{
 				"bad payload",
 				func(t *testing.T) (*sqlmock.Rows, *mocks.PayloadFactory) {
+					uuid, _ := messaging.GenerateUUID().MarshalBinary()
 					mockRows := sqlmock.NewRows([]string{"event_id", "event_name", "payload", "metadata", "created_at"})
 					mockRows.AddRow(
-						messaging.GenerateUUID(),
+						uuid,
 						"some",
 						[]byte("{}"),
 						[]byte("{}"),
@@ -182,9 +185,10 @@ func TestAggregateChangedFactory_CreateFromRows(t *testing.T) {
 			{
 				"missing aggregate id",
 				func(t *testing.T) (*sqlmock.Rows, *mocks.PayloadFactory) {
+					uuid, _ := messaging.GenerateUUID().MarshalBinary()
 					mockRows := sqlmock.NewRows([]string{"event_id", "event_name", "payload", "metadata", "created_at"})
 					mockRows.AddRow(
-						messaging.GenerateUUID(),
+						uuid,
 						"some",
 						[]byte("{}"),
 						[]byte("{}"),
@@ -201,9 +205,10 @@ func TestAggregateChangedFactory_CreateFromRows(t *testing.T) {
 			{
 				"missing aggregate version",
 				func(t *testing.T) (*sqlmock.Rows, *mocks.PayloadFactory) {
+					uuid, _ := messaging.GenerateUUID().MarshalBinary()
 					mockRows := sqlmock.NewRows([]string{"event_id", "event_name", "payload", "metadata", "created_at"})
 					mockRows.AddRow(
-						messaging.GenerateUUID(),
+						uuid,
 						"some",
 						[]byte("{}"),
 						[]byte(`{"_aggregate_id": "00c5ca66-df07-4fcc-8866-5ca6ba1a10b8"}`),
@@ -220,9 +225,10 @@ func TestAggregateChangedFactory_CreateFromRows(t *testing.T) {
 			{
 				"invalid aggregate version type",
 				func(t *testing.T) (*sqlmock.Rows, *mocks.PayloadFactory) {
+					uuid, _ := messaging.GenerateUUID().MarshalBinary()
 					mockRows := sqlmock.NewRows([]string{"event_id", "event_name", "payload", "metadata", "created_at"})
 					mockRows.AddRow(
-						messaging.GenerateUUID(),
+						uuid,
 						"some",
 						[]byte("{}"),
 						[]byte(`{
@@ -242,9 +248,10 @@ func TestAggregateChangedFactory_CreateFromRows(t *testing.T) {
 			{
 				"invalid aggregate version",
 				func(t *testing.T) (*sqlmock.Rows, *mocks.PayloadFactory) {
+					uuid, _ := messaging.GenerateUUID().MarshalBinary()
 					mockRows := sqlmock.NewRows([]string{"event_id", "event_name", "payload", "metadata", "created_at"})
 					mockRows.AddRow(
-						messaging.GenerateUUID(),
+						uuid,
 						"some",
 						[]byte("{}"),
 						[]byte(`{
