@@ -8,6 +8,7 @@ import (
 
 	"github.com/hellofresh/goengine/aggregate"
 	"github.com/hellofresh/goengine/eventstore"
+	"github.com/hellofresh/goengine/eventstore/inmemory"
 	"github.com/hellofresh/goengine/messaging"
 	"github.com/hellofresh/goengine/metadata"
 	"github.com/hellofresh/goengine/mocks"
@@ -177,7 +178,7 @@ func TestRepository_GetAggregateRoot(t *testing.T) {
 			2,
 		)
 		eventStream := []*aggregate.Changed{firstEvent, secondEvent}
-		messageStream := []messaging.Message{firstEvent, secondEvent}
+		messageStream := inmemory.NewEventStream([]messaging.Message{firstEvent, secondEvent})
 
 		store := &mocks.EventStore{}
 		aggregateType, _ := aggregate.NewType("mock", func() aggregate.Root {
@@ -223,7 +224,10 @@ func TestRepository_GetAggregateRoot(t *testing.T) {
 		root, err := repo.GetAggregateRoot(ctx, rootID)
 
 		asserts := assert.New(t)
-		asserts.Nil(err, "Expected no error")
+		if !asserts.NoError(err) {
+			asserts.FailNow("Expected no error")
+		}
+
 		asserts.NotNil(root, "Expected a aggregate root")
 		store.AssertExpectations(t)
 
@@ -281,7 +285,7 @@ func TestRepository_GetAggregateRoot(t *testing.T) {
 						(*uint)(nil),
 						mock.Anything,
 					).
-					Return(testCase.storeMessages, testCase.storeError).
+					Return(inmemory.NewEventStream(testCase.storeMessages), testCase.storeError).
 					Once()
 
 				// Get/Load the aggregate

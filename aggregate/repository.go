@@ -102,19 +102,29 @@ func (r *Repository) GetAggregateRoot(ctx context.Context, aggregateID ID) (Root
 	if err != nil {
 		return nil, err
 	}
+	defer streamEvents.Close()
 
-	if len(streamEvents) == 0 {
-		return nil, ErrEmptyEventStream
-	}
+	var changedStream []*Changed
+	for streamEvents.Next() {
+		msg, err := streamEvents.Message()
+		if err != nil {
+			return nil, err
+		}
 
-	changedStream := make([]*Changed, len(streamEvents))
-	for i, streamEvent := range streamEvents {
-		changedEvent, ok := streamEvent.(*Changed)
+		changedEvent, ok := msg.(*Changed)
 		if !ok {
 			return nil, ErrUnexpectedMessageType
 		}
 
-		changedStream[i] = changedEvent
+		changedStream = append(changedStream, changedEvent)
+	}
+
+	if err := streamEvents.Err(); err != nil {
+		return nil, err
+	}
+
+	if len(changedStream) == 0 {
+		return nil, ErrEmptyEventStream
 	}
 
 	root := r.aggregateType.CreateInstance()
