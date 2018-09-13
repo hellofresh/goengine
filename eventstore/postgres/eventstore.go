@@ -129,7 +129,7 @@ func (e *EventStore) Load(
 	fromNumber int,
 	count *uint,
 	matcher metadata.Matcher,
-) ([]messaging.Message, error) {
+) (eventstore.EventStream, error) {
 	tableName, err := e.tableName(streamName)
 	if err != nil {
 		return nil, err
@@ -160,11 +160,7 @@ func (e *EventStore) Load(
 	}
 	defer rows.Close()
 
-	streamEvents, err := e.messageFactory.CreateFromRows(rows)
-	if err != nil {
-		return nil, err
-	}
-	return streamEvents, nil
+	return e.messageFactory.CreateEventStream(rows)
 }
 
 // AppendTo batch inserts Messages into the event stream table

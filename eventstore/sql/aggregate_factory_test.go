@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hellofresh/goengine/eventstore"
+
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/hellofresh/goengine/aggregate"
 	"github.com/hellofresh/goengine/eventstore/sql"
@@ -105,12 +107,18 @@ func TestAggregateChangedFactory_CreateFromRows(t *testing.T) {
 				}
 
 				// Finally recreate the messages
-				msgs, err := messageFactory.CreateFromRows(rows)
-				if !asserts.Nil(err) {
+				stream, err := messageFactory.CreateEventStream(rows)
+				if !asserts.NoError(err) {
 					return
 				}
+				defer stream.Close()
 
-				assertEqualMessages(t, expectedMessages, msgs)
+				messages, err := eventstore.ReadEventStream(stream)
+				if !asserts.NoError(stream.Err()) {
+					asserts.FailNow("no exception was expected while reading the stream")
+				}
+
+				assertEqualMessages(t, expectedMessages, messages)
 				payloadFactory.AssertExpectations(t)
 			})
 		}
@@ -126,7 +134,7 @@ func TestAggregateChangedFactory_CreateFromRows(t *testing.T) {
 		}
 
 		// Finally recreate the messages
-		msgs, err := messageFactory.CreateFromRows(nil)
+		msgs, err := messageFactory.CreateEventStream(nil)
 
 		// Check result
 		asserts.Equal(sql.ErrRowsRequired, err)
@@ -297,13 +305,20 @@ func TestAggregateChangedFactory_CreateFromRows(t *testing.T) {
 				}
 
 				// Finally recreate the messages
-				msgs, err := messageFactory.CreateFromRows(rows)
-
-				// Check result
-				if asserts.Error(err) {
-					asserts.Equal(testCase.expectedErrorMessage, err.Error())
+				stream, err := messageFactory.CreateEventStream(rows)
+				if !asserts.NoError(err) {
+					asserts.FailNow("no exception was expected")
 				}
-				asserts.Nil(msgs)
+				defer stream.Close()
+
+				// Read the stream
+				messages, err := eventstore.ReadEventStream(stream)
+				if !asserts.NoError(stream.Err()) {
+					asserts.FailNow("no exception was expected while reading the stream")
+				}
+
+				asserts.EqualError(err, testCase.expectedErrorMessage)
+				asserts.Nil(messages)
 
 				payloadFactory.AssertExpectations(t)
 			})
@@ -335,7 +350,7 @@ func createAggregateChangedMessage(payload interface{}, version uint) (*aggregat
 
 func assertEqualMessages(t *testing.T, expected []*aggregate.Changed, msgs []messaging.Message) {
 	asserts := assert.New(t)
-	if !asserts.NotNil(msgs) || !asserts.Len(msgs, len(expected)) {
+	if asserts.Len(msgs, len(expected)) {
 		return
 	}
 
