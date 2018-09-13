@@ -55,15 +55,15 @@ func (_m *EventStore) HasStream(ctx context.Context, streamName eventstore.Strea
 }
 
 // Load provides a mock function with given fields: ctx, streamName, fromNumber, count, metadataMatcher
-func (_m *EventStore) Load(ctx context.Context, streamName eventstore.StreamName, fromNumber int, count *uint, metadataMatcher metadata.Matcher) ([]messaging.Message, error) {
+func (_m *EventStore) Load(ctx context.Context, streamName eventstore.StreamName, fromNumber int, count *uint, metadataMatcher metadata.Matcher) (eventstore.EventStream, error) {
 	ret := _m.Called(ctx, streamName, fromNumber, count, metadataMatcher)
 
-	var r0 []messaging.Message
-	if rf, ok := ret.Get(0).(func(context.Context, eventstore.StreamName, int, *uint, metadata.Matcher) []messaging.Message); ok {
+	var r0 eventstore.EventStream
+	if rf, ok := ret.Get(0).(func(context.Context, eventstore.StreamName, int, *uint, metadata.Matcher) eventstore.EventStream); ok {
 		r0 = rf(ctx, streamName, fromNumber, count, metadataMatcher)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]messaging.Message)
+			r0 = ret.Get(0).(eventstore.EventStream)
 		}
 	}
 

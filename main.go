@@ -19,6 +19,7 @@ package goengine_dev
 //go:generate go run vendor/github.com/vektra/mockery/cmd/mockery/mockery.go -dir messaging/ -name=Message -outpkg mocks -output ./mocks -case underscore
 //go:generate go run vendor/github.com/vektra/mockery/cmd/mockery/mockery.go -dir eventstore/ -name=PayloadConverter -outpkg mocks -output ./mocks -case underscore
 //go:generate go run vendor/github.com/vektra/mockery/cmd/mockery/mockery.go -dir eventstore/ -name=PersistenceStrategy -outpkg mocks -output ./mocks -case underscore
+//go:generate go run vendor/github.com/vektra/mockery/cmd/mockery/mockery.go -dir eventstore/ -name=EventStream -outpkg mocks -output ./mocks -case underscore
 //go:generate go run vendor/github.com/vektra/mockery/cmd/mockery/mockery.go -dir eventstore/sql/ -name=MessageFactory -outpkg mocks -output ./mocks -case underscore
 
 // blank imports help docs.
