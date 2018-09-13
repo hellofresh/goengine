@@ -64,7 +64,7 @@ func (i *EventStore) Load(
 	fromNumber int,
 	count *uint,
 	matcher metadata.Matcher,
-) ([]messaging.Message, error) {
+) (eventstore.EventStream, error) {
 	i.RLock()
 	defer i.RUnlock()
 
@@ -91,7 +91,7 @@ func (i *EventStore) Load(
 		}
 	}
 
-	return streamEvents, nil
+	return NewEventStream(streamEvents), nil
 }
 
 // AppendTo appends the provided messages to the stream

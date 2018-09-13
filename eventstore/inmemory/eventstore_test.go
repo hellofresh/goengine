@@ -153,12 +153,20 @@ func TestEventStore_Load(t *testing.T) {
 				}
 			}
 
-			messages, err := store.Load(ctx, testCase.loadFrom, 1, testCase.loadCount, testCase.matcher)
-
+			stream, err := store.Load(ctx, testCase.loadFrom, 1, testCase.loadCount, testCase.matcher)
 			asserts := assert.New(t)
-			asserts.Equal(testCase.expectedEvents, messages)
-			asserts.Nil(err)
-			asserts.Len(loggerHooks.Entries, 0)
+
+			if asserts.Nil(err) {
+				defer stream.Close()
+
+				messages, err := eventstore.ReadEventStream(stream)
+				if !asserts.NoError(err) {
+					asserts.FailNow("no exception was expected while reading the stream")
+				}
+
+				asserts.Equal(testCase.expectedEvents, messages)
+				asserts.Len(loggerHooks.Entries, 0)
+			}
 		})
 	}
 
@@ -173,7 +181,7 @@ func TestEventStore_Load(t *testing.T) {
 
 			asserts := assert.New(t)
 			asserts.Equal(inmemory.ErrStreamNotFound, err)
-			asserts.Len(messages, 0)
+			asserts.Nil(messages)
 			asserts.Len(loggerHooks.Entries, 0)
 		})
 
@@ -193,7 +201,7 @@ func TestEventStore_Load(t *testing.T) {
 
 			asserts := assert.New(t)
 			asserts.IsType(inmemory.IncompatibleMatcherError{}, err)
-			asserts.Len(messages, 0)
+			asserts.Nil(messages)
 			asserts.Len(loggerHooks.Entries, 0)
 		})
 	})
