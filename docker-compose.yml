@@ -1,0 +1,12 @@
+version: '2'
+
+services:
+  postgres:
+    image: postgres:10.3
+    ports:
+    - '8043:5432'
+    environment:
+      LC_ALL: C.UTF-8
+      POSTGRES_DB: goengine
+      POSTGRES_USER: goengine
+      POSTGRES_PASSWORD: goengine
