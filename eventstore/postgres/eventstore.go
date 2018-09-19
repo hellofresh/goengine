@@ -90,6 +90,9 @@ func (e *EventStore) Create(ctx context.Context, streamName eventstore.StreamNam
 	}
 
 	tx, err := e.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
 	for _, q := range queries {
 		_, err := e.db.ExecContext(ctx, q)
 		if err == nil {
@@ -136,15 +139,15 @@ func (e *EventStore) Load(
 	condition := fmt.Sprintf("no >= $%d", len(params)+1)
 	conditions = append(conditions, condition)
 	params = append(params, fromNumber)
-	where := fmt.Sprintf(" WHERE %s", strings.Join(conditions, " AND "))
+	where := fmt.Sprintf("WHERE %s", strings.Join(conditions, " AND "))
 
 	limit := ""
 	if count != nil {
-		limit = fmt.Sprintf("LIMIT %d", count)
+		limit = fmt.Sprintf("LIMIT %d", *count)
 	}
 
 	q := fmt.Sprintf(
-		"SELECT %s FROM %s%s%s",
+		`SELECT %s FROM %s %s %s`,
 		e.columns,
 		tableName,
 		where,
@@ -187,6 +190,9 @@ func (e *EventStore) AppendTo(ctx context.Context, streamName eventstore.StreamN
 	}
 
 	result, err := e.db.ExecContext(ctx, q, data...)
+	if err != nil {
+		return err
+	}
 	if e.logger != nil {
 		e.logger.
 			WithFields(logrus.Fields{
@@ -248,8 +254,8 @@ func matchConditions(matcher metadata.Matcher) ([]string, []interface{}) {
 	i := 0
 	matcher.Iterate(func(c metadata.Constraint) {
 		i++
-		field := QuoteIdentifier(c.Field())
-		condition := fmt.Sprintf("metadata ->> '%s' %s $%d", field, c.Operator(), i)
+		field := SingleQuoteIdentifier(c.Field())
+		condition := fmt.Sprintf("metadata ->> %s %s $%d", field, c.Operator(), i)
 		conditions = append(conditions, condition)
 		params = append(params, c.Value())
 	})
@@ -261,7 +267,7 @@ func (e *EventStore) tableExists(ctx context.Context, tableName string) bool {
 	var exists bool
 	err := e.db.QueryRowContext(
 		ctx,
-		`SELECT EXISTS(SELECT 1 FROM information_schema.tables WHERE table_schema = "public" AND table_name = $1)`,
+		`SELECT EXISTS(SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = $1)`,
 		tableName,
 	).Scan(&exists)
 

@@ -24,8 +24,8 @@ func TestCreate(t *testing.T) {
 		mockHasStreamQuery(false, mock)
 		mock.ExpectBegin()
 		mock.ExpectExec(`CREATE TABLE "events_orders"(.+)`).WillReturnResult(sqlmock.NewResult(0, 0))
-		mock.ExpectExec(`CREATE UNIQUE INDEX ON "events_orders"(.+)`).WillReturnResult(sqlmock.NewResult(0, 0))
-		mock.ExpectExec(`CREATE INDEX ON "events_orders"(.+)`).WillReturnResult(sqlmock.NewResult(0, 0))
+		mock.ExpectExec(`CREATE UNIQUE INDEX "events_orders_unique_index___aggregate_type__aggregate_id__aggregate_version" ON "events_orders"(.+)`).WillReturnResult(sqlmock.NewResult(0, 0))
+		mock.ExpectExec(`CREATE INDEX "events_orders_index__aggregate_type__aggregate_id" ON "events_orders"(.+)`).WillReturnResult(sqlmock.NewResult(0, 0))
 		mock.ExpectCommit()
 
 		store := eventStore(asserts, db)
@@ -45,7 +45,7 @@ func TestCreate(t *testing.T) {
 		mockHasStreamQuery(false, mock)
 		mock.ExpectBegin()
 		mock.ExpectExec(`CREATE TABLE "events_orders"(.+)`).WillReturnResult(sqlmock.NewResult(0, 0))
-		mock.ExpectExec(`CREATE UNIQUE INDEX ON "events_orders"(.+)`).WillReturnError(expectedError)
+		mock.ExpectExec(`CREATE UNIQUE INDEX(.+)ON "events_orders"(.+)`).WillReturnError(expectedError)
 		mock.ExpectRollback()
 
 		store := eventStore(asserts, db)
