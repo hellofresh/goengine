@@ -158,6 +158,7 @@ func TestRepository_SaveAggregateRoot(t *testing.T) {
 
 func TestRepository_GetAggregateRoot(t *testing.T) {
 	t.Run("load and reconstitute a AggregateRoot", func(t *testing.T) {
+		asserts := assert.New(t)
 		ctx := context.Background()
 		rootID := aggregate.GenerateID()
 
@@ -178,7 +179,10 @@ func TestRepository_GetAggregateRoot(t *testing.T) {
 			2,
 		)
 		eventStream := []*aggregate.Changed{firstEvent, secondEvent}
-		messageStream := inmemory.NewEventStream([]messaging.Message{firstEvent, secondEvent})
+		messageStream, err := inmemory.NewEventStream([]messaging.Message{firstEvent, secondEvent}, []int64{1, 2})
+		if !asserts.NoError(err) {
+			return
+		}
 
 		store := &mocks.EventStore{}
 		aggregateType, _ := aggregate.NewType("mock", func() aggregate.Root {
@@ -223,7 +227,6 @@ func TestRepository_GetAggregateRoot(t *testing.T) {
 		// Get/Load the aggregate
 		root, err := repo.GetAggregateRoot(ctx, rootID)
 
-		asserts := assert.New(t)
 		if !asserts.NoError(err) {
 			asserts.FailNow("Expected no error")
 		}
@@ -272,8 +275,14 @@ func TestRepository_GetAggregateRoot(t *testing.T) {
 
 		for _, testCase := range badTestCases {
 			t.Run(testCase.title, func(t *testing.T) {
+				asserts := assert.New(t)
 				ctx := context.Background()
 				rootID := aggregate.GenerateID()
+
+				stream, err := inmemory.NewEventStream(testCase.storeMessages, make([]int64, len(testCase.storeMessages)))
+				if !asserts.NoError(err) {
+					return
+				}
 
 				repo, store := mockRepository()
 				store.
@@ -285,13 +294,12 @@ func TestRepository_GetAggregateRoot(t *testing.T) {
 						(*uint)(nil),
 						mock.Anything,
 					).
-					Return(inmemory.NewEventStream(testCase.storeMessages), testCase.storeError).
+					Return(stream, testCase.storeError).
 					Once()
 
 				// Get/Load the aggregate
 				root, err := repo.GetAggregateRoot(ctx, rootID)
 
-				asserts := assert.New(t)
 				asserts.Equal(testCase.expectedError, err, "Expected error")
 				asserts.Nil(root, "Expected no aggregate root")
 				store.AssertExpectations(t)

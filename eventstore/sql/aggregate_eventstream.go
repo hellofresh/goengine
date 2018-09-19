@@ -44,8 +44,9 @@ func (a *aggregateChangedEventStream) Close() error {
 	return a.rows.Close()
 }
 
-func (a *aggregateChangedEventStream) Message() (messaging.Message, error) {
+func (a *aggregateChangedEventStream) Message() (messaging.Message, int64, error) {
 	var (
+		eventNumber  int64
 		eventID      messaging.UUID
 		eventName    string
 		jsonPayload  []byte
@@ -53,33 +54,33 @@ func (a *aggregateChangedEventStream) Message() (messaging.Message, error) {
 		createdAt    time.Time
 	)
 
-	err := a.rows.Scan(&eventID, &eventName, &jsonPayload, &jsonMetadata, &createdAt)
+	err := a.rows.Scan(&eventNumber, &eventID, &eventName, &jsonPayload, &jsonMetadata, &createdAt)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
 	metadataWrapper := metadata.JSONMetadata{Metadata: metadata.New()}
 	if err := json.Unmarshal(jsonMetadata, &metadataWrapper); err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	meta := metadataWrapper.Metadata
 
 	payload, err := a.payloadFactory.CreatePayload(eventName, jsonPayload)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
 	aggregateID, err := aggregateIDFromMetadata(meta)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
 	aggregateVersion, err := aggregateVersionFromMetadata(meta)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
-	return aggregate.ReconstituteChange(
+	aggr, err := aggregate.ReconstituteChange(
 		aggregateID,
 		eventID,
 		payload,
@@ -87,6 +88,8 @@ func (a *aggregateChangedEventStream) Message() (messaging.Message, error) {
 		createdAt,
 		aggregateVersion,
 	)
+
+	return aggr, eventNumber, err
 }
 
 func aggregateIDFromMetadata(meta metadata.Metadata) (aggregate.ID, error) {

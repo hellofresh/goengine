@@ -25,15 +25,22 @@ func TestReadEventStream(t *testing.T) {
 			streamIndex++
 			return streamIndex < 4
 		})
-		stream.On("Message").Return(func() messaging.Message {
-			return mockedMessages[streamIndex]
-		}, nil)
+		stream.On("Message").Return(
+			func() messaging.Message {
+				return mockedMessages[streamIndex]
+			},
+			func() int64 {
+				return int64(streamIndex + 1)
+			},
+			nil,
+		)
 		stream.On("Err").Return(nil)
 
-		messages, err := eventstore.ReadEventStream(stream)
+		messages, numbers, err := eventstore.ReadEventStream(stream)
 
 		if assert.NoError(t, err) {
 			assert.Equal(t, mockedMessages, messages)
+			assert.Equal(t, []int64{1, 2, 3, 4}, numbers)
 		}
 	})
 
@@ -46,13 +53,14 @@ func TestReadEventStream(t *testing.T) {
 		})
 		stream.On("Err").Return(expectedError)
 
-		messages, err := eventstore.ReadEventStream(stream)
+		messages, numbers, err := eventstore.ReadEventStream(stream)
 
 		asserts := assert.New(t)
 		if asserts.Error(err) {
 			asserts.Equal(expectedError, err)
 		}
 		asserts.Empty(messages)
+		asserts.Empty(numbers)
 	})
 
 	t.Run("Error while fetching a Message", func(t *testing.T) {
@@ -68,6 +76,9 @@ func TestReadEventStream(t *testing.T) {
 			func() messaging.Message {
 				return mockedMessages[streamIndex]
 			},
+			func() int64 {
+				return int64(streamIndex + 1)
+			},
 			func() error {
 				if streamIndex == 2 {
 					return expectedError
@@ -78,12 +89,13 @@ func TestReadEventStream(t *testing.T) {
 		)
 		stream.On("Err").Return(nil)
 
-		messages, err := eventstore.ReadEventStream(stream)
+		messages, numbers, err := eventstore.ReadEventStream(stream)
 
 		asserts := assert.New(t)
 		if asserts.Error(err) {
 			asserts.Equal(expectedError, err)
 		}
+		asserts.Empty(numbers)
 		asserts.Empty(messages)
 	})
 }

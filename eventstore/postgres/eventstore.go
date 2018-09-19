@@ -147,8 +147,7 @@ func (e *EventStore) Load(
 	}
 
 	q := fmt.Sprintf(
-		`SELECT %s FROM %s %s %s`,
-		e.columns,
+		`SELECT * FROM %s %s ORDER BY no %s`,
 		tableName,
 		where,
 		limit,
@@ -158,7 +157,6 @@ func (e *EventStore) Load(
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
 
 	return e.messageFactory.CreateEventStream(rows)
 }

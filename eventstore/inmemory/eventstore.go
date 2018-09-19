@@ -78,20 +78,23 @@ func (i *EventStore) Load(
 		return nil, err
 	}
 
-	var streamEvents []messaging.Message
+	var messages []messaging.Message
+	var messageNumbers []int64
 	var found uint
 
 	for idx, event := range storedEvents {
-		if idx+1 >= fromNumber && metadataMatcher.Matches(event.Metadata()) {
+		messageNumber := idx + 1
+		if messageNumber >= fromNumber && metadataMatcher.Matches(event.Metadata()) {
 			found++
-			streamEvents = append(streamEvents, event)
+			messages = append(messages, event)
+			messageNumbers = append(messageNumbers, int64(messageNumber))
 			if count != nil && found == *count {
 				break
 			}
 		}
 	}
 
-	return NewEventStream(streamEvents), nil
+	return NewEventStream(messages, messageNumbers)
 }
 
 // AppendTo appends the provided messages to the stream

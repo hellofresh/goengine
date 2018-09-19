@@ -106,7 +106,7 @@ func (r *Repository) GetAggregateRoot(ctx context.Context, aggregateID ID) (Root
 
 	var changedStream []*Changed
 	for streamEvents.Next() {
-		msg, err := streamEvents.Message()
+		msg, _, err := streamEvents.Message()
 		if err != nil {
 			return nil, err
 		}

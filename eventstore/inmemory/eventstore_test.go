@@ -68,11 +68,12 @@ func TestEventStore_HasStream(t *testing.T) {
 
 func TestEventStore_Load(t *testing.T) {
 	type validTestCase struct {
-		title          string
-		loadFrom       eventstore.StreamName
-		loadCount      *uint
-		matcher        metadata.Matcher
-		expectedEvents []messaging.Message
+		title           string
+		loadFrom        eventstore.StreamName
+		loadCount       *uint
+		matcher         metadata.Matcher
+		expectedEvents  []messaging.Message
+		expectedNumbers []int64
 	}
 
 	testStreams := map[eventstore.StreamName][]messaging.Message{
@@ -96,6 +97,7 @@ func TestEventStore_Load(t *testing.T) {
 			nil,
 			metadata.NewMatcher(),
 			nil,
+			nil,
 		},
 		{
 			"Entire event stream",
@@ -103,6 +105,7 @@ func TestEventStore_Load(t *testing.T) {
 			nil,
 			metadata.NewMatcher(),
 			testStreams["test"],
+			[]int64{1, 2, 3, 4, 5},
 		},
 		{
 			"All of type a",
@@ -110,6 +113,7 @@ func TestEventStore_Load(t *testing.T) {
 			nil,
 			metadata.WithConstraint(metadata.NewMatcher(), "type", metadata.Equals, "a"),
 			testStreams["test"][0:4],
+			[]int64{1, 2, 3, 4},
 		},
 		{
 			"Load 2 of type a",
@@ -117,6 +121,7 @@ func TestEventStore_Load(t *testing.T) {
 			&intTwo,
 			metadata.WithConstraint(metadata.NewMatcher(), "type", metadata.Equals, "a"),
 			testStreams["test"][0:2],
+			[]int64{1, 2},
 		},
 		{
 			"All of type b",
@@ -126,12 +131,14 @@ func TestEventStore_Load(t *testing.T) {
 			[]messaging.Message{
 				testStreams["test"][4],
 			},
+			[]int64{5},
 		},
 		{
 			"All of type c",
 			"test",
 			nil,
 			metadata.WithConstraint(metadata.NewMatcher(), "type", metadata.Equals, "c"),
+			nil,
 			nil,
 		},
 	}
@@ -159,12 +166,13 @@ func TestEventStore_Load(t *testing.T) {
 			if asserts.Nil(err) {
 				defer stream.Close()
 
-				messages, err := eventstore.ReadEventStream(stream)
+				messages, messageNumbers, err := eventstore.ReadEventStream(stream)
 				if !asserts.NoError(err) {
 					asserts.FailNow("no exception was expected while reading the stream")
 				}
 
 				asserts.Equal(testCase.expectedEvents, messages)
+				asserts.Equal(testCase.expectedNumbers, messageNumbers)
 				asserts.Len(loggerHooks.Entries, 0)
 			}
 		})

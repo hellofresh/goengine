@@ -38,7 +38,7 @@ func (_m *EventStream) Err() error {
 }
 
 // Message provides a mock function with given fields:
-func (_m *EventStream) Message() (messaging.Message, error) {
+func (_m *EventStream) Message() (messaging.Message, int64, error) {
 	ret := _m.Called()
 
 	var r0 messaging.Message
@@ -50,14 +50,21 @@ func (_m *EventStream) Message() (messaging.Message, error) {
 		}
 	}
 
-	var r1 error
-	if rf, ok := ret.Get(1).(func() error); ok {
+	var r1 int64
+	if rf, ok := ret.Get(1).(func() int64); ok {
 		r1 = rf()
 	} else {
-		r1 = ret.Error(1)
+		r1 = ret.Get(1).(int64)
 	}
 
-	return r0, r1
+	var r2 error
+	if rf, ok := ret.Get(2).(func() error); ok {
+		r2 = rf()
+	} else {
+		r2 = ret.Error(2)
+	}
+
+	return r0, r1, r2
 }
 
 // Next provides a mock function with given fields:

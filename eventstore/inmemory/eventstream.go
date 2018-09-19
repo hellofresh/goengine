@@ -7,12 +7,21 @@ import (
 	"github.com/hellofresh/goengine/messaging"
 )
 
-// Ensure that EventStream satisfies the eventstore.EventStream interface
-var _ eventstore.EventStream = &EventStream{}
+var (
+	// ErrMessageNumberCountMismatch occurs when the provided messages and numbers do not have the same length
+	ErrMessageNumberCountMismatch = errors.New("provided messages and messageNumbers do not match")
+	// ErrEventStreamClosed occurs when an eventstream is closed
+	ErrEventStreamClosed = errors.New("no more messages")
+	// ErrEventStreamNotStarted occurs when an eventstream Message or MessageNumber is called before Next
+	ErrEventStreamNotStarted = errors.New("eventStream Message called without calling Next")
+	// Ensure that EventStream satisfies the eventstore.EventStream interface
+	_ eventstore.EventStream = &EventStream{}
+)
 
-// EventStream a inmemory eventstore.EventStream implementation
+// EventStream an inmemory eventstore.EventStream implementation
 type EventStream struct {
-	messages []messaging.Message
+	messages       []messaging.Message
+	messageNumbers []int64
 
 	index        int
 	messageCount int
@@ -20,12 +29,19 @@ type EventStream struct {
 }
 
 // NewEventStream return a new EventStream containing the given messages
-func NewEventStream(messages []messaging.Message) *EventStream {
-	return &EventStream{
-		index:        -1,
-		messages:     messages,
-		messageCount: len(messages),
+func NewEventStream(messages []messaging.Message, messageNumbers []int64) (*EventStream, error) {
+	messageCount := len(messages)
+	if len(messageNumbers) != messageCount {
+		return nil, ErrMessageNumberCountMismatch
 	}
+
+	return &EventStream{
+		messages:       messages,
+		messageNumbers: messageNumbers,
+
+		index:        -1,
+		messageCount: len(messages),
+	}, nil
 }
 
 // Next prepares the next result for reading.
@@ -56,19 +72,20 @@ func (e *EventStream) Close() error {
 
 	e.closed = true
 	e.messages = nil
+	e.messageNumbers = nil
 
 	return nil
 }
 
 // Message returns the current message in the EventStream.
-func (e *EventStream) Message() (messaging.Message, error) {
+func (e *EventStream) Message() (messaging.Message, int64, error) {
 	if e.closed {
-		return nil, errors.New("no more messages")
+		return nil, 0, ErrEventStreamClosed
 	}
 
 	if e.index == -1 {
-		return nil, errors.New("eventStream Message called without calling Next")
+		return nil, 0, ErrEventStreamNotStarted
 	}
 
-	return e.messages[e.index], nil
+	return e.messages[e.index], e.messageNumbers[e.index], nil
 }

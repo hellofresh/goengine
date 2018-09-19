@@ -110,7 +110,6 @@ func TestEventStoreAppendTo(t *testing.T) {
 }
 
 func TestEventStoreLoad(t *testing.T) {
-	asserts := assert.New(t)
 	aggregateIDFirst := messaging.GenerateUUID()
 	aggregateIDSecond := messaging.GenerateUUID()
 	messages := generateAppendMessages([]messaging.UUID{aggregateIDFirst, aggregateIDSecond})
@@ -119,11 +118,12 @@ func TestEventStoreLoad(t *testing.T) {
 	streamName := eventstore.StreamName("orders_load")
 
 	testCases := []struct {
-		title      string
-		fromNumber int
-		count      *uint
-		matcher    func() metadata.Matcher
-		messages   []messaging.Message
+		title          string
+		fromNumber     int
+		count          *uint
+		matcher        func() metadata.Matcher
+		messages       []messaging.Message
+		messageNumbers []int64
 	}{
 		{
 			"Get all events from the storage",
@@ -131,6 +131,7 @@ func TestEventStoreLoad(t *testing.T) {
 			nil,
 			func() metadata.Matcher { return metadata.NewMatcher() },
 			messages,
+			[]int64{1, 2, 3, 4, 5, 6, 7, 8, 9, 10},
 		},
 		{
 			"Get only two first events",
@@ -138,13 +139,15 @@ func TestEventStoreLoad(t *testing.T) {
 			nil,
 			func() metadata.Matcher { return metadata.NewMatcher() },
 			messages[(countPrepared - 2):countPrepared],
+			[]int64{9, 10},
 		},
 		{
 			"Get only 5 last elements",
-			0,
-			uintPointer(5),
+			6,
+			nil,
 			func() metadata.Matcher { return metadata.NewMatcher() },
-			messages[:5],
+			messages[5:],
+			[]int64{6, 7, 8, 9, 10},
 		},
 		{
 			"Get messages for one aggregate id",
@@ -154,7 +157,8 @@ func TestEventStoreLoad(t *testing.T) {
 				matcher := metadata.NewMatcher()
 				return metadata.WithConstraint(matcher, "_aggregate_id", metadata.Equals, aggregateIDFirst)
 			},
-			messages[0 : countPrepared/2+1],
+			messages[0 : countPrepared/2],
+			[]int64{1, 2, 3, 4, 5},
 		},
 		{
 			"Get messages for one aggregate id and version",
@@ -166,6 +170,18 @@ func TestEventStoreLoad(t *testing.T) {
 				return metadata.WithConstraint(matcher, "_aggregate_id", metadata.Equals, aggregateIDFirst)
 			},
 			messages[1:2],
+			[]int64{2},
+		},
+		{
+			"Get all messages with version 1",
+			0,
+			nil,
+			func() metadata.Matcher {
+				matcher := metadata.NewMatcher()
+				return metadata.WithConstraint(matcher, "_aggregate_version", metadata.Equals, 1)
+			},
+			[]messaging.Message{messages[0], messages[5]},
+			[]int64{1, 6},
 		},
 		{
 			"Get messages for less and grater then the version",
@@ -178,6 +194,7 @@ func TestEventStoreLoad(t *testing.T) {
 				return metadata.WithConstraint(matcher, "_aggregate_id", metadata.Equals, aggregateIDFirst)
 			},
 			messages[1:4],
+			[]int64{2, 3, 4},
 		},
 		{
 			"Get messages for boolean equals true",
@@ -189,6 +206,7 @@ func TestEventStoreLoad(t *testing.T) {
 				return metadata.WithConstraint(matcher, "_aggregate_id", metadata.Equals, aggregateIDFirst)
 			},
 			messages[:3],
+			[]int64{1, 2, 3},
 		},
 		{
 			"Get messages for boolean equals false",
@@ -200,6 +218,7 @@ func TestEventStoreLoad(t *testing.T) {
 				return metadata.WithConstraint(matcher, "_aggregate_id", metadata.Equals, aggregateIDFirst)
 			},
 			messages[3:5],
+			[]int64{4, 5},
 		},
 		{
 			"Get messages for not existing aggregate id",
@@ -209,6 +228,7 @@ func TestEventStoreLoad(t *testing.T) {
 				matcher := metadata.NewMatcher()
 				return metadata.WithConstraint(matcher, "_aggregate_id", metadata.Equals, messaging.GenerateUUID())
 			},
+			nil,
 			nil,
 		},
 		{
@@ -220,6 +240,7 @@ func TestEventStoreLoad(t *testing.T) {
 				return metadata.WithConstraint(matcher, "';''; DROP DATABASE events_orders_load;", metadata.Equals, "ok")
 			},
 			messages,
+			[]int64{1, 2, 3, 4, 5, 6, 7, 8, 9, 10},
 		},
 		{
 			"Get no messages for match with not existing metadata field",
@@ -230,10 +251,13 @@ func TestEventStoreLoad(t *testing.T) {
 				return metadata.WithConstraint(matcher, "_my_field_does_not_exist", metadata.Equals, "true")
 			},
 			nil,
+			nil,
 		},
 	}
 
 	test.PostgresDatabase(t, func(db *sql.DB) {
+		asserts := assert.New(t)
+
 		store := initEventStore(t, db)
 		// create table
 		err := store.Create(ctx, streamName)
@@ -245,14 +269,27 @@ func TestEventStoreLoad(t *testing.T) {
 
 		for _, testCase := range testCases {
 			t.Run(testCase.title, func(t *testing.T) {
+				asserts := assert.New(t)
+				expectedMessageCount := len(testCase.messages)
+				if !asserts.Len(testCase.messageNumbers, expectedMessageCount, "invalid test case messages len must be equal to messageNumbers") {
+					return
+				}
+
 				// read events
 				storeLoadInstance := initEventStore(t, db)
 				results, err := storeLoadInstance.Load(ctx, streamName, testCase.fromNumber, testCase.count, testCase.matcher())
 				asserts.NoError(err)
-				expectedMessages := testCase.messages
 
-				for i, resultEvent := range results {
-					expectedEvent := expectedMessages[i]
+				var i int
+				for results.Next() {
+					resultEvent, resultNumber, err := results.Message()
+					if !asserts.NoError(err) ||
+						!asserts.Truef(expectedMessageCount > i, "unexpected message received %d", i) {
+						i++
+						continue
+					}
+
+					expectedEvent := testCase.messages[i]
 
 					asserts.Equal(expectedEvent.Payload(), resultEvent.Payload())
 					asserts.Equal(expectedEvent.UUID(), resultEvent.UUID())
@@ -263,7 +300,14 @@ func TestEventStoreLoad(t *testing.T) {
 					aggregateVersionExpected := resultEvent.Metadata().Value("_aggregate_version").(float64)
 					asserts.Equal(aggregateVersionExpected, resultEvent.Metadata().Value("_aggregate_version"))
 					asserts.Equal(len(expectedEvent.Metadata().AsMap()), len(resultEvent.Metadata().AsMap()))
+
+					asserts.Equal(testCase.messageNumbers[i], resultNumber)
+
+					i++
 				}
+
+				asserts.NoError(results.Err())
+				asserts.Equal(len(testCase.messages), i, "expected to have received the right amount of messages")
 			})
 		}
 	})

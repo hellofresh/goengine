@@ -27,8 +27,8 @@ type (
 		// result of Err. Close is idempotent and does not affect the result of Err.
 		Close() error
 
-		// Message returns the current message in the EventStream.
-		Message() (messaging.Message, error)
+		// Message returns the current message and it's number within the EventStream.
+		Message() (messaging.Message, int64, error)
 	}
 
 	// EventStore an interface describing an event store
@@ -54,20 +54,22 @@ type (
 
 // ReadEventStream reads the entire event stream and returns it's content as a slice.
 // The main purpose of the function is for testing and debugging.
-func ReadEventStream(stream EventStream) ([]messaging.Message, error) {
+func ReadEventStream(stream EventStream) ([]messaging.Message, []int64, error) {
 	var messages []messaging.Message
+	var messageNumbers []int64
 	for stream.Next() {
-		msg, err := stream.Message()
+		msg, msgNumber, err := stream.Message()
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
 		messages = append(messages, msg)
+		messageNumbers = append(messageNumbers, msgNumber)
 	}
 
 	if err := stream.Err(); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	return messages, nil
+	return messages, messageNumbers, nil
 }
