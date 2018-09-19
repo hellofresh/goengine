@@ -3,155 +3,163 @@ package postgres_test
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
-
-	"github.com/hellofresh/goengine/metadata"
-
-	"github.com/stretchr/testify/assert"
 
 	"github.com/hellofresh/goengine/eventstore"
 	"github.com/hellofresh/goengine/eventstore/postgres"
 	"github.com/hellofresh/goengine/messaging"
+	"github.com/hellofresh/goengine/metadata"
 	"github.com/hellofresh/goengine/mocks"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestNewPostgresStrategy(t *testing.T) {
 	t.Run("error on no converter provided", func(t *testing.T) {
-		s, err := postgres.NewPostgresStrategy(nil)
+		strategy, err := postgres.NewPostgresStrategy(nil)
+
 		assert.Error(t, postgres.ErrNoPayloadConverter, err)
-		assert.Nil(t, s)
+		assert.Nil(t, strategy)
 	})
 
 	t.Run("error on no converter provided", func(t *testing.T) {
-		s, err := postgres.NewPostgresStrategy(&mocks.PayloadConverter{})
-		assert.IsTypef(t, &postgres.SingleStreamStrategy{}, s, "")
+		strategy, err := postgres.NewPostgresStrategy(&mocks.PayloadConverter{})
+
+		assert.IsTypef(t, &postgres.SingleStreamStrategy{}, strategy, "")
 		assert.Nil(t, err)
 	})
 }
 
 func TestGenerateTableName(t *testing.T) {
-	type testCase struct {
-		title    string
-		input    eventstore.StreamName
-		expected string
-		err      error
+	strategy, err := postgres.NewPostgresStrategy(&mocks.PayloadConverter{})
+	if err != nil {
+		t.Fatal("Strategy could not be initiated", err)
 	}
 
-	testCases := []testCase{
-		{
-			"Empty stream name",
-			"",
-			"",
-			postgres.ErrEmptyStreamName,
-		},
-		{
-			"no escaping: letters",
-			"order",
-			"events_order",
-			nil,
-		},
-		{
-			"no escaping: letters, numbers",
-			"order1",
-			"events_order1",
-			nil,
-		},
-		{
-			"no escaping: letters, numbers",
-			"order1",
-			"events_order1",
-			nil,
-		},
-		{
-			"no escaping: underscores",
-			"order_1_",
-			"events_order_1",
-			nil,
-		},
-		{
-			"escaping: brackets []",
-			"order[1]",
-			"events_order1",
-			nil,
-		},
-		{
-			"escaping: brackets ()",
-			"order(1)",
-			"events_order1",
-			nil,
-		},
-		{
-			"escaping: special symbols",
-			"order%1#?",
-			"events_order1",
-			nil,
-		},
-		{
-			"escaping: special symbols",
-			"o.r,d;e:r%1#?",
-			"events_order1",
-			nil,
-		},
-		{
-			"escaping: quotes",
-			"order'1\"",
-			"events_order1",
-			nil,
-		},
-		{
-			"escaping: dash, slash",
-			"order\\-1-",
-			"events_order1",
-			nil,
-		},
-		{
-			"escaping: dash, slash",
-			"or_de_r___",
-			"events_or_de_r",
-			nil,
-		},
-		{
-			"escaping: dash, slash",
-			"or_de_r__&@#_",
-			"events_or_de_r",
-			nil,
-		},
-	}
+	t.Run("name conversions", func(t *testing.T) {
+		type validTestCase struct {
+			title  string
+			input  eventstore.StreamName
+			output string
+		}
 
-	for _, testCase := range testCases {
-		t.Run(testCase.title, func(t *testing.T) {
-			s, err := postgres.NewPostgresStrategy(&mocks.PayloadConverter{})
-			assert.Nil(t, err)
-			tableName, err := s.GenerateTableName(testCase.input)
-			assert.Equal(t, testCase.err, err)
-			assert.Equal(t, testCase.expected, tableName)
-		})
-	}
+		testCases := []validTestCase{
+			{
+				"no escaping: letters",
+				"order",
+				"events_order",
+			},
+			{
+				"no escaping: letters, numbers",
+				"order1",
+				"events_order1",
+			},
+			{
+				"no escaping: letters, numbers",
+				"order1",
+				"events_order1",
+			},
+			{
+				"no escaping: underscores",
+				"order_1_",
+				"events_order_1",
+			},
+			{
+				"escaping: brackets []",
+				"order[1]",
+				"events_order1",
+			},
+			{
+				"escaping: brackets ()",
+				"order(1)",
+				"events_order1",
+			},
+			{
+				"escaping: special symbols",
+				"order%1#?",
+				"events_order1",
+			},
+			{
+				"escaping: special symbols",
+				"o.r,d;e:r%1#?",
+				"events_order1",
+			},
+			{
+				"escaping: quotes",
+				"order'1\"",
+				"events_order1",
+			},
+			{
+				"escaping: dash, slash",
+				"order\\-1-",
+				"events_order1",
+			},
+			{
+				"escaping: dash, slash",
+				"or_de_r___",
+				"events_or_de_r",
+			},
+			{
+				"escaping: dash, slash",
+				"or_de_r__&@#_",
+				"events_or_de_r",
+			},
+		}
+
+		for _, testCase := range testCases {
+			t.Run(testCase.title, func(t *testing.T) {
+				tableName, err := strategy.GenerateTableName(testCase.input)
+
+				asserts := assert.New(t)
+				if asserts.NoError(err) {
+					asserts.Equal(testCase.output, tableName)
+				}
+			})
+		}
+	})
+
+	t.Run("Empty stream names are not supported", func(t *testing.T) {
+		tableName, err := strategy.GenerateTableName("")
+
+		asserts := assert.New(t)
+		asserts.Empty(tableName)
+		asserts.Equal(postgres.ErrEmptyStreamName, err)
+	})
 }
 
 func TestColumnNames(t *testing.T) {
-	expected := []string{"event_id", "event_name", "payload", "metadata", "created_at"}
-	s, err := postgres.NewPostgresStrategy(&mocks.PayloadConverter{})
+	expectedColumns := []string{"event_id", "event_name", "payload", "metadata", "created_at"}
+
+	strategy, err := postgres.NewPostgresStrategy(&mocks.PayloadConverter{})
+	if err != nil {
+		t.Fatal("Strategy could not be initiated", err)
+	}
+
 	t.Run("get expected columns", func(t *testing.T) {
-		assert.Nil(t, err)
-		cols := s.ColumnNames()
-		assert.Equal(t, cols, expected)
+		cols := strategy.ColumnNames()
+
+		assert.Equal(t, cols, expectedColumns)
 	})
 
 	t.Run("cannot modify data", func(t *testing.T) {
-		colsOrig := s.ColumnNames()
+		colsOrig := strategy.ColumnNames()
 		colsOrig = append(colsOrig, "field1")
 		colsOrig = append(colsOrig, "field2")
-		assert.Equal(t, s.ColumnNames(), expected)
+
+		assert.Equal(t, strategy.ColumnNames(), expectedColumns)
 	})
 }
 
 func TestCreateSchema(t *testing.T) {
+	strategy, err := postgres.NewPostgresStrategy(&mocks.PayloadConverter{})
+	if err != nil {
+		t.Fatal("Strategy could not be initiated", err)
+	}
+
 	t.Run("output statement elements count", func(t *testing.T) {
-		s, err := postgres.NewPostgresStrategy(&mocks.PayloadConverter{})
-		assert.Nil(t, err)
-		cs := s.CreateSchema("abc")
+		cs := strategy.CreateSchema("abc")
+
 		assert.Equal(t, 3, len(cs))
 		assert.Contains(t, cs[0], `CREATE TABLE "abc"`)
 	})
@@ -159,80 +167,76 @@ func TestCreateSchema(t *testing.T) {
 
 func TestPrepareData(t *testing.T) {
 	t.Run("get expected columns", func(t *testing.T) {
-		id1 := messaging.GenerateUUID()
-		id2 := messaging.GenerateUUID()
-		id3 := messaging.GenerateUUID()
-
-		meta1 := metadata.FromMap(map[string]interface{}{"type": "m1", "version": 1})
-		metab1, _ := json.Marshal(meta1)
-		meta2 := metadata.FromMap(map[string]interface{}{"type": "m1", "version": 2})
-		metab2, _ := json.Marshal(meta2)
-		meta3 := metadata.FromMap(map[string]interface{}{"type": "m1", "version": 3})
-		metab3, _ := json.Marshal(meta3)
-
-		payload1 := []byte(`{"Name":"alice","Balance":0}`)
-		payload2 := []byte(`{"Add":1}`)
-		payload3 := []byte(`{"Add":2}`)
-
-		m1 := mockMessage(id1, payload1, meta1, time.Now())
-		m2 := mockMessage(id2, payload2, meta2, time.Now())
-		m3 := mockMessage(id3, payload3, meta3, time.Now())
+		asserts := assert.New(t)
 
 		pc := &mocks.PayloadConverter{}
-		pc.On("ConvertPayload", payload1).Return("PayloadFirst", payload1, nil)
-		pc.On("ConvertPayload", payload2).Return("PayloadSecond", payload2, nil)
-		pc.On("ConvertPayload", payload3).Return("PayloadThird", payload3, nil)
+		messages := make([]messaging.Message, 3)
+		expectedColumns := make([]interface{}, 3*5)
+		for i := range messages {
+			id := messaging.GenerateUUID()
+			payload := []byte(fmt.Sprintf(`{"Name":"%d","Balance":0}`, i))
+			payloadType := fmt.Sprintf("Payload%d", i)
+			meta := metadata.FromMap(map[string]interface{}{"type": "m", "version": i})
+			createdAt := time.Now()
 
-		messages := []messaging.Message{m1, m2, m3}
-		s, err := postgres.NewPostgresStrategy(pc)
-		assert.Nil(t, err)
-		data, err := s.PrepareData(messages)
+			messages[i] = mockMessage(id, payload, meta, createdAt)
 
-		assert.Equal(t, 15, len(data))
-		assert.Equal(t, nil, err)
+			pc.On("ConvertPayload", payload).Return(payloadType, payload, nil)
 
-		// check UUID
-		assert.Equal(t, id1, data[0])
-		assert.Equal(t, id2, data[5])
-		assert.Equal(t, id3, data[10])
+			metaJSON, err := json.Marshal(meta)
+			if !asserts.NoError(err) {
+				return
+			}
 
-		// check payload type
-		assert.Equal(t, "PayloadFirst", data[1])
-		assert.Equal(t, "PayloadSecond", data[6])
-		assert.Equal(t, "PayloadThird", data[11])
+			expectedColumns = append(
+				expectedColumns,
+				id,
+				payloadType,
+				payload,
+				metaJSON,
+				createdAt,
+			)
+		}
 
-		// check payload
-		assert.Equal(t, payload1, data[2])
-		assert.Equal(t, payload2, data[7])
-		assert.Equal(t, payload3, data[12])
+		strategy, err := postgres.NewPostgresStrategy(pc)
+		if asserts.NoError(err) {
+			return
+		}
 
-		// check metadata
-		assert.Equal(t, metab1, data[3])
-		assert.Equal(t, metab2, data[8])
-		assert.Equal(t, metab3, data[13])
+		data, err := strategy.PrepareData(messages)
 
-		// check dates
-		assert.IsTypef(t, time.Time{}, data[4], "type of time")
-		assert.IsTypef(t, time.Time{}, data[9], "type of time")
-		assert.IsTypef(t, time.Time{}, data[14], "type of time")
+		asserts.Equal(expectedColumns, data)
+		asserts.Equal(nil, err)
 	})
 
 	t.Run("Converter error", func(t *testing.T) {
-		id := messaging.GenerateUUID()
-		meta := metadata.FromMap(map[string]interface{}{"type": "m1", "version": 1})
+		asserts := assert.New(t)
+
+		expectedErr := errors.New("converter error")
+
 		payload := []byte(`{"Name":"alice","Balance":0}`)
 
-		m := mockMessage(id, payload, meta, time.Now())
+		messages := []messaging.Message{
+			mockMessage(
+				messaging.GenerateUUID(),
+				payload,
+				metadata.FromMap(map[string]interface{}{"type": "m1", "version": 1}),
+				time.Now(),
+			),
+		}
+
 		pc := &mocks.PayloadConverter{}
-		expectedErr := errors.New("Converter error")
 		pc.On("ConvertPayload", payload).Return("PayloadFirst", nil, expectedErr)
 
-		messages := []messaging.Message{m}
-		s, err := postgres.NewPostgresStrategy(pc)
-		assert.Nil(t, err)
-		data, err := s.PrepareData(messages)
-		assert.Error(t, expectedErr, err)
-		assert.Nil(t, data)
+		strategy, err := postgres.NewPostgresStrategy(pc)
+		if asserts.NoError(err) {
+			return
+		}
+
+		data, err := strategy.PrepareData(messages)
+
+		asserts.Error(expectedErr, err)
+		asserts.Nil(data)
 	})
 }
 

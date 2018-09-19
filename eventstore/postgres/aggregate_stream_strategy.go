@@ -14,7 +14,6 @@ import (
 var (
 	// ErrEmptyStreamName error on empty stream name
 	ErrEmptyStreamName = errors.New("stream name cannot be empty")
-
 	// ErrNoPayloadConverter error on no payload converter provided
 	ErrNoPayloadConverter = errors.New("payload converter should be provided")
 )
@@ -29,9 +28,8 @@ func NewPostgresStrategy(converter eventstore.PayloadConverter) (eventstore.Pers
 	if converter == nil {
 		return nil, ErrNoPayloadConverter
 	}
-	return &SingleStreamStrategy{
-		converter: converter,
-	}, nil
+
+	return &SingleStreamStrategy{converter: converter}, nil
 }
 
 // CreateSchema returns a valid set of SQL statements to create the event store tables and indexes
@@ -85,10 +83,12 @@ func (s *SingleStreamStrategy) PrepareData(messages []messaging.Message) ([]inte
 		if err != nil {
 			return nil, err
 		}
+
 		meta, err := json.Marshal(msg.Metadata())
 		if err != nil {
 			return nil, err
 		}
+
 		out = append(out,
 			msg.UUID(),
 			payloadType,
@@ -105,6 +105,7 @@ func (s *SingleStreamStrategy) GenerateTableName(streamName eventstore.StreamNam
 	if len(streamName) == 0 {
 		return "", ErrEmptyStreamName
 	}
+
 	// remove underscore at the end
 	regLastUnderScores, err := regexp.Compile("_+$")
 	if err != nil {
