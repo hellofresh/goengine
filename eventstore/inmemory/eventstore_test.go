@@ -260,13 +260,8 @@ func createEventStoreWithStream(t *testing.T, name eventstore.StreamName) (*inme
 }
 
 func mockMessage(metadataInfo map[string]interface{}) *mocks.Message {
-	meta := metadata.New()
-	for key, val := range metadataInfo {
-		meta = metadata.WithValue(meta, key, val)
-	}
-
 	msg := &mocks.Message{}
-	msg.On("Metadata").Return(meta)
+	msg.On("Metadata").Return(metadata.FromMap(metadataInfo))
 
 	return msg
 }

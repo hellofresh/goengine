@@ -44,6 +44,45 @@ func TestWithValue(t *testing.T) {
 	})
 }
 
+func TestFromMap(t *testing.T) {
+	type mapTestCase struct {
+		title string
+		input map[string]interface{}
+	}
+
+	testCases := []mapTestCase{
+		{
+			"map with data",
+			map[string]interface{}{
+				"v":        1,
+				"foo":      "bar",
+				"is_valid": true,
+			},
+		},
+		{
+			"empty map",
+			map[string]interface{}{},
+		},
+		{
+			"nil map",
+			nil,
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.title, func(t *testing.T) {
+			expectedMap := testCase.input
+			if expectedMap == nil {
+				expectedMap = map[string]interface{}{}
+			}
+
+			m := metadata.FromMap(testCase.input)
+
+			assert.Equal(t, expectedMap, m.AsMap())
+		})
+	}
+}
+
 func TestAsMap(t *testing.T) {
 	type mapTestCase struct {
 		title       string

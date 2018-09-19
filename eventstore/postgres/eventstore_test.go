@@ -4,8 +4,11 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
+
+	"github.com/hellofresh/goengine/metadata"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/stretchr/testify/assert"
@@ -151,7 +154,7 @@ func TestAppendTo(t *testing.T) {
 
 	t.Run("Empty stream name", func(t *testing.T) {
 		id := messaging.GenerateUUID()
-		meta := getMeta(map[string]interface{}{"type": "m1", "version": 1})
+		meta := metadata.FromMap(map[string]interface{}{"type": "m1", "version": 1})
 		payload := []byte(`{"Name":"alice","Balance":0}`)
 		message := mockMessage(id, payload, meta, time.Now())
 		payloadConverter := &mocks.PayloadConverter{}
@@ -175,7 +178,7 @@ func TestAppendTo(t *testing.T) {
 	t.Run("Prepare data error", func(t *testing.T) {
 		expectedError := errors.New("prepare data expected error")
 		id := messaging.GenerateUUID()
-		meta := getMeta(map[string]interface{}{"type": "m1", "version": 1})
+		meta := metadata.FromMap(map[string]interface{}{"type": "m1", "version": 1})
 		payload := []byte(`{"Name":"alice","Balance":0}`)
 		message := mockMessage(id, payload, meta, time.Now())
 		messages := []messaging.Message{message}
@@ -199,23 +202,24 @@ func TestAppendTo(t *testing.T) {
 }
 
 func mockMessages() (*mocks.PayloadConverter, []messaging.Message) {
-	id1 := messaging.GenerateUUID()
-	id2 := messaging.GenerateUUID()
-	id3 := messaging.GenerateUUID()
-	meta1 := getMeta(map[string]interface{}{"type": "m1", "version": 1})
-	meta2 := getMeta(map[string]interface{}{"type": "m1", "version": 2})
-	meta3 := getMeta(map[string]interface{}{"type": "m1", "version": 3})
-	payload1 := []byte(`{"Name":"alice","Balance":0}`)
-	payload2 := []byte(`{"Add":1}`)
-	payload3 := []byte(`{"Add":2}`)
-	m1 := mockMessage(id1, payload1, meta1, time.Now())
-	m2 := mockMessage(id2, payload2, meta2, time.Now())
-	m3 := mockMessage(id3, payload3, meta3, time.Now())
 	pc := &mocks.PayloadConverter{}
-	pc.On("ConvertPayload", payload1).Return("PayloadFirst", payload1, nil)
-	pc.On("ConvertPayload", payload2).Return("PayloadSecond", payload2, nil)
-	pc.On("ConvertPayload", payload3).Return("PayloadThird", payload3, nil)
-	messages := []messaging.Message{m1, m2, m3}
+	messages := make([]messaging.Message, 3)
+
+	for i := 0; i < len(messages); i++ {
+		payload := []byte(fmt.Sprintf(`{"Name":"alice_%d","Balance":0}`, i))
+		messages[i] = mockMessage(
+			messaging.GenerateUUID(),
+			payload,
+			metadata.FromMap(map[string]interface{}{
+				"type":    fmt.Sprintf("m%d", i),
+				"version": i + 1,
+			}),
+			time.Now(),
+		)
+
+		pc.On("ConvertPayload", payload).Return(fmt.Sprintf("Payload%d", i), payload, nil)
+	}
+
 	return pc, messages
 }
 

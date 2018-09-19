@@ -18,6 +18,16 @@ func New() Metadata {
 	return new(emptyData)
 }
 
+// FromMap returns a new Metadata instance filled with the map data
+func FromMap(data map[string]interface{}) Metadata {
+	meta := New()
+	for k, v := range data {
+		meta = WithValue(meta, k, v)
+	}
+
+	return meta
+}
+
 // WithValue returns a copy of parent in which the value associated with key is val.
 func WithValue(parent Metadata, key string, val interface{}) Metadata {
 	return &valueData{parent, key, val}
@@ -113,11 +123,6 @@ func (j *JSONMetadata) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	meta := New()
-	for k, v := range valueMap {
-		meta = WithValue(meta, k, v)
-	}
-
-	j.Metadata = meta
+	j.Metadata = FromMap(valueMap)
 	return nil
 }

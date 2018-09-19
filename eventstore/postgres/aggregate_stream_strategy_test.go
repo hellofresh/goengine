@@ -6,12 +6,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hellofresh/goengine/metadata"
+
 	"github.com/stretchr/testify/assert"
 
 	"github.com/hellofresh/goengine/eventstore"
 	"github.com/hellofresh/goengine/eventstore/postgres"
 	"github.com/hellofresh/goengine/messaging"
-	"github.com/hellofresh/goengine/metadata"
 	"github.com/hellofresh/goengine/mocks"
 )
 
@@ -162,11 +163,11 @@ func TestPrepareData(t *testing.T) {
 		id2 := messaging.GenerateUUID()
 		id3 := messaging.GenerateUUID()
 
-		meta1 := getMeta(map[string]interface{}{"type": "m1", "version": 1})
+		meta1 := metadata.FromMap(map[string]interface{}{"type": "m1", "version": 1})
 		metab1, _ := json.Marshal(meta1)
-		meta2 := getMeta(map[string]interface{}{"type": "m1", "version": 2})
+		meta2 := metadata.FromMap(map[string]interface{}{"type": "m1", "version": 2})
 		metab2, _ := json.Marshal(meta2)
-		meta3 := getMeta(map[string]interface{}{"type": "m1", "version": 3})
+		meta3 := metadata.FromMap(map[string]interface{}{"type": "m1", "version": 3})
 		metab3, _ := json.Marshal(meta3)
 
 		payload1 := []byte(`{"Name":"alice","Balance":0}`)
@@ -218,7 +219,7 @@ func TestPrepareData(t *testing.T) {
 
 	t.Run("Converter error", func(t *testing.T) {
 		id := messaging.GenerateUUID()
-		meta := getMeta(map[string]interface{}{"type": "m1", "version": 1})
+		meta := metadata.FromMap(map[string]interface{}{"type": "m1", "version": 1})
 		payload := []byte(`{"Name":"alice","Balance":0}`)
 
 		m := mockMessage(id, payload, meta, time.Now())
@@ -242,12 +243,4 @@ func mockMessage(id messaging.UUID, payload []byte, meta interface{}, time time.
 	m.On("Metadata").Return(meta)
 	m.On("CreatedAt").Return(time)
 	return m
-}
-
-func getMeta(metadataInfo map[string]interface{}) metadata.Metadata {
-	meta := metadata.New()
-	for key, val := range metadataInfo {
-		meta = metadata.WithValue(meta, key, val)
-	}
-	return meta
 }
