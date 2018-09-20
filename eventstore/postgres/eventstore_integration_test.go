@@ -9,16 +9,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/hellofresh/goengine/eventstore"
 	eventstorejson "github.com/hellofresh/goengine/eventstore/json"
 	"github.com/hellofresh/goengine/eventstore/postgres"
 	eventstoresql "github.com/hellofresh/goengine/eventstore/sql"
-	"github.com/hellofresh/goengine/internal"
+	"github.com/hellofresh/goengine/internal/test"
 	"github.com/hellofresh/goengine/messaging"
 	"github.com/hellofresh/goengine/metadata"
 	"github.com/hellofresh/goengine/mocks"
+	"github.com/stretchr/testify/assert"
 )
 
 type payloadData struct {
@@ -30,7 +29,7 @@ func TestEventStoreCreate(t *testing.T) {
 	t.Run("Check create table with indexes", func(t *testing.T) {
 		asserts := assert.New(t)
 		ctx := context.Background()
-		internal.TestDatabase(t, func(db *sql.DB) {
+		test.PostgresDatabase(t, func(db *sql.DB) {
 			store := initEventStore(t, db)
 			err := store.Create(ctx, "orders")
 			asserts.NoError(err)
@@ -60,7 +59,7 @@ func TestEventStoreHasStream(t *testing.T) {
 		ctx := context.Background()
 		streamName := eventstore.StreamName("orders")
 		anotherStreamName := eventstore.StreamName("orders2")
-		internal.TestDatabase(t, func(db *sql.DB) {
+		test.PostgresDatabase(t, func(db *sql.DB) {
 			store := initEventStore(t, db)
 			exists := store.HasStream(ctx, streamName)
 			asserts.False(exists)
@@ -82,7 +81,7 @@ func TestEventStoreAppendTo(t *testing.T) {
 		ctx := context.Background()
 		streamName := eventstore.StreamName("orders_my")
 
-		internal.TestDatabase(t, func(db *sql.DB) {
+		test.PostgresDatabase(t, func(db *sql.DB) {
 			store := initEventStore(t, db)
 			err := store.Create(ctx, streamName)
 			asserts.NoError(err)
@@ -234,7 +233,7 @@ func TestEventStoreLoad(t *testing.T) {
 		},
 	}
 
-	internal.TestDatabase(t, func(db *sql.DB) {
+	test.PostgresDatabase(t, func(db *sql.DB) {
 		store := initEventStore(t, db)
 		// create table
 		err := store.Create(ctx, streamName)

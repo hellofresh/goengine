@@ -45,7 +45,7 @@ test-unit:
 
 test-integration:
 	echo "Running integration tests on ci"
-	POSTGRES_DSN=$(POSTGRES_DSN) go test -v -tags=integration -race ./...
+	POSTGRES_DSN=$(POSTGRES_DSN) go test -tags=integration -race ./...
 
 test-examples:
 	echo "Running examples"
