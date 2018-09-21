@@ -1,10 +1,14 @@
 package main
 
 import (
+	"go/build"
 	"os"
+	"path/filepath"
 	"reflect"
 	"text/template"
 	"unicode"
+
+	"github.com/hellofresh/goengine/eventstore/inmemory"
 )
 
 var (
@@ -144,6 +148,8 @@ func compare{{ .String | ucFirst }}(rValue {{ . }}, operator metadata.Operator, 
 )
 
 func main() {
+	matcherPath := filepath.Join(getInmemoryDir(), "matcher_gen.go")
+
 	tmpl, err := template.New("type_compare").Funcs(template.FuncMap{
 		"basicType": func(kind reflect.Kind) bool {
 			for _, k := range basicTypes {
@@ -171,7 +177,7 @@ func main() {
 		panic(err)
 	}
 
-	f, err := os.OpenFile("eventstore/inmemory/matcher_gen.go", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+	f, err := os.OpenFile(matcherPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
 		panic(err)
 	}
@@ -189,4 +195,15 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
+	println("Generated inmemory comparison")
+}
+
+func getInmemoryDir() string {
+	path := reflect.TypeOf(inmemory.EventStore{}).PkgPath()
+	p, err := build.Import(path, "", build.FindOnly)
+	if err != nil {
+		panic(err)
+	}
+	return p.Dir
 }
