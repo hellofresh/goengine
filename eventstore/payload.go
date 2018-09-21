@@ -12,4 +12,10 @@ type (
 		// CreatePayload returns a reconstructed payload or a error
 		CreatePayload(payloadType string, data interface{}) (interface{}, error)
 	}
+
+	// PayloadResolver is used resolve the event_name of a payload
+	PayloadResolver interface {
+		// ResolveName resolves the name of the underlying payload type
+		ResolveName(payload interface{}) (string, error)
+	}
 )

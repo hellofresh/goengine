@@ -3,6 +3,8 @@ package inmemory
 import (
 	"errors"
 	"reflect"
+
+	"github.com/hellofresh/goengine/eventstore"
 )
 
 var (
@@ -10,6 +12,8 @@ var (
 	ErrUnknownPayloadType = errors.New("unknown payload type was provided")
 	// ErrDuplicatePayloadType occurs when a payload type is already registered
 	ErrDuplicatePayloadType = errors.New("payload type is already registered")
+	// Ensure that we satisfy the eventstore.PayloadResolver interface
+	_ eventstore.PayloadResolver = &PayloadRegistry{}
 )
 
 // PayloadRegistry is a registry containing the mapping of an payload type to a event name
@@ -36,8 +40,8 @@ func (p *PayloadRegistry) RegisterPayload(eventName string, payload interface{})
 	return nil
 }
 
-// ResolveEventName resolves the type name based on the underlying type of the payload
-func (p *PayloadRegistry) ResolveEventName(payload interface{}) (string, error) {
+// ResolveName resolves the type name based on the underlying type of the payload
+func (p *PayloadRegistry) ResolveName(payload interface{}) (string, error) {
 	name := p.typeName(reflect.TypeOf(payload))
 	if eventName, found := p.typeMap[name]; found {
 		return eventName, nil

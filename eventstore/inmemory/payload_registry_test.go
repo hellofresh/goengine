@@ -48,7 +48,7 @@ func TestPayloadRegistry(t *testing.T) {
 	t.Run("resolve payloads", func(t *testing.T) {
 		for _, tc := range testCases {
 			t.Run(tc.title, func(t *testing.T) {
-				name, err := registry.ResolveEventName(tc.payload)
+				name, err := registry.ResolveName(tc.payload)
 
 				asserts := assert.New(t)
 				if asserts.NoError(err) {
@@ -70,7 +70,7 @@ func TestPayloadRegistry(t *testing.T) {
 	})
 
 	t.Run("unknown type", func(t *testing.T) {
-		name, err := registry.ResolveEventName(struct{}{})
+		name, err := registry.ResolveName(struct{}{})
 
 		asserts := assert.New(t)
 		if asserts.Error(err) {

@@ -27,6 +27,8 @@ var (
 	_ eventstore.PayloadFactory = &PayloadTransformer{}
 	// Ensure that PayloadTransformer satisfies the PayloadConverter interface
 	_ eventstore.PayloadConverter = &PayloadTransformer{}
+	// Ensure that PayloadTransformer satisfies the PayloadResolver interface
+	_ eventstore.PayloadResolver = &PayloadTransformer{}
 )
 
 type (
@@ -58,9 +60,9 @@ func NewPayloadTransformer() *PayloadTransformer {
 
 // ConvertPayload marshall the payload into JSON returning the payload fullpkgPath and the serialized data.
 func (p *PayloadTransformer) ConvertPayload(payload interface{}) (string, []byte, error) {
-	payloadName, ok := p.names[fullPkgPath(reflect.TypeOf(payload))]
-	if !ok {
-		return "", nil, ErrPayloadNotRegistered
+	payloadName, err := p.ResolveName(payload)
+	if err != nil {
+		return "", nil, err
 	}
 
 	data, err := json.Marshal(payload)
@@ -69,6 +71,16 @@ func (p *PayloadTransformer) ConvertPayload(payload interface{}) (string, []byte
 	}
 
 	return payloadName, data, nil
+}
+
+// ResolveName returns the payloadType name of the provided payload
+func (p *PayloadTransformer) ResolveName(payload interface{}) (string, error) {
+	payloadName, ok := p.names[fullPkgPath(reflect.TypeOf(payload))]
+	if !ok {
+		return "", ErrPayloadNotRegistered
+	}
+
+	return payloadName, nil
 }
 
 // RegisterPayload registers a payload type and the way to initialize it with the factory
