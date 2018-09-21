@@ -197,7 +197,7 @@ func TestRepository_GetAggregateRoot(t *testing.T) {
 				"Load",
 				ctx,
 				eventstore.StreamName("event_stream"),
-				1,
+				int64(1),
 				(*uint)(nil),
 				mock.MatchedBy(func(m metadata.Matcher) bool {
 					expected := metadata.WithConstraint(
@@ -290,7 +290,7 @@ func TestRepository_GetAggregateRoot(t *testing.T) {
 						"Load",
 						ctx,
 						eventstore.StreamName("event_stream"),
-						1,
+						int64(1),
 						(*uint)(nil),
 						mock.Anything,
 					).

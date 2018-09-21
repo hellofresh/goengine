@@ -48,7 +48,7 @@ type (
 		HasStream(ctx context.Context, streamName StreamName) bool
 
 		// Load returns a list of events based on the provided conditions
-		Load(ctx context.Context, streamName StreamName, fromNumber int, count *uint, metadataMatcher metadata.Matcher) (EventStream, error)
+		Load(ctx context.Context, streamName StreamName, fromNumber int64, count *uint, metadataMatcher metadata.Matcher) (EventStream, error)
 	}
 )
 

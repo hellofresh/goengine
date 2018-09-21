@@ -113,13 +113,13 @@ func TestEventStoreLoad(t *testing.T) {
 	aggregateIDFirst := messaging.GenerateUUID()
 	aggregateIDSecond := messaging.GenerateUUID()
 	messages := generateAppendMessages([]messaging.UUID{aggregateIDFirst, aggregateIDSecond})
-	countPrepared := len(messages)
+	countPrepared := int64(len(messages))
 	ctx := context.Background()
 	streamName := eventstore.StreamName("orders_load")
 
 	testCases := []struct {
 		title          string
-		fromNumber     int
+		fromNumber     int64
 		count          *uint
 		matcher        func() metadata.Matcher
 		messages       []messaging.Message

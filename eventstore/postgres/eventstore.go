@@ -126,7 +126,7 @@ func (e *EventStore) HasStream(ctx context.Context, streamName eventstore.Stream
 func (e *EventStore) Load(
 	ctx context.Context,
 	streamName eventstore.StreamName,
-	fromNumber int,
+	fromNumber int64,
 	count *uint,
 	matcher metadata.Matcher,
 ) (eventstore.EventStream, error) {

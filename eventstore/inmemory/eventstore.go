@@ -61,7 +61,7 @@ func (i *EventStore) HasStream(ctx context.Context, streamName eventstore.Stream
 func (i *EventStore) Load(
 	ctx context.Context,
 	streamName eventstore.StreamName,
-	fromNumber int,
+	fromNumber int64,
 	count *uint,
 	matcher metadata.Matcher,
 ) (eventstore.EventStream, error) {
@@ -83,11 +83,11 @@ func (i *EventStore) Load(
 	var found uint
 
 	for idx, event := range storedEvents {
-		messageNumber := idx + 1
+		messageNumber := int64(idx + 1)
 		if messageNumber >= fromNumber && metadataMatcher.Matches(event.Metadata()) {
 			found++
 			messages = append(messages, event)
-			messageNumbers = append(messageNumbers, int64(messageNumber))
+			messageNumbers = append(messageNumbers, messageNumber)
 			if count != nil && found == *count {
 				break
 			}
