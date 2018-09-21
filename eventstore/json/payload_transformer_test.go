@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	eventstorejson "github.com/hellofresh/goengine/eventstore/json"
-	anotherpayload "github.com/hellofresh/goengine/eventstore/json/internal/another/payload"
-	"github.com/hellofresh/goengine/eventstore/json/internal/payload"
+	anotherpayload "github.com/hellofresh/goengine/internal/mocks/another/payload"
+	"github.com/hellofresh/goengine/internal/mocks/payload"
 	"github.com/stretchr/testify/assert"
 )
 
