@@ -79,4 +79,21 @@ func TestEventStream(t *testing.T) {
 		}
 		asserts.Nil(stream)
 	})
+
+	t.Run("iteration must start before a message can be fetched", func(t *testing.T) {
+		asserts := assert.New(t)
+
+		stream, err := inmemory.NewEventStream([]messaging.Message{}, []int64{})
+		if !asserts.NoError(err) {
+			return
+		}
+		asserts.NotNil(stream)
+
+		msg, msgNumber, err := stream.Message()
+		asserts.Nil(msg)
+		asserts.Empty(msgNumber)
+		if asserts.Error(err) {
+			asserts.Equal(inmemory.ErrEventStreamNotStarted, err)
+		}
+	})
 }
