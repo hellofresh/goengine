@@ -1,6 +1,6 @@
 // +build unit
 
-package inmemory_test
+package eventstore_test
 
 import (
 	"context"
@@ -11,17 +11,17 @@ import (
 	"github.com/hellofresh/goengine/messaging"
 	"github.com/hellofresh/goengine/metadata"
 	"github.com/hellofresh/goengine/mocks"
-	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
 func TestNewQueryExecutor(t *testing.T) {
 	t.Run("Create Query Executor", func(t *testing.T) {
-		store := &inmemory.EventStore{}
-		registry := &inmemory.PayloadRegistry{}
+		store := &mocks.EventStore{}
+		registry := &mocks.PayloadResolver{}
 		query := &mocks.Query{}
 
-		executor, err := inmemory.NewQueryExecutor(store, "test", registry, query)
+		executor, err := eventstore.NewQueryExecutor(store, "test", registry, query)
 
 		asserts := assert.New(t)
 		asserts.NotNil(executor)
@@ -31,8 +31,8 @@ func TestNewQueryExecutor(t *testing.T) {
 	t.Run("invalid arguments", func(t *testing.T) {
 		type invalidTestCase struct {
 			title         string
-			eventStore    *inmemory.EventStore
-			registry      *inmemory.PayloadRegistry
+			eventStore    eventstore.EventStore
+			registry      eventstore.PayloadResolver
 			streamName    eventstore.StreamName
 			query         eventstore.Query
 			expectedError error
@@ -42,32 +42,32 @@ func TestNewQueryExecutor(t *testing.T) {
 			{
 				"eventStore may not be nil",
 				nil,
-				&inmemory.PayloadRegistry{},
+				&mocks.PayloadResolver{},
 				"event_stream",
 				&mocks.Query{},
-				inmemory.ErrEventStoreRequired,
+				eventstore.ErrEventStoreRequired,
 			},
 			{
-				"registry may not be nil",
+				"resolver may not be nil",
 				&inmemory.EventStore{},
 				nil,
 				"event_stream",
 				&mocks.Query{},
-				inmemory.ErrPayloadRegistryRequired,
+				eventstore.ErrPayloadResolverRequired,
 			},
 			{
 				"query may not be nil",
-				&inmemory.EventStore{},
-				&inmemory.PayloadRegistry{},
+				&mocks.EventStore{},
+				&mocks.PayloadResolver{},
 				"event_stream",
 				nil,
-				inmemory.ErrQueryRequired,
+				eventstore.ErrQueryRequired,
 			},
 		}
 
 		for _, testCase := range testCases {
 			t.Run(testCase.title, func(t *testing.T) {
-				executor, err := inmemory.NewQueryExecutor(
+				executor, err := eventstore.NewQueryExecutor(
 					testCase.eventStore,
 					testCase.streamName,
 					testCase.registry,
@@ -103,24 +103,30 @@ func TestQueryExecutor_Run(t *testing.T) {
 		}
 
 		asserts := assert.New(t)
-		messages := []messaging.Message{
-			mockMessageWithPayload(myEvent{1}, map[string]interface{}{}),
-			mockMessageWithPayload(mySecondEvent{2}, map[string]interface{}{}),
-			mockMessageWithPayload(myEvent{3}, map[string]interface{}{}),
+		eventStream, err := inmemory.NewEventStream(
+			[]messaging.Message{
+				mockMessageWithPayload(myEvent{1}, map[string]interface{}{}),
+				mockMessageWithPayload(mySecondEvent{2}, map[string]interface{}{}),
+				mockMessageWithPayload(myEvent{3}, map[string]interface{}{}),
+			},
+			[]int64{1, 2, 3},
+		)
+		if !asserts.NoError(err) {
+			return
 		}
 
 		var streamName eventstore.StreamName = "event_stream"
 
 		ctx := context.Background()
-		logger, _ := test.NewNullLogger()
 
-		store := inmemory.NewEventStore(logger)
-		store.Create(ctx, streamName)
-		store.AppendTo(ctx, streamName, messages)
+		storeBatchSize := uint(100)
+		store := &mocks.EventStore{}
+		store.On("Load", ctx, streamName, int64(1), &storeBatchSize, metadata.NewMatcher()).
+			Return(eventStream, nil)
 
-		registry := &inmemory.PayloadRegistry{}
-		registry.RegisterPayload("my_event", myEvent{})
-		registry.RegisterPayload("second_event", mySecondEvent{})
+		registry := &mocks.PayloadResolver{}
+		registry.On("ResolveName", mock.AnythingOfType("myEvent")).Return("my_event", nil)
+		registry.On("ResolveName", mock.AnythingOfType("mySecondEvent")).Return("second_event", nil)
 
 		query := &mocks.Query{}
 		query.On("Init").Once().Return(myState{})
@@ -147,7 +153,7 @@ func TestQueryExecutor_Run(t *testing.T) {
 			},
 		})
 
-		executor, err := inmemory.NewQueryExecutor(store, streamName, registry, query)
+		executor, err := eventstore.NewQueryExecutor(store, streamName, registry, query)
 		if !asserts.NoError(err) {
 			asserts.FailNow("failed to create executor")
 		}

@@ -1,46 +1,43 @@
-package inmemory
+package eventstore
 
 import (
 	"context"
 	"errors"
 
-	"github.com/hellofresh/goengine/eventstore"
 	"github.com/hellofresh/goengine/metadata"
 )
 
 var (
 	// ErrEventStoreRequired occurs when a nil event store is provided
 	ErrEventStoreRequired = errors.New("an EventStore may not be nil")
-	// ErrPayloadRegistryRequired occurs when a nil registry is provided
-	ErrPayloadRegistryRequired = errors.New("a PayloadRegistry may not be nil")
+	// ErrPayloadResolverRequired occurs when a nil resolver is provided
+	ErrPayloadResolverRequired = errors.New("an PayloadResolver may not be nil")
 	// ErrQueryRequired occurs when a nil query is provided
 	ErrQueryRequired = errors.New("a Query may not be nil")
 	// ErrQueryHasNoHandlers occurs when a query is being run without any handlers
 	ErrQueryHasNoHandlers = errors.New("the Query has no handlers")
-	// Ensure QueryExecutor implements the eventstore.QueryExecutor interface
-	_ eventstore.QueryExecutor = &QueryExecutor{}
 	// queryBatchSize is the amount of event that should be fetch from the eventstore at once
 	queryBatchSize uint = 100
 )
 
 // QueryExecutor is used to run a query against a inmemory event store
 type QueryExecutor struct {
-	store      *EventStore
-	streamName eventstore.StreamName
-	registry   *PayloadRegistry
-	query      eventstore.Query
+	store      EventStore
+	streamName StreamName
+	resolver   PayloadResolver
+	query      Query
 
 	state  interface{}
 	offset int64
 }
 
 // NewQueryExecutor returns a new QueryExecutor instance
-func NewQueryExecutor(store *EventStore, streamName eventstore.StreamName, registry *PayloadRegistry, query eventstore.Query) (*QueryExecutor, error) {
+func NewQueryExecutor(store EventStore, streamName StreamName, resolver PayloadResolver, query Query) (*QueryExecutor, error) {
 	if store == nil {
 		return nil, ErrEventStoreRequired
 	}
-	if registry == nil {
-		return nil, ErrPayloadRegistryRequired
+	if resolver == nil {
+		return nil, ErrPayloadResolverRequired
 	}
 	if query == nil {
 		return nil, ErrQueryRequired
@@ -49,7 +46,7 @@ func NewQueryExecutor(store *EventStore, streamName eventstore.StreamName, regis
 	return &QueryExecutor{
 		store:      store,
 		streamName: streamName,
-		registry:   registry,
+		resolver:   resolver,
 		query:      query,
 		offset:     0,
 		state:      nil,
@@ -82,16 +79,16 @@ func (e *QueryExecutor) Run(ctx context.Context) (interface{}, error) {
 
 		var msgCount int64
 		for messages.Next() {
-			msgCount++
-
 			// Get the message
 			msg, msgNumber, err := messages.Message()
 			if err != nil {
 				return nil, err
 			}
+			msgCount++
+			e.offset = msgNumber
 
 			// Resolve the payload event name
-			eventName, err := e.registry.ResolveEventName(msg.Payload())
+			eventName, err := e.resolver.ResolveName(msg.Payload())
 			if err != nil {
 				continue
 			}
@@ -107,7 +104,6 @@ func (e *QueryExecutor) Run(ctx context.Context) (interface{}, error) {
 			if err != nil {
 				return nil, err
 			}
-			e.offset = msgNumber
 		}
 
 		// If the amount of messages is less than the batch size then we reached the end of the stream
