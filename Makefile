@@ -20,7 +20,7 @@ all: clean deps test
 .PHONY: clean
 
 clean:
-	echo "Cleaning"
+	$(call title, "Cleaning")
 	go clean -v
 
 #-----------------------------------------------------------------------------------------------------------------------
@@ -29,7 +29,7 @@ clean:
 .PHONY: deps
 
 deps:
-	echo "Installing dependencies"
+	$(call title, "Installing dependencies")
 	dep ensure -v
 
 #-----------------------------------------------------------------------------------------------------------------------
@@ -40,15 +40,22 @@ deps:
 test: test-unit test-examples
 
 test-unit:
-	echo "Running unit tests"
+	$(call title, "Running unit tests")
 	go test -tags=unit -race ./...
 
 test-integration:
-	echo "Running integration tests on ci"
+	$(call title, "Running integration tests on ci")
 	POSTGRES_DSN=$(POSTGRES_DSN) go test -tags=integration -race ./...
 
 test-examples:
-	echo "Running examples"
+	$(call title, "Running examples")
 	go run -race example/aggregate/*.go
 	go run -race example/repository/*.go
 
+###-----------------------------------------------------------------------------------------------------------------------
+### Functions
+### (https://www.gnu.org/software/make/manual/html_node/Call-Function.html#Call-Function)
+###-----------------------------------------------------------------------------------------------------------------------
+define title
+	@printf "\e[1m%s\e[0m\n" $(1)
+endef
