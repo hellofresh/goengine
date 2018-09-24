@@ -1,3 +1,5 @@
+// +build unit
+
 package inmemory_test
 
 import (

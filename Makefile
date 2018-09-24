@@ -41,7 +41,7 @@ test: test-unit test-examples
 
 test-unit:
 	echo "Running unit tests"
-	go test -v -race ./...
+	go test -tags=unit -race ./...
 
 test-integration:
 	echo "Running integration tests on ci"

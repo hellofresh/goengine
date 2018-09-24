@@ -1,3 +1,5 @@
+// +build unit
+
 package eventstore_test
 
 import (

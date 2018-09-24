@@ -1,3 +1,5 @@
+// +build unit
+
 package metadata_test
 
 import (
