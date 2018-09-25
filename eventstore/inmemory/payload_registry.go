@@ -2,9 +2,9 @@ package inmemory
 
 import (
 	"errors"
-	"reflect"
 
 	"github.com/hellofresh/goengine/eventstore"
+	"github.com/hellofresh/goengine/internal/reflect"
 )
 
 var (
@@ -24,7 +24,7 @@ type PayloadRegistry struct {
 // RegisterPayload register a eventName to a specific payload type.
 // Reflection is used to determine the full payload type name.
 func (p *PayloadRegistry) RegisterPayload(eventName string, payload interface{}) error {
-	name := p.typeName(reflect.TypeOf(payload))
+	name := reflect.FullTypeNameOf(payload)
 	if _, found := p.typeMap[name]; found {
 		return ErrDuplicatePayloadType
 	}
@@ -42,14 +42,10 @@ func (p *PayloadRegistry) RegisterPayload(eventName string, payload interface{})
 
 // ResolveName resolves the type name based on the underlying type of the payload
 func (p *PayloadRegistry) ResolveName(payload interface{}) (string, error) {
-	name := p.typeName(reflect.TypeOf(payload))
+	name := reflect.FullTypeNameOf(payload)
 	if eventName, found := p.typeMap[name]; found {
 		return eventName, nil
 	}
 
 	return "", ErrUnknownPayloadType
-}
-
-func (p *PayloadRegistry) typeName(t reflect.Type) string {
-	return t.PkgPath() + "." + t.Name()
 }

@@ -7,6 +7,7 @@ import (
 	"reflect"
 
 	"github.com/hellofresh/goengine/eventstore"
+	reflectUtil "github.com/hellofresh/goengine/internal/reflect"
 )
 
 var (
@@ -75,7 +76,7 @@ func (p *PayloadTransformer) ConvertPayload(payload interface{}) (string, []byte
 
 // ResolveName returns the payloadType name of the provided payload
 func (p *PayloadTransformer) ResolveName(payload interface{}) (string, error) {
-	payloadName, ok := p.names[fullPkgPath(reflect.TypeOf(payload))]
+	payloadName, ok := p.names[reflectUtil.FullTypeNameOf(payload)]
 	if !ok {
 		return "", ErrPayloadNotRegistered
 	}
@@ -100,7 +101,7 @@ func (p *PayloadTransformer) RegisterPayload(payloadType string, initiator Paylo
 		return ErrInitiatorInvalidResult
 	}
 
-	p.names[fullPkgPath(rv.Type())] = payloadType
+	p.names[reflectUtil.FullTypeName(rv.Type())] = payloadType
 
 	p.types[payloadType] = PayloadType{
 		initiator:      initiator,
@@ -146,11 +147,4 @@ func (p *PayloadTransformer) CreatePayload(typeName string, data interface{}) (i
 	}
 
 	return vp.Elem().Interface(), nil
-}
-
-// fullPkgPath returns the full qualified name of a reflect.Type
-//
-// The fully qualified name is the combination of the type PkgPath and its Name.
-func fullPkgPath(t reflect.Type) string {
-	return t.PkgPath() + "." + t.Name()
 }
