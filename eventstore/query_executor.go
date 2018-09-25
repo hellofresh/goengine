@@ -16,23 +16,22 @@ var (
 	ErrQueryRequired = errors.New("a Query may not be nil")
 	// ErrQueryHasNoHandlers occurs when a query is being run without any handlers
 	ErrQueryHasNoHandlers = errors.New("the Query has no handlers")
-	// queryBatchSize is the amount of event that should be fetch from the eventstore at once
-	queryBatchSize uint = 100
 )
 
 // QueryExecutor is used to run a query against a inmemory event store
 type QueryExecutor struct {
-	store      EventStore
-	streamName StreamName
-	resolver   PayloadResolver
-	query      Query
+	store          EventStore
+	streamName     StreamName
+	resolver       PayloadResolver
+	query          Query
+	queryBatchSize uint
 
 	state  interface{}
 	offset int64
 }
 
 // NewQueryExecutor returns a new QueryExecutor instance
-func NewQueryExecutor(store EventStore, streamName StreamName, resolver PayloadResolver, query Query) (*QueryExecutor, error) {
+func NewQueryExecutor(store EventStore, streamName StreamName, resolver PayloadResolver, query Query, queryBatchSize uint) (*QueryExecutor, error) {
 	if store == nil {
 		return nil, ErrEventStoreRequired
 	}
@@ -44,12 +43,14 @@ func NewQueryExecutor(store EventStore, streamName StreamName, resolver PayloadR
 	}
 
 	return &QueryExecutor{
-		store:      store,
-		streamName: streamName,
-		resolver:   resolver,
-		query:      query,
-		offset:     0,
-		state:      nil,
+		store:          store,
+		streamName:     streamName,
+		resolver:       resolver,
+		query:          query,
+		queryBatchSize: queryBatchSize,
+
+		offset: 0,
+		state:  nil,
 	}, nil
 }
 
@@ -72,7 +73,7 @@ func (e *QueryExecutor) Run(ctx context.Context) (interface{}, error) {
 	}
 
 	for {
-		messages, err := e.store.Load(ctx, e.streamName, e.offset, &queryBatchSize, metadata.NewMatcher())
+		messages, err := e.store.Load(ctx, e.streamName, e.offset, &e.queryBatchSize, metadata.NewMatcher())
 		if err != nil {
 			return nil, err
 		}
@@ -107,11 +108,9 @@ func (e *QueryExecutor) Run(ctx context.Context) (interface{}, error) {
 		}
 
 		// If the amount of messages is less than the batch size then we reached the end of the stream
-		if msgCount < int64(queryBatchSize) {
+		if msgCount < int64(e.queryBatchSize) {
 			break
 		}
-
-		e.offset += msgCount
 	}
 
 	return e.state, nil

@@ -21,7 +21,7 @@ func TestNewQueryExecutor(t *testing.T) {
 		registry := &mocks.PayloadResolver{}
 		query := &mocks.Query{}
 
-		executor, err := eventstore.NewQueryExecutor(store, "test", registry, query)
+		executor, err := eventstore.NewQueryExecutor(store, "test", registry, query, 100)
 
 		asserts := assert.New(t)
 		asserts.NotNil(executor)
@@ -72,6 +72,7 @@ func TestNewQueryExecutor(t *testing.T) {
 					testCase.streamName,
 					testCase.registry,
 					testCase.query,
+					100,
 				)
 
 				asserts := assert.New(t)
@@ -103,13 +104,22 @@ func TestQueryExecutor_Run(t *testing.T) {
 		}
 
 		asserts := assert.New(t)
-		eventStream, err := inmemory.NewEventStream(
+		eventBatch1, err := inmemory.NewEventStream(
 			[]messaging.Message{
 				mockMessageWithPayload(myEvent{1}, map[string]interface{}{}),
 				mockMessageWithPayload(mySecondEvent{2}, map[string]interface{}{}),
+			},
+			[]int64{1, 2},
+		)
+		if !asserts.NoError(err) {
+			return
+		}
+
+		eventBatch2, err := inmemory.NewEventStream(
+			[]messaging.Message{
 				mockMessageWithPayload(myEvent{3}, map[string]interface{}{}),
 			},
-			[]int64{1, 2, 3},
+			[]int64{3},
 		)
 		if !asserts.NoError(err) {
 			return
@@ -119,10 +129,14 @@ func TestQueryExecutor_Run(t *testing.T) {
 
 		ctx := context.Background()
 
-		storeBatchSize := uint(100)
+		queryBatchSize := uint(2)
 		store := &mocks.EventStore{}
-		store.On("Load", ctx, streamName, int64(1), &storeBatchSize, metadata.NewMatcher()).
-			Return(eventStream, nil)
+		store.On("Load", ctx, streamName, int64(1), &queryBatchSize, metadata.NewMatcher()).
+			Once().
+			Return(eventBatch1, nil)
+		store.On("Load", ctx, streamName, int64(2), &queryBatchSize, metadata.NewMatcher()).
+			Once().
+			Return(eventBatch2, nil)
 
 		registry := &mocks.PayloadResolver{}
 		registry.On("ResolveName", mock.AnythingOfType("myEvent")).Return("my_event", nil)
@@ -130,7 +144,7 @@ func TestQueryExecutor_Run(t *testing.T) {
 
 		query := &mocks.Query{}
 		query.On("Init").Once().Return(myState{})
-		query.On("Handlers").Once().Return(map[string]eventstore.QueryMessageHandler{
+		query.On("Handlers").Times(2).Return(map[string]eventstore.QueryMessageHandler{
 			"my_event": func(rawState interface{}, message messaging.Message) (interface{}, error) {
 				state := rawState.(myState)
 				state.count++
@@ -153,7 +167,7 @@ func TestQueryExecutor_Run(t *testing.T) {
 			},
 		})
 
-		executor, err := eventstore.NewQueryExecutor(store, streamName, registry, query)
+		executor, err := eventstore.NewQueryExecutor(store, streamName, registry, query, queryBatchSize)
 		if !asserts.NoError(err) {
 			asserts.FailNow("failed to create executor")
 		}
