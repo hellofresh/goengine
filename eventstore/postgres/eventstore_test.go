@@ -10,88 +10,69 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hellofresh/goengine/metadata"
-
 	"github.com/DATA-DOG/go-sqlmock"
-	"github.com/stretchr/testify/assert"
-
 	"github.com/hellofresh/goengine/eventstore"
 	"github.com/hellofresh/goengine/eventstore/postgres"
+	"github.com/hellofresh/goengine/internal/test"
 	"github.com/hellofresh/goengine/messaging"
+	"github.com/hellofresh/goengine/metadata"
 	"github.com/hellofresh/goengine/mocks"
+	"github.com/stretchr/testify/assert"
 )
 
-func TestCreate(t *testing.T) {
-	asserts := assert.New(t)
-	t.Run("Check create table with indexes", func(t *testing.T) {
-		db, mock, _ := sqlmock.New()
+func TestEventStore_Create(t *testing.T) {
+	test.RunWithMockDB(t, "Check create table with indexes", func(t *testing.T, db *sql.DB, dbMock sqlmock.Sqlmock) {
+		mockHasStreamQuery(false, dbMock)
+		dbMock.ExpectBegin()
+		dbMock.ExpectExec(`CREATE TABLE "events_orders"(.+)`).WillReturnResult(sqlmock.NewResult(0, 0))
+		dbMock.ExpectExec(`CREATE UNIQUE INDEX "events_orders_unique_index___aggregate_type__aggregate_id__aggregate_version" ON "events_orders"(.+)`).WillReturnResult(sqlmock.NewResult(0, 0))
+		dbMock.ExpectExec(`CREATE INDEX "events_orders_index__aggregate_type__aggregate_id" ON "events_orders"(.+)`).WillReturnResult(sqlmock.NewResult(0, 0))
+		dbMock.ExpectCommit()
 
-		mockHasStreamQuery(false, mock)
-		mock.ExpectBegin()
-		mock.ExpectExec(`CREATE TABLE "events_orders"(.+)`).WillReturnResult(sqlmock.NewResult(0, 0))
-		mock.ExpectExec(`CREATE UNIQUE INDEX "events_orders_unique_index___aggregate_type__aggregate_id__aggregate_version" ON "events_orders"(.+)`).WillReturnResult(sqlmock.NewResult(0, 0))
-		mock.ExpectExec(`CREATE INDEX "events_orders_index__aggregate_type__aggregate_id" ON "events_orders"(.+)`).WillReturnResult(sqlmock.NewResult(0, 0))
-		mock.ExpectCommit()
+		store := createEventStore(t, db, &mocks.PayloadConverter{})
 
-		store := eventStore(asserts, db)
 		err := store.Create(context.Background(), "orders")
-		asserts.NoError(err)
+		assert.NoError(t, err)
 	})
 
-	t.Run("Check transaction rollback", func(t *testing.T) {
-		ctx := context.Background()
-		db, mock, err := sqlmock.New()
-		if !assert.Nil(t, err) {
-			return
-		}
-		defer db.Close()
-
+	test.RunWithMockDB(t, "Check transaction rollback", func(t *testing.T, db *sql.DB, dbMock sqlmock.Sqlmock) {
 		expectedError := errors.New("index error")
-		mockHasStreamQuery(false, mock)
-		mock.ExpectBegin()
-		mock.ExpectExec(`CREATE TABLE "events_orders"(.+)`).WillReturnResult(sqlmock.NewResult(0, 0))
-		mock.ExpectExec(`CREATE UNIQUE INDEX(.+)ON "events_orders"(.+)`).WillReturnError(expectedError)
-		mock.ExpectRollback()
 
-		store := eventStore(asserts, db)
-		err = store.Create(ctx, "orders")
-		asserts.Error(err)
-		asserts.Equal(expectedError, err)
+		mockHasStreamQuery(false, dbMock)
+		dbMock.ExpectBegin()
+		dbMock.ExpectExec(`CREATE TABLE "events_orders"(.+)`).WillReturnResult(sqlmock.NewResult(0, 0))
+		dbMock.ExpectExec(`CREATE UNIQUE INDEX(.+)ON "events_orders"(.+)`).WillReturnError(expectedError)
+		dbMock.ExpectRollback()
+
+		store := createEventStore(t, db, &mocks.PayloadConverter{})
+
+		err := store.Create(context.Background(), "orders")
+		if assert.Error(t, err) {
+			assert.Equal(t, expectedError, err)
+		}
+	})
+	test.RunWithMockDB(t, "Empty stream name", func(t *testing.T, db *sql.DB, dbMock sqlmock.Sqlmock) {
+		store := createEventStore(t, db, &mocks.PayloadConverter{})
+
+		err := store.Create(context.Background(), "")
+		if assert.Error(t, err) {
+			assert.Equal(t, postgres.ErrEmptyStreamName, err)
+		}
 	})
 
-	t.Run("Empty stream name", func(t *testing.T) {
-		ctx := context.Background()
-		db, _, err := sqlmock.New()
-		if !assert.Nil(t, err) {
-			return
+	test.RunWithMockDB(t, "Stream table already exist", func(t *testing.T, db *sql.DB, dbMock sqlmock.Sqlmock) {
+		mockHasStreamQuery(true, dbMock)
+
+		store := createEventStore(t, db, &mocks.PayloadConverter{})
+
+		err := store.Create(context.Background(), "orders")
+		if assert.Error(t, err) {
+			assert.Equal(t, postgres.ErrTableAlreadyExists, err)
 		}
-		defer db.Close()
-
-		store := eventStore(asserts, db)
-		err = store.Create(ctx, "")
-		assert.Error(t, err)
-		assert.Equal(t, postgres.ErrEmptyStreamName, err)
-	})
-
-	t.Run("Stream table already exist", func(t *testing.T) {
-		ctx := context.Background()
-		db, mock, err := sqlmock.New()
-		if !assert.Nil(t, err) {
-			return
-		}
-		defer db.Close()
-
-		mockHasStreamQuery(true, mock)
-
-		store := eventStore(asserts, db)
-		err = store.Create(ctx, "orders")
-		asserts.Error(err)
-		asserts.Equal(postgres.ErrTableAlreadyExists, err)
 	})
 }
 
-func TestHasStream(t *testing.T) {
-	asserts := assert.New(t)
+func TestEventStore_HasStream(t *testing.T) {
 	testCases := []struct {
 		title      string
 		streamName eventstore.StreamName
@@ -119,88 +100,81 @@ func TestHasStream(t *testing.T) {
 	}
 
 	for _, testCase := range testCases {
-		t.Run(testCase.title, func(t *testing.T) {
-			db, mock, _ := sqlmock.New()
-			mockHasStreamQuery(testCase.sqlResult, mock)
-			store := eventStore(asserts, db)
-			b := store.HasStream(context.Background(), testCase.streamName)
-			assert.Equal(t, testCase.expected, b)
+		test.RunWithMockDB(t, testCase.title, func(t *testing.T, db *sql.DB, dbMock sqlmock.Sqlmock) {
+			mockHasStreamQuery(testCase.sqlResult, dbMock)
+
+			store := createEventStore(t, db, &mocks.PayloadConverter{})
+
+			exists := store.HasStream(context.Background(), testCase.streamName)
+			assert.Equal(t, testCase.expected, exists)
 		})
 	}
 }
 
-func mockHasStreamQuery(result bool, mock sqlmock.Sqlmock) {
-	mockRows := sqlmock.NewRows([]string{"type"})
-	mockRows.AddRow(result)
-	mock.ExpectQuery(`SELECT EXISTS\((.+)`).WithArgs("events_orders").WillReturnRows(mockRows)
-}
-
-func TestAppendTo(t *testing.T) {
-	asserts := assert.New(t)
-	t.Run("Insert successfully", func(t *testing.T) {
+func TestEventStore_AppendTo(t *testing.T) {
+	test.RunWithMockDB(t, "Insert successfully", func(t *testing.T, db *sql.DB, dbMock sqlmock.Sqlmock) {
 		payloadConverter, messages := mockMessages()
-		db, mock, _ := sqlmock.New()
-		mock.ExpectExec(`INSERT(.+)VALUES \(\$1,\$2,\$3,\$4,\$5\),\(\$6,\$7,\$8,\$9,\$10\),\(\$11(.+)`).
+
+		dbMock.ExpectExec(`INSERT(.+)VALUES \(\$1,\$2,\$3,\$4,\$5\),\(\$6,\$7,\$8,\$9,\$10\),\(\$11(.+)`).
 			WillReturnResult(sqlmock.NewResult(111, 3))
 
-		persistenceStrategy, err := postgres.NewPostgresStrategy(payloadConverter)
-		messageFactory := &mocks.MessageFactory{}
-		asserts.NoError(err)
+		eventStore := createEventStore(t, db, payloadConverter)
 
-		eventStore, err := postgres.NewEventStore(persistenceStrategy, db, messageFactory, nil)
-		asserts.NoError(err)
-
-		err = eventStore.AppendTo(context.Background(), "orders", messages)
-		asserts.NoError(err)
+		err := eventStore.AppendTo(context.Background(), "orders", messages)
+		assert.NoError(t, err)
 	})
 
-	t.Run("Empty stream name", func(t *testing.T) {
-		id := messaging.GenerateUUID()
-		meta := metadata.FromMap(map[string]interface{}{"type": "m1", "version": 1})
-		payload := []byte(`{"Name":"alice","Balance":0}`)
-		message := mockMessage(id, payload, meta, time.Now())
-		payloadConverter := &mocks.PayloadConverter{}
+	test.RunWithMockDB(t, "Empty stream name", func(t *testing.T, db *sql.DB, _ sqlmock.Sqlmock) {
+		messages := []messaging.Message{
+			mockMessage(
+				messaging.GenerateUUID(),
+				[]byte(`{"Name":"alice","Balance":0}`),
+				metadata.FromMap(map[string]interface{}{"type": "m1", "version": 1}),
+				time.Now(),
+			),
+		}
 
-		messages := []messaging.Message{message}
-		ctx := context.Background()
-		db, _, _ := sqlmock.New()
+		eventStore := createEventStore(t, db, &mocks.PayloadConverter{})
 
-		persistenceStrategy, err := postgres.NewPostgresStrategy(payloadConverter)
-		mf := &mocks.MessageFactory{}
-		asserts.NoError(err)
-
-		store, err := postgres.NewEventStore(persistenceStrategy, db, mf, nil)
-		asserts.NoError(err)
-
-		err = store.AppendTo(ctx, "", messages)
-		asserts.Error(err)
-		asserts.Equal(postgres.ErrEmptyStreamName, err)
+		err := eventStore.AppendTo(context.Background(), "", messages)
+		if assert.Error(t, err) {
+			assert.Equal(t, postgres.ErrEmptyStreamName, err)
+		}
 	})
 
-	t.Run("Prepare data error", func(t *testing.T) {
+	test.RunWithMockDB(t, "Prepare data error", func(t *testing.T, db *sql.DB, _ sqlmock.Sqlmock) {
 		expectedError := errors.New("prepare data expected error")
-		id := messaging.GenerateUUID()
-		meta := metadata.FromMap(map[string]interface{}{"type": "m1", "version": 1})
-		payload := []byte(`{"Name":"alice","Balance":0}`)
-		message := mockMessage(id, payload, meta, time.Now())
-		messages := []messaging.Message{message}
 
-		db, _, _ := sqlmock.New()
-		ctx := context.Background()
+		messages := []messaging.Message{
+			mockMessage(
+				messaging.GenerateUUID(),
+				[]byte(`{"Name":"alice","Balance":0}`),
+				metadata.FromMap(map[string]interface{}{"type": "m1", "version": 1}),
+				time.Now(),
+			),
+		}
+
 		persistenceStrategy := &mocks.PersistenceStrategy{}
 		persistenceStrategy.On("PrepareData", messages).Return(nil, expectedError)
-		streamName := eventstore.StreamName("orders")
-		persistenceStrategy.On("GenerateTableName", streamName).Return("events_orders", nil)
+		persistenceStrategy.On("GenerateTableName", eventstore.StreamName("orders")).Return("events_orders", nil)
 		persistenceStrategy.On("ColumnNames").Return([]string{"event_id", "event_name"})
-		messageFactory := &mocks.MessageFactory{}
 
-		store, err := postgres.NewEventStore(persistenceStrategy, db, messageFactory, nil)
-		asserts.NoError(err)
+		store, err := postgres.NewEventStore(persistenceStrategy, db, &mocks.MessageFactory{}, nil)
+		asserts := assert.New(t)
+		if !asserts.NoError(err) {
+			t.Fail()
+		}
 
-		err = store.AppendTo(ctx, "orders", messages)
-		asserts.Error(err)
-		asserts.Equal(expectedError, err)
+		err = store.AppendTo(context.Background(), "orders", messages)
+		if asserts.Error(err) {
+			asserts.Equal(expectedError, err)
+		}
 	})
+}
+
+func mockHasStreamQuery(result bool, mock sqlmock.Sqlmock) {
+	mockRows := sqlmock.NewRows([]string{"type"}).AddRow(result)
+	mock.ExpectQuery(`SELECT EXISTS\((.+)`).WithArgs("events_orders").WillReturnRows(mockRows)
 }
 
 func mockMessages() (*mocks.PayloadConverter, []messaging.Message) {
@@ -225,14 +199,23 @@ func mockMessages() (*mocks.PayloadConverter, []messaging.Message) {
 	return pc, messages
 }
 
-func eventStore(asserts *assert.Assertions, db *sql.DB) eventstore.EventStore {
-	payloadConverter := &mocks.PayloadConverter{}
-	persistenceStrategy, err := postgres.NewPostgresStrategy(payloadConverter)
-	asserts.NoError(err)
+func createEventStore(t *testing.T, db *sql.DB, converter eventstore.PayloadConverter) eventstore.EventStore {
+	asserts := assert.New(t)
+
+	persistenceStrategy, err := postgres.NewPostgresStrategy(converter)
+	if !asserts.NoError(err) {
+		t.Fail()
+	}
+
 	messageFactory := &mocks.MessageFactory{}
-	asserts.NoError(err)
+	if !asserts.NoError(err) {
+		t.Fail()
+	}
+
 	store, err := postgres.NewEventStore(persistenceStrategy, db, messageFactory, nil)
-	asserts.NoError(err)
+	if !asserts.NoError(err) {
+		t.Fail()
+	}
 
 	return store
 }
