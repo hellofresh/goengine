@@ -358,11 +358,6 @@ func mockAppendMessage(id messaging.UUID, payload interface{}, meta interface{},
 	return m
 }
 
-func uintPointer(int int) *uint {
-	var i = uint(int)
-	return &i
-}
-
 func initEventStore(t *testing.T, db *sql.DB) eventstore.EventStore {
 	transformer := eventstorejson.NewPayloadTransformer()
 	transformer.RegisterPayload("tests", func() interface{} { return &payloadData{} })

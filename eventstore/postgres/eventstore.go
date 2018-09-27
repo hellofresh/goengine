@@ -242,9 +242,11 @@ func (e *EventStore) tableName(s eventstore.StreamName) (string, error) {
 	return tableName, nil
 }
 
-func matchConditions(matcher metadata.Matcher) ([]string, []interface{}) {
-	var params []interface{}
-	var conditions []string
+func matchConditions(matcher metadata.Matcher) (conditions []string, params []interface{}) {
+	if matcher == nil {
+		return
+	}
+
 	i := 0
 	matcher.Iterate(func(c metadata.Constraint) {
 		i++
@@ -254,7 +256,7 @@ func matchConditions(matcher metadata.Matcher) ([]string, []interface{}) {
 		params = append(params, c.Value())
 	})
 
-	return conditions, params
+	return
 }
 
 func (e *EventStore) tableExists(ctx context.Context, tableName string) bool {
