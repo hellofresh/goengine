@@ -13,12 +13,59 @@ import (
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/hellofresh/goengine/eventstore"
 	"github.com/hellofresh/goengine/eventstore/postgres"
+	eventstoreSQL "github.com/hellofresh/goengine/eventstore/sql"
 	"github.com/hellofresh/goengine/internal/test"
 	"github.com/hellofresh/goengine/messaging"
 	"github.com/hellofresh/goengine/metadata"
 	"github.com/hellofresh/goengine/mocks"
 	"github.com/stretchr/testify/assert"
 )
+
+func TestNewEventStore(t *testing.T) {
+	test.RunWithMockDB(t, "invalid arguments", func(t *testing.T, db *sql.DB, _ sqlmock.Sqlmock) {
+		testCases := []struct {
+			title       string
+			strategy    eventstore.PersistenceStrategy
+			db          *sql.DB
+			factory     eventstoreSQL.MessageFactory
+			expectedErr error
+		}{
+			{
+				"No persistence strategy",
+				nil,
+				db,
+				&mocks.MessageFactory{},
+				postgres.ErrNoAggregateStreamStrategy,
+			},
+			{
+				"No database",
+				&mocks.PersistenceStrategy{},
+				nil,
+				&mocks.MessageFactory{},
+				postgres.ErrNoDBConnect,
+			},
+			{
+				"No message factory",
+				&mocks.PersistenceStrategy{},
+				db,
+				nil,
+				postgres.ErrNoMessageFactory,
+			},
+		}
+
+		for _, testCase := range testCases {
+			t.Run(testCase.title, func(t *testing.T) {
+				store, err := postgres.NewEventStore(testCase.strategy, testCase.db, testCase.factory, nil)
+
+				asserts := assert.New(t)
+				if asserts.Error(err) {
+					asserts.Equal(testCase.expectedErr, err)
+				}
+				asserts.Nil(store)
+			})
+		}
+	})
+}
 
 func TestEventStore_Create(t *testing.T) {
 	test.RunWithMockDB(t, "Check create table with indexes", func(t *testing.T, db *sql.DB, dbMock sqlmock.Sqlmock) {
@@ -68,6 +115,25 @@ func TestEventStore_Create(t *testing.T) {
 		err := store.Create(context.Background(), "orders")
 		if assert.Error(t, err) {
 			assert.Equal(t, postgres.ErrTableAlreadyExists, err)
+		}
+	})
+
+	test.RunWithMockDB(t, "No queries in strategy", func(t *testing.T, db *sql.DB, dbMock sqlmock.Sqlmock) {
+		asserts := assert.New(t)
+
+		strategy := &mocks.PersistenceStrategy{}
+		strategy.On("ColumnNames").Return([]string{})
+		strategy.On("GenerateTableName", eventstore.StreamName("orders")).Return("events_orders", nil)
+		strategy.On("CreateSchema", "events_orders").Return([]string{})
+
+		store, err := postgres.NewEventStore(strategy, db, &mocks.MessageFactory{}, nil)
+		if !asserts.NoError(err) {
+			t.Fail()
+		}
+
+		err = store.Create(context.Background(), "orders")
+		if asserts.Error(err) {
+			asserts.Equal(postgres.ErrNoCreateTableQueries, err)
 		}
 	})
 }
@@ -207,12 +273,7 @@ func createEventStore(t *testing.T, db *sql.DB, converter eventstore.PayloadConv
 		t.Fail()
 	}
 
-	messageFactory := &mocks.MessageFactory{}
-	if !asserts.NoError(err) {
-		t.Fail()
-	}
-
-	store, err := postgres.NewEventStore(persistenceStrategy, db, messageFactory, nil)
+	store, err := postgres.NewEventStore(persistenceStrategy, db, &mocks.MessageFactory{}, nil)
 	if !asserts.NoError(err) {
 		t.Fail()
 	}
