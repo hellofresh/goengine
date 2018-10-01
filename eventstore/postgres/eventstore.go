@@ -9,12 +9,12 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/sirupsen/logrus"
-
 	"github.com/hellofresh/goengine/eventstore"
-	esql "github.com/hellofresh/goengine/eventstore/sql"
+	eventstoreSQL "github.com/hellofresh/goengine/eventstore/sql"
+	"github.com/hellofresh/goengine/internal/log"
 	"github.com/hellofresh/goengine/messaging"
 	"github.com/hellofresh/goengine/metadata"
+	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -38,7 +38,7 @@ var (
 type EventStore struct {
 	persistenceStrategy       eventstore.PersistenceStrategy
 	db                        *sql.DB
-	messageFactory            esql.MessageFactory
+	messageFactory            eventstoreSQL.MessageFactory
 	preparedInsertPlaceholder map[int]string
 	columns                   string
 	logger                    logrus.FieldLogger
@@ -48,7 +48,7 @@ type EventStore struct {
 func NewEventStore(
 	persistenceStrategy eventstore.PersistenceStrategy,
 	db *sql.DB,
-	messageFactory esql.MessageFactory,
+	messageFactory eventstoreSQL.MessageFactory,
 	logger logrus.FieldLogger,
 ) (eventstore.EventStore, error) {
 	if persistenceStrategy == nil {
@@ -59,6 +59,9 @@ func NewEventStore(
 	}
 	if messageFactory == nil {
 		return nil, ErrNoMessageFactory
+	}
+	if logger == nil {
+		logger = log.NilLogger
 	}
 
 	columns := fmt.Sprintf("%s", strings.Join(persistenceStrategy.ColumnNames(), ", "))
@@ -167,37 +170,47 @@ func (e *EventStore) AppendTo(ctx context.Context, streamName eventstore.StreamN
 	if err != nil {
 		return err
 	}
-	columns := e.persistenceStrategy.ColumnNames()
-	lenCols := len(columns)
-	values := e.prepareInsertValues(streamEvents, lenCols)
-
-	q := fmt.Sprintf(
-		"INSERT INTO %s (%s) VALUES %s;",
-		tableName,
-		e.columns,
-		values,
-	)
 
 	data, err := e.persistenceStrategy.PrepareData(streamEvents)
 	if err != nil {
 		return err
 	}
 
-	result, err := e.db.ExecContext(ctx, q, data...)
+	columns := e.persistenceStrategy.ColumnNames()
+	values := e.prepareInsertValues(streamEvents, len(columns))
+
+	result, err := e.db.ExecContext(
+		ctx,
+		fmt.Sprintf(
+			"INSERT INTO %s (%s) VALUES %s;",
+			tableName,
+			e.columns,
+			values,
+		),
+		data...,
+	)
 	if err != nil {
-		return err
-	}
-	if e.logger != nil {
 		e.logger.
 			WithFields(logrus.Fields{
-				"queryResult":  result,
 				"streamName":   streamName,
 				"streamEvents": streamEvents,
 			}).
 			WithError(err).
-			Debugf("batch inserts Messages into the event stream table")
+			Warn("failed to insert messages into the event stream")
+
+		return err
 	}
-	return err
+
+	e.logger.
+		WithFields(logrus.Fields{
+			"result":       result,
+			"streamName":   streamName,
+			"streamEvents": streamEvents,
+		}).
+		WithError(err).
+		Debug("inserted messages into the event stream")
+
+	return nil
 }
 
 func (e *EventStore) prepareInsertValues(streamEvents []messaging.Message, lenCols int) string {
@@ -268,9 +281,10 @@ func (e *EventStore) tableExists(ctx context.Context, tableName string) bool {
 	).Scan(&exists)
 
 	if err != nil {
-		if e.logger != nil {
-			e.logger.Warnf("error on readinf from information_schema %s", err)
-		}
+		e.logger.
+			WithField("table", tableName).
+			WithError(err).
+			Warn("error on reading from information_schema")
 
 		return false
 	}
