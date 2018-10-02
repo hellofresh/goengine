@@ -50,7 +50,7 @@ func NewEventStore(
 	db *sql.DB,
 	messageFactory eventstoreSQL.MessageFactory,
 	logger logrus.FieldLogger,
-) (eventstore.EventStore, error) {
+) (*EventStore, error) {
 	if persistenceStrategy == nil {
 		return nil, ErrNoAggregateStreamStrategy
 	}
@@ -139,24 +139,25 @@ func (e *EventStore) Load(
 	}
 
 	conditions, params := matchConditions(matcher)
-	condition := fmt.Sprintf("no >= $%d", len(params)+1)
-	conditions = append(conditions, condition)
+
 	params = append(params, fromNumber)
-	where := fmt.Sprintf("WHERE %s", strings.Join(conditions, " AND "))
+	conditions = append(conditions, fmt.Sprintf("no >= $%d", len(params)))
 
 	limit := ""
 	if count != nil {
 		limit = fmt.Sprintf("LIMIT %d", *count)
 	}
 
-	q := fmt.Sprintf(
-		`SELECT * FROM %s %s ORDER BY no %s`,
-		tableName,
-		where,
-		limit,
+	rows, err := e.db.QueryContext(
+		ctx,
+		fmt.Sprintf(
+			`SELECT * FROM %s WHERE %s ORDER BY no %s`,
+			tableName,
+			strings.Join(conditions, " AND "),
+			limit,
+		),
+		params...,
 	)
-
-	rows, err := e.db.QueryContext(ctx, q, params...)
 	if err != nil {
 		return nil, err
 	}

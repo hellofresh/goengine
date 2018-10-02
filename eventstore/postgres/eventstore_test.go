@@ -19,6 +19,7 @@ import (
 	"github.com/hellofresh/goengine/metadata"
 	"github.com/hellofresh/goengine/mocks"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
 func TestNewEventStore(t *testing.T) {
@@ -238,6 +239,130 @@ func TestEventStore_AppendTo(t *testing.T) {
 	})
 }
 
+func TestEventStore_Load(t *testing.T) {
+	t.Run("Load events", func(t *testing.T) {
+		columns := []string{"no", "payload", "metadata"}
+		var limit50 uint = 50
+
+		testCases := []struct {
+			title         string
+			fromNumber    int64
+			count         *uint
+			matcher       func() metadata.Matcher
+			expectedQuery string
+		}{
+			{
+				"With matcher",
+				1,
+				nil,
+				func() metadata.Matcher {
+					m := metadata.NewMatcher()
+					m = metadata.WithConstraint(m, "version", metadata.GreaterThan, 1)
+					m = metadata.WithConstraint(m, "version", metadata.LowerThan, 100)
+					return m
+				},
+				`SELECT \* FROM event_stream WHERE metadata ->> 'version' > \$1 AND metadata ->> 'version' < \$2 AND no >= \$3 ORDER BY no`,
+			},
+			{
+				"Without matcher",
+				1,
+				nil,
+				func() metadata.Matcher {
+					return nil
+				},
+				`SELECT \* FROM event_stream WHERE no >= \$1 ORDER BY no`,
+			},
+			{
+				"With limit",
+				1,
+				&limit50,
+				func() metadata.Matcher {
+					return nil
+				},
+				`SELECT \* FROM event_stream WHERE no >= \$1 ORDER BY no LIMIT 50`,
+			},
+		}
+
+		for _, testCase := range testCases {
+			test.RunWithMockDB(t, testCase.title, func(t *testing.T, db *sql.DB, dbMock sqlmock.Sqlmock) {
+				expectedStream := &mocks.EventStream{}
+
+				dbMock.ExpectQuery(testCase.expectedQuery).WillReturnRows(sqlmock.NewRows(columns))
+
+				factory := &mocks.MessageFactory{}
+				factory.On("CreateEventStream", mock.AnythingOfType("*sql.Rows")).Once().Return(expectedStream, nil)
+
+				strategy := &mocks.PersistenceStrategy{}
+				strategy.On("ColumnNames").Return(columns)
+				strategy.On("GenerateTableName", eventstore.StreamName("event_stream")).Return("event_stream", nil)
+
+				store, err := postgres.NewEventStore(strategy, db, factory, nil)
+
+				stream, err := store.Load(
+					context.Background(),
+					"event_stream",
+					testCase.fromNumber,
+					testCase.count,
+					testCase.matcher(),
+				)
+
+				if assert.NoError(t, err) {
+					assert.Equal(t, expectedStream, stream)
+				}
+				factory.AssertExpectations(t)
+				strategy.AssertExpectations(t)
+			})
+		}
+	})
+
+	t.Run("persistent strategy failures", func(t *testing.T) {
+		columns := []string{"no", "payload"}
+
+		testCases := []struct {
+			title         string
+			strategy      func() *mocks.PersistenceStrategy
+			expectedError error
+		}{
+			{
+				"Empty table name returned",
+				func() *mocks.PersistenceStrategy {
+					strategy := &mocks.PersistenceStrategy{}
+					strategy.On("ColumnNames").Return(columns)
+					strategy.On("GenerateTableName", eventstore.StreamName("event_stream")).Return("", nil)
+					return strategy
+				},
+				postgres.ErrTableNameEmpty,
+			},
+			{
+				"Empty table name returned",
+				func() *mocks.PersistenceStrategy {
+					strategy := &mocks.PersistenceStrategy{}
+					strategy.On("ColumnNames").Return(columns)
+					strategy.
+						On("GenerateTableName", eventstore.StreamName("event_stream")).
+						Return("", errors.New("failed gen"))
+					return strategy
+				},
+				errors.New("failed gen"),
+			},
+		}
+
+		for _, testCase := range testCases {
+			test.RunWithMockDB(t, testCase.title, func(t *testing.T, db *sql.DB, dbMock sqlmock.Sqlmock) {
+				strategy := testCase.strategy()
+				store, err := postgres.NewEventStore(strategy, db, &mocks.MessageFactory{}, nil)
+
+				stream, err := store.Load(context.Background(), "event_stream", 1, nil, nil)
+				if assert.Error(t, err) {
+					assert.Equal(t, testCase.expectedError, err)
+					assert.Nil(t, stream)
+				}
+				strategy.AssertExpectations(t)
+			})
+		}
+	})
+}
+
 func mockHasStreamQuery(result bool, mock sqlmock.Sqlmock) {
 	mockRows := sqlmock.NewRows([]string{"type"}).AddRow(result)
 	mock.ExpectQuery(`SELECT EXISTS\((.+)`).WithArgs("events_orders").WillReturnRows(mockRows)
@@ -265,7 +390,7 @@ func mockMessages() (*mocks.PayloadConverter, []messaging.Message) {
 	return pc, messages
 }
 
-func createEventStore(t *testing.T, db *sql.DB, converter eventstore.PayloadConverter) eventstore.EventStore {
+func createEventStore(t *testing.T, db *sql.DB, converter eventstore.PayloadConverter) *postgres.EventStore {
 	asserts := assert.New(t)
 
 	persistenceStrategy, err := postgres.NewPostgresStrategy(converter)
