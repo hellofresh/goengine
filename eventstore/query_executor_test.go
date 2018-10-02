@@ -145,7 +145,7 @@ func TestQueryExecutor_Run(t *testing.T) {
 		query := &mocks.Query{}
 		query.On("Init").Once().Return(myState{})
 		query.On("Handlers").Times(2).Return(map[string]eventstore.QueryMessageHandler{
-			"my_event": func(rawState interface{}, message messaging.Message) (interface{}, error) {
+			"my_event": func(ctx context.Context, rawState interface{}, message messaging.Message) (interface{}, error) {
 				state := rawState.(myState)
 				state.count++
 				state.numbers = append(
@@ -155,7 +155,7 @@ func TestQueryExecutor_Run(t *testing.T) {
 
 				return state, nil
 			},
-			"second_event": func(rawState interface{}, message messaging.Message) (interface{}, error) {
+			"second_event": func(ctx context.Context, rawState interface{}, message messaging.Message) (interface{}, error) {
 				state := rawState.(myState)
 				state.count++
 				state.numbers = append(

@@ -101,7 +101,7 @@ func (e *QueryExecutor) Run(ctx context.Context) (interface{}, error) {
 			}
 
 			// Execute the handler
-			e.state, err = handler(e.state, msg)
+			e.state, err = handler(ctx, e.state, msg)
 			if err != nil {
 				return nil, err
 			}
