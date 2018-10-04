@@ -7,12 +7,9 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"os"
 	"testing"
 	"time"
-
-	"github.com/sirupsen/logrus"
-
-	"github.com/stretchr/testify/assert"
 
 	"github.com/hellofresh/goengine/aggregate"
 	"github.com/hellofresh/goengine/eventstore"
@@ -22,17 +19,18 @@ import (
 	"github.com/hellofresh/goengine/internal/test"
 	"github.com/hellofresh/goengine/messaging"
 	"github.com/hellofresh/goengine/metadata"
+	"github.com/stretchr/testify/assert"
 )
 
-func TestSingleProjector(t *testing.T) {
-	test.PostgresDatabase(t, func(db *sql.DB) {
-		eventStream := eventstore.StreamName("event_stream")
-		aggregateIds := []aggregate.ID{
-			aggregate.GenerateID(),
-		}
+func TestSingleProjector_Run_Once(t *testing.T) {
+	dbDSN, exists := os.LookupEnv("POSTGRES_DSN")
+	if !exists {
+		t.Fatalf("missing POSTGRES_DSN enviroment variable")
+	}
 
-		// Create payload transformer
-		transformer := eventStoreJSON.NewPayloadTransformer()
+	test.PostgresDatabase(t, func(db *sql.DB) {
+		eventStream, store, transformer := setupEventStoreAndProjections(t, db)
+
 		transformer.RegisterPayload("account_debited", func() interface{} {
 			return AccountDeposited{}
 		})
@@ -40,28 +38,10 @@ func TestSingleProjector(t *testing.T) {
 			return AccountCredited{}
 		})
 
-		// Use a persistence strategy
-		persistenceStrategy, err := postgres.NewPostgresStrategy(transformer)
-		if err != nil {
-			t.Fatalf("failed initializing persistent strategy %s", err)
+		aggregateIds := []aggregate.ID{
+			aggregate.GenerateID(),
 		}
-
-		// Create message factory
-		messageFactory, err := eventStoreSQL.NewAggregateChangedFactory(transformer)
-		if err != nil {
-			t.Fatalf("failed on dependencies load %s", err)
-		}
-
-		// Create event store
-		logrus.SetLevel(logrus.DebugLevel)
-		store, err := postgres.NewEventStore(persistenceStrategy, db, messageFactory, logrus.StandardLogger())
-		if err != nil {
-			t.Fatalf("failed on dependencies load %s", err)
-		}
-
-		ctx := context.Background()
-		store.Create(ctx, eventStream)
-
+		// Add events to the event stream
 		appendEvents(t, store, eventStream,
 			map[aggregate.ID][]interface{}{
 				aggregateIds[0]: {
@@ -75,7 +55,15 @@ func TestSingleProjector(t *testing.T) {
 			},
 		)
 
-		projector, err := postgres.NewSingleProjector(db, "projections", store, transformer, &DepositedProjection{})
+		projector, err := postgres.NewSingleProjector(
+			dbDSN,
+			db,
+			store,
+			transformer,
+			&DepositedProjection{},
+			"projections",
+			nil,
+		)
 		if err != nil {
 			t.Fatalf("failed to create projector %s", err)
 		}
@@ -86,7 +74,7 @@ func TestSingleProjector(t *testing.T) {
 
 			err := projector.Run(ctx, false)
 			if !asserts.NoError(err) {
-				return
+				t.Fail()
 			}
 
 			assertProjectionState(
@@ -109,7 +97,7 @@ func TestSingleProjector(t *testing.T) {
 
 				err := projector.Run(ctx, false)
 				if !asserts.NoError(err) {
-					return
+					t.Fail()
 				}
 
 				assertProjectionState(
@@ -122,7 +110,52 @@ func TestSingleProjector(t *testing.T) {
 		})
 	})
 }
-func assertProjectionState(t *testing.T, db *sql.DB, position int64, jsonState string) {
+
+func setupEventStoreAndProjections(t *testing.T, db *sql.DB) (eventstore.StreamName, *postgres.EventStore, *eventStoreJSON.PayloadTransformer) {
+	eventStream := eventstore.StreamName("event_stream")
+
+	// Create payload transformer
+	transformer := eventStoreJSON.NewPayloadTransformer()
+
+	// Use a persistence strategy
+	persistenceStrategy, err := postgres.NewPostgresStrategy(transformer)
+	if err != nil {
+		t.Fatalf("failed initializing persistent strategy %s", err)
+	}
+
+	// Create message factory
+	messageFactory, err := eventStoreSQL.NewAggregateChangedFactory(transformer)
+	if err != nil {
+		t.Fatalf("failed on dependencies load %s", err)
+	}
+
+	// Create event store
+	store, err := postgres.NewEventStore(persistenceStrategy, db, messageFactory, nil)
+	if err != nil {
+		t.Fatalf("failed on dependencies load %s", err)
+	}
+
+	// Create the event stream
+	ctx := context.Background()
+	if err := store.Create(ctx, eventStream); err != nil {
+		t.Fatalf("failed on create event stream %s", err)
+	}
+
+	// Setup the projection tables etc.
+	eventStreamTable, err := persistenceStrategy.GenerateTableName(eventStream)
+	if err != nil {
+		t.Fatalf("failed to generate eventstream table name %s", err)
+	}
+	queries := postgres.SingleProjectorCreateSchema("projections", eventStream, eventStreamTable)
+	for _, query := range queries {
+		if _, err := db.ExecContext(ctx, query); err != nil {
+			t.Fatalf("failed to create projection tables etc. %s", err)
+		}
+	}
+
+	return eventStream, store, transformer
+}
+func assertProjectionState(t *testing.T, db *sql.DB, expectedPosition int64, expectedState string) {
 	asserts := assert.New(t)
 
 	projections, err := db.Query(`SELECT position, state FROM projections`)
@@ -137,8 +170,8 @@ func assertProjectionState(t *testing.T, db *sql.DB, position int64, jsonState s
 		)
 		err := projections.Scan(&position, &state)
 		if asserts.NoError(err) {
-			asserts.Equal(position, position)
-			asserts.JSONEq(jsonState, state)
+			asserts.Equal(expectedPosition, position)
+			asserts.JSONEq(expectedState, state)
 		}
 	}
 }
