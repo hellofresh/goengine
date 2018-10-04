@@ -11,6 +11,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/hellofresh/goengine/aggregate"
 	"github.com/hellofresh/goengine/eventstore"
 	eventStoreJSON "github.com/hellofresh/goengine/eventstore/json"
@@ -21,6 +23,91 @@ import (
 	"github.com/hellofresh/goengine/metadata"
 	"github.com/stretchr/testify/assert"
 )
+
+func TestSingleProjector_Run(t *testing.T) {
+	dbDSN, exists := os.LookupEnv("POSTGRES_DSN")
+	if !exists {
+		t.Fatalf("missing POSTGRES_DSN enviroment variable")
+	}
+	test.PostgresDatabase(t, func(db *sql.DB) {
+		eventStream, store, transformer := setupEventStoreAndProjections(t, db)
+
+		transformer.RegisterPayload("account_debited", func() interface{} {
+			return AccountDeposited{}
+		})
+		transformer.RegisterPayload("account_credited", func() interface{} {
+			return AccountCredited{}
+		})
+
+		projectorCtx, projectorCancel := context.WithCancel(context.Background())
+		projector, err := postgres.NewSingleProjector(
+			dbDSN,
+			db,
+			store,
+			transformer,
+			&DepositedProjection{},
+			"projections",
+			logrus.StandardLogger(),
+		)
+		if err != nil {
+			t.Fatalf("failed to create projector %s", err)
+		}
+
+		// Run the projector in the background
+		go func() {
+			err := projector.Run(projectorCtx, true)
+			if err != nil {
+				t.Fatalf("projector.Run returned an error. %s", err)
+			}
+		}()
+		time.Sleep(25 * time.Millisecond)
+
+		// Add events to the event stream
+		aggregateIds := []aggregate.ID{
+			aggregate.GenerateID(),
+		}
+		appendEvents(t, store, eventStream,
+			map[aggregate.ID][]interface{}{
+				aggregateIds[0]: {
+					AccountDeposited{Amount: 100},
+					AccountCredited{Amount: 50},
+					AccountDeposited{Amount: 10},
+					AccountDeposited{Amount: 5},
+					AccountDeposited{Amount: 100},
+					AccountDeposited{Amount: 1},
+				},
+			},
+		)
+
+		time.Sleep(25 * time.Millisecond)
+		assertProjectionState(
+			t,
+			db,
+			6,
+			`{"Total": 5, "TotalAmount": 216}`,
+		)
+
+		// Add events to the event stream
+		appendEvents(t, store, eventStream,
+			map[aggregate.ID][]interface{}{
+				aggregateIds[0]: {
+					AccountDeposited{Amount: 100},
+					AccountDeposited{Amount: 1},
+				},
+			},
+		)
+
+		time.Sleep(25 * time.Millisecond)
+		assertProjectionState(
+			t,
+			db,
+			8,
+			`{"Total": 7, "TotalAmount": 317}`,
+		)
+
+		projectorCancel()
+	})
+}
 
 func TestSingleProjector_Run_Once(t *testing.T) {
 	dbDSN, exists := os.LookupEnv("POSTGRES_DSN")

@@ -18,25 +18,34 @@ var (
 	_ eventstore.Projector = &SingleProjector{}
 )
 
-// SingleProjector is a postgres projector used execute a projection again an event stream
-//
-// This projector uses postgres advisory locks (https://www.postgresql.org/docs/10/static/explicit-locking.html#ADVISORY-LOCKS)
-// to avoid projecting the same event multiple times.
-// Updates to the event stream are received by using the postgres notify and listen.
-type SingleProjector struct {
-	db              *sql.DB
-	dbDSN           string
-	store           eventstore.EventStore
-	resolver        eventstore.PayloadResolver
-	projection      eventstore.Projection
-	projectionTable string
-	logger          logrus.FieldLogger
+type (
+	// SingleProjector is a postgres projector used execute a projection again an event stream
+	//
+	// This projector uses postgres advisory locks (https://www.postgresql.org/docs/10/static/explicit-locking.html#ADVISORY-LOCKS)
+	// to avoid projecting the same event multiple times.
+	// Updates to the event stream are received by using the postgres notify and listen.
+	SingleProjector struct {
+		db              *sql.DB
+		dbDSN           string
+		store           eventstore.EventStore
+		resolver        eventstore.PayloadResolver
+		projection      eventstore.Projection
+		projectionTable string
+		logger          logrus.FieldLogger
 
-	eventHandlers map[string]eventstore.ProjectionHandler
+		eventHandlers map[string]eventstore.ProjectionHandler
 
-	state    interface{}
-	position int64
-}
+		state    interface{}
+		position int64
+	}
+
+	// projectorNotification is a representation of the data provided by postgres notify
+	projectorNotification struct {
+		No          int64  `json:"no"`
+		EventName   string `json:"event_name"`
+		AggregateID string `json:"aggregate_id"`
+	}
+)
 
 // NewSingleProjector creates a new projector for a projection
 func NewSingleProjector(
@@ -163,6 +172,7 @@ func (a *SingleProjector) Run(ctx context.Context, keepRunning bool) error {
 			logger.Warn("connection listener: unknown event")
 		}
 	})
+	defer listener.Close()
 
 	if err := listener.Listen(string(a.projection.FromStream())); err != nil {
 		return err
@@ -171,13 +181,27 @@ func (a *SingleProjector) Run(ctx context.Context, keepRunning bool) error {
 	for {
 		select {
 		case n := <-listener.Notify:
-			a.logger.WithField("notification", n).Debug("received database notification")
+			logger := a.logger.WithFields(logrus.Fields{
+				"channel":    n.Channel,
+				"data":       n.Extra,
+				"process_id": n.BePid,
+			})
 
 			// If extra data is provided use it to check if the projection needs to catch up
 			if n.Extra != "" {
 				// decode the extra's
+				var notification projectorNotification
+				if err := json.Unmarshal([]byte(n.Extra), &notification); err != nil {
+					logger.Warn("received notification with a invalid data")
+				} else if notification.No <= a.position {
+					// The current position is a head of the notification so ignore
+					logger.Debug("ignoring notification: it is behind the projection position")
+					continue
+				}
 
-				// If the no is less then the current position ignore this notification
+				logger.Debug("received notification")
+			} else {
+				logger.Warn("received notification without data")
 			}
 
 			a.triggerRun(ctx)
