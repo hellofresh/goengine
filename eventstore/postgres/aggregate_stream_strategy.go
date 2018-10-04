@@ -34,9 +34,9 @@ func NewPostgresStrategy(converter eventstore.PayloadConverter) (eventstore.Pers
 
 // CreateSchema returns a valid set of SQL statements to create the event store tables and indexes
 func (s *SingleStreamStrategy) CreateSchema(tableName string) []string {
-	uniqueIndexName := DoubleQuoteIdentifier(fmt.Sprintf(`%s_unique_index___aggregate_type__aggregate_id__aggregate_version`, tableName))
-	indexName := DoubleQuoteIdentifier(fmt.Sprintf(`%s_index__aggregate_type__aggregate_id`, tableName))
-	tableName = DoubleQuoteIdentifier(tableName)
+	uniqueIndexName := quoteIdentifier(fmt.Sprintf(`%s_unique_index___aggregate_type__aggregate_id__aggregate_version`, tableName))
+	indexName := quoteIdentifier(fmt.Sprintf(`%s_index__aggregate_type__aggregate_id`, tableName))
+	tableName = quoteIdentifier(tableName)
 
 	statements := make([]string, 3)
 	statements[0] = fmt.Sprintf(

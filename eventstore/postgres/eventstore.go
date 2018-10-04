@@ -264,8 +264,7 @@ func matchConditions(matcher metadata.Matcher) (conditions []string, params []in
 	i := 0
 	matcher.Iterate(func(c metadata.Constraint) {
 		i++
-		field := SingleQuoteIdentifier(c.Field())
-		condition := fmt.Sprintf("metadata ->> %s %s $%d", field, c.Operator(), i)
+		condition := fmt.Sprintf("metadata ->> %s %s $%d", quoteString(c.Field()), c.Operator(), i)
 		conditions = append(conditions, condition)
 		params = append(params, c.Value())
 	})
