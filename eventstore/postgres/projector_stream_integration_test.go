@@ -22,7 +22,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestSingleProjector_Run(t *testing.T) {
+func TestStreamProjector_Run(t *testing.T) {
 	dbDSN, exists := os.LookupEnv("POSTGRES_DSN")
 	if !exists {
 		t.Fatalf("missing POSTGRES_DSN enviroment variable")
@@ -38,7 +38,7 @@ func TestSingleProjector_Run(t *testing.T) {
 		})
 
 		projectorCtx, projectorCancel := context.WithCancel(context.Background())
-		projector, err := postgres.NewSingleProjector(
+		projector, err := postgres.NewStreamProjector(
 			dbDSN,
 			db,
 			store,
@@ -115,7 +115,7 @@ func TestSingleProjector_Run(t *testing.T) {
 	})
 }
 
-func TestSingleProjector_Run_Once(t *testing.T) {
+func TestStreamProjector_Run_Once(t *testing.T) {
 	dbDSN, exists := os.LookupEnv("POSTGRES_DSN")
 	if !exists {
 		t.Fatalf("missing POSTGRES_DSN enviroment variable")
@@ -148,7 +148,7 @@ func TestSingleProjector_Run_Once(t *testing.T) {
 			},
 		)
 
-		projector, err := postgres.NewSingleProjector(
+		projector, err := postgres.NewStreamProjector(
 			dbDSN,
 			db,
 			store,
@@ -239,7 +239,7 @@ func setupEventStoreAndProjections(t *testing.T, db *sql.DB) (eventstore.StreamN
 	if err != nil {
 		t.Fatalf("failed to generate eventstream table name %s", err)
 	}
-	queries := postgres.SingleProjectorCreateSchema("projections", eventStream, eventStreamTable)
+	queries := postgres.StreamProjectorCreateSchema("projections", eventStream, eventStreamTable)
 	for _, query := range queries {
 		if _, err := db.ExecContext(ctx, query); err != nil {
 			t.Fatalf("failed to create projection tables etc. %s", err)

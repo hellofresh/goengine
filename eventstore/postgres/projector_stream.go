@@ -19,16 +19,16 @@ var (
 	// ErrProjectionFailedToLock occurs when the projector cannot acquire the projection lock
 	ErrProjectionFailedToLock = errors.New("unable to acquire projection lock")
 	// Ensure that we satisfy the eventstore.Projector interface
-	_ eventstore.Projector = &SingleProjector{}
+	_ eventstore.Projector = &StreamProjector{}
 )
 
 type (
-	// SingleProjector is a postgres projector used execute a projection again an event stream
+	// StreamProjector is a postgres projector used to execute a projection against an event stream.
 	//
 	// This projector uses postgres advisory locks (https://www.postgresql.org/docs/10/static/explicit-locking.html#ADVISORY-LOCKS)
 	// to avoid projecting the same event multiple times.
 	// Updates to the event stream are received by using the postgres notify and listen.
-	SingleProjector struct {
+	StreamProjector struct {
 		sync.Mutex
 
 		db              *sql.DB
@@ -53,8 +53,8 @@ type (
 	}
 )
 
-// NewSingleProjector creates a new projector for a projection
-func NewSingleProjector(
+// NewStreamProjector creates a new projector for a projection
+func NewStreamProjector(
 	dbDSN string,
 	db *sql.DB,
 	store eventstore.EventStore,
@@ -62,7 +62,7 @@ func NewSingleProjector(
 	projection eventstore.Projection,
 	projectionTable string,
 	logger logrus.FieldLogger,
-) (*SingleProjector, error) {
+) (*StreamProjector, error) {
 	if logger == nil {
 		logger = log.NilLogger
 	}
@@ -71,7 +71,7 @@ func NewSingleProjector(
 		"event_stream": projection.FromStream(),
 	})
 
-	return &SingleProjector{
+	return &StreamProjector{
 		db:              db,
 		dbDSN:           dbDSN,
 		store:           store,
@@ -82,8 +82,8 @@ func NewSingleProjector(
 	}, nil
 }
 
-// SingleProjectorCreateSchema return the sql statement needed for the postgres database in order to use the SingleProjector
-func SingleProjectorCreateSchema(projectionTable string, streamName eventstore.StreamName, streamTable string) []string {
+// StreamProjectorCreateSchema return the sql statement needed for the postgres database in order to use the StreamProjector
+func StreamProjectorCreateSchema(projectionTable string, streamName eventstore.StreamName, streamTable string) []string {
 	statements := make([]string, 3)
 	statements[0] = `CREATE FUNCTION public.event_stream_notify ()
   RETURNS TRIGGER
@@ -144,9 +144,9 @@ $$;`
 }
 
 // Run executes the projection and manages the state of the projection
-func (a *SingleProjector) Run(ctx context.Context, keepRunning bool) error {
-	a.Lock()
-	defer a.Unlock()
+func (s *StreamProjector) Run(ctx context.Context, keepRunning bool) error {
+	s.Lock()
+	defer s.Unlock()
 
 	// Check if the context is expired
 	select {
@@ -156,14 +156,14 @@ func (a *SingleProjector) Run(ctx context.Context, keepRunning bool) error {
 	}
 
 	// Create the projection if none exists
-	if !a.projectionExists(ctx) {
-		if err := a.createProjection(ctx); err != nil {
+	if !s.projectionExists(ctx) {
+		if err := s.createProjection(ctx); err != nil {
 			return err
 		}
 	}
 
 	// Trigger an initial run of the projection
-	if err := a.triggerRun(ctx); err != nil {
+	if err := s.triggerRun(ctx); err != nil {
 		// If the projector needs to keep running but could not acquire a lock we still need to continue.
 		if err == ErrProjectionFailedToLock && !keepRunning {
 			return err
@@ -173,8 +173,8 @@ func (a *SingleProjector) Run(ctx context.Context, keepRunning bool) error {
 		return nil
 	}
 
-	listener := pq.NewListener(a.dbDSN, time.Millisecond, time.Second, func(event pq.ListenerEventType, err error) {
-		logger := a.logger.WithField("listener_event", event)
+	listener := pq.NewListener(s.dbDSN, time.Millisecond, time.Second, func(event pq.ListenerEventType, err error) {
+		logger := s.logger.WithField("listener_event", event)
 		if err != nil {
 			logger = logger.WithError(err)
 		}
@@ -194,14 +194,14 @@ func (a *SingleProjector) Run(ctx context.Context, keepRunning bool) error {
 	})
 	defer listener.Close()
 
-	if err := listener.Listen(string(a.projection.FromStream())); err != nil {
+	if err := listener.Listen(string(s.projection.FromStream())); err != nil {
 		return err
 	}
 
 	for {
 		select {
 		case n := <-listener.Notify:
-			logger := a.logger.WithFields(logrus.Fields{
+			logger := s.logger.WithFields(logrus.Fields{
 				"channel":    n.Channel,
 				"data":       n.Extra,
 				"process_id": n.BePid,
@@ -213,7 +213,7 @@ func (a *SingleProjector) Run(ctx context.Context, keepRunning bool) error {
 				var notification projectorNotification
 				if err := json.Unmarshal([]byte(n.Extra), &notification); err != nil {
 					logger.Warn("received notification with a invalid data")
-				} else if notification.No <= a.position {
+				} else if notification.No <= s.position {
 					// The current position is a head of the notification so ignore
 					logger.Debug("ignoring notification: it is behind the projection position")
 					continue
@@ -224,7 +224,7 @@ func (a *SingleProjector) Run(ctx context.Context, keepRunning bool) error {
 				logger.Warn("received notification without data")
 			}
 
-			if err := a.triggerRun(ctx); err != nil {
+			if err := s.triggerRun(ctx); err != nil {
 				if err == ErrProjectionFailedToLock {
 					logger.WithError(err).Info("ignoring notification: the projection is already locked")
 					continue
@@ -233,46 +233,46 @@ func (a *SingleProjector) Run(ctx context.Context, keepRunning bool) error {
 				return err
 			}
 		case <-ctx.Done():
-			a.logger.Debug("context closed stopping projection")
+			s.logger.Debug("context closed stopping projection")
 			return nil
 		}
 	}
 }
 
 // Reset trigger a reset of the projection and the projections state
-func (a *SingleProjector) Reset(ctx context.Context) error {
-	a.Lock()
-	defer a.Unlock()
+func (s *StreamProjector) Reset(ctx context.Context) error {
+	s.Lock()
+	defer s.Unlock()
 
-	return a.do(ctx, func(ctx context.Context, conn *sql.Conn) error {
-		if err := a.projection.Reset(ctx); err != nil {
+	return s.do(ctx, func(ctx context.Context, conn *sql.Conn) error {
+		if err := s.projection.Reset(ctx); err != nil {
 			return err
 		}
 
-		a.position = 0
-		a.state = nil
+		s.position = 0
+		s.state = nil
 
-		return a.persist(ctx, conn)
+		return s.persist(ctx, conn)
 	})
 }
 
 // Delete removes the projection and the projections state
-func (a *SingleProjector) Delete(ctx context.Context) error {
-	a.Lock()
-	defer a.Unlock()
+func (s *StreamProjector) Delete(ctx context.Context) error {
+	s.Lock()
+	defer s.Unlock()
 
-	return a.do(ctx, func(ctx context.Context, conn *sql.Conn) error {
-		if err := a.projection.Delete(ctx); err != nil {
+	return s.do(ctx, func(ctx context.Context, conn *sql.Conn) error {
+		if err := s.projection.Delete(ctx); err != nil {
 			return err
 		}
 
-		_, err := a.db.ExecContext(
+		_, err := s.db.ExecContext(
 			ctx,
 			fmt.Sprintf(
 				`DELETE FROM %s WHERE name = $1`,
-				quoteIdentifier(a.projectionTable),
+				quoteIdentifier(s.projectionTable),
 			),
-			a.projection.Name(),
+			s.projection.Name(),
 		)
 
 		if err != nil {
@@ -283,18 +283,18 @@ func (a *SingleProjector) Delete(ctx context.Context) error {
 	})
 }
 
-func (a *SingleProjector) triggerRun(ctx context.Context) error {
-	streamName := a.projection.FromStream()
+func (s *StreamProjector) triggerRun(ctx context.Context) error {
+	streamName := s.projection.FromStream()
 
-	return a.do(ctx, func(ctx context.Context, conn *sql.Conn) error {
-		stream, err := a.store.Load(ctx, streamName, a.position+1, nil, nil)
+	return s.do(ctx, func(ctx context.Context, conn *sql.Conn) error {
+		stream, err := s.store.Load(ctx, streamName, s.position+1, nil, nil)
 		if err != nil {
 			return err
 		}
 
-		if err := a.handleStream(ctx, conn, streamName, stream); err != nil {
+		if err := s.handleStream(ctx, conn, streamName, stream); err != nil {
 			if err := stream.Close(); err != nil {
-				a.logger.WithError(err).Warn("failed to close the stream after a handling error occurred")
+				s.logger.WithError(err).Warn("failed to close the stream after a handling error occurred")
 			}
 			return err
 		}
@@ -307,7 +307,7 @@ func (a *SingleProjector) triggerRun(ctx context.Context) error {
 	})
 }
 
-func (a *SingleProjector) handleStream(ctx context.Context, conn *sql.Conn, streamName eventstore.StreamName, stream eventstore.EventStream) error {
+func (s *StreamProjector) handleStream(ctx context.Context, conn *sql.Conn, streamName eventstore.StreamName, stream eventstore.EventStream) error {
 	var msgCount int64
 	for stream.Next() {
 		// Check if the context is expired
@@ -323,33 +323,33 @@ func (a *SingleProjector) handleStream(ctx context.Context, conn *sql.Conn, stre
 			return err
 		}
 		msgCount++
-		a.position = msgNumber
+		s.position = msgNumber
 
 		// Resolve the payload event name
-		eventName, err := a.resolver.ResolveName(msg.Payload())
+		eventName, err := s.resolver.ResolveName(msg.Payload())
 		if err != nil {
 			continue
 		}
 
 		// Load event handlers if needed
-		if a.eventHandlers == nil {
-			a.eventHandlers = a.projection.Handlers()
+		if s.eventHandlers == nil {
+			s.eventHandlers = s.projection.Handlers()
 		}
 
 		// Resolve the payload handler using the event name
-		handler, found := a.eventHandlers[eventName]
+		handler, found := s.eventHandlers[eventName]
 		if !found {
 			continue
 		}
 
 		// Execute the handler
-		a.state, err = handler(ctx, a.state, msg)
+		s.state, err = handler(ctx, s.state, msg)
 		if err != nil {
 			return err
 		}
 
 		// Persist state and position changes
-		if err := a.persist(ctx, conn); err != nil {
+		if err := s.persist(ctx, conn); err != nil {
 			return err
 		}
 	}
@@ -357,30 +357,30 @@ func (a *SingleProjector) handleStream(ctx context.Context, conn *sql.Conn, stre
 	return stream.Err()
 }
 
-func (a *SingleProjector) do(ctx context.Context, callback func(ctx context.Context, conn *sql.Conn) error) error {
-	conn, err := a.db.Conn(ctx)
+func (s *StreamProjector) do(ctx context.Context, callback func(ctx context.Context, conn *sql.Conn) error) error {
+	conn, err := s.db.Conn(ctx)
 	if err != nil {
 		return err
 	}
 	defer conn.Close()
 
-	if err := a.acquireProjection(ctx, conn); err != nil {
+	if err := s.acquireProjection(ctx, conn); err != nil {
 		return err
 	}
-	defer a.releaseProjection(ctx, conn)
+	defer s.releaseProjection(ctx, conn)
 
 	return callback(ctx, conn)
 }
 
-func (a *SingleProjector) acquireProjection(ctx context.Context, conn *sql.Conn) error {
+func (s *StreamProjector) acquireProjection(ctx context.Context, conn *sql.Conn) error {
 	res := conn.QueryRowContext(
 		ctx,
 		fmt.Sprintf(
 			`SELECT pg_try_advisory_lock(%s::regclass::oid::int, no), position, state FROM %s WHERE name = $1`,
-			quoteString(a.projectionTable),
-			quoteIdentifier(a.projectionTable),
+			quoteString(s.projectionTable),
+			quoteIdentifier(s.projectionTable),
 		),
-		a.projection.Name(),
+		s.projection.Name(),
 	)
 
 	var (
@@ -397,7 +397,7 @@ func (a *SingleProjector) acquireProjection(ctx context.Context, conn *sql.Conn)
 	}
 
 	var err error
-	a.state, err = a.projection.ReconstituteState(jsonState)
+	s.state, err = s.projection.ReconstituteState(jsonState)
 	if err != nil {
 		return err
 	}
@@ -405,15 +405,15 @@ func (a *SingleProjector) acquireProjection(ctx context.Context, conn *sql.Conn)
 	return nil
 }
 
-func (a *SingleProjector) releaseProjection(ctx context.Context, conn *sql.Conn) error {
+func (s *StreamProjector) releaseProjection(ctx context.Context, conn *sql.Conn) error {
 	res := conn.QueryRowContext(
 		ctx,
 		fmt.Sprintf(
 			`SELECT pg_advisory_unlock(%s::regclass::oid::int, no) FROM %s WHERE name = $1`,
-			quoteString(a.projectionTable),
-			quoteIdentifier(a.projectionTable),
+			quoteString(s.projectionTable),
+			quoteIdentifier(s.projectionTable),
 		),
-		a.projection.Name(),
+		s.projection.Name(),
 	)
 
 	var unlocked bool
@@ -428,8 +428,8 @@ func (a *SingleProjector) releaseProjection(ctx context.Context, conn *sql.Conn)
 	return nil
 }
 
-func (a *SingleProjector) persist(ctx context.Context, conn *sql.Conn) error {
-	jsonState, err := json.Marshal(a.state)
+func (s *StreamProjector) persist(ctx context.Context, conn *sql.Conn) error {
+	jsonState, err := json.Marshal(s.state)
 	if err != nil {
 		return err
 	}
@@ -438,11 +438,11 @@ func (a *SingleProjector) persist(ctx context.Context, conn *sql.Conn) error {
 		ctx,
 		fmt.Sprintf(
 			`UPDATE %s SET position = $1, state = $2 WHERE name = $3`,
-			quoteIdentifier(a.projectionTable),
+			quoteIdentifier(s.projectionTable),
 		),
-		a.position,
+		s.position,
 		jsonState,
-		a.projection.Name(),
+		s.projection.Name(),
 	)
 	if err != nil {
 		return err
@@ -451,17 +451,17 @@ func (a *SingleProjector) persist(ctx context.Context, conn *sql.Conn) error {
 	return nil
 }
 
-func (a *SingleProjector) projectionExists(ctx context.Context) bool {
-	rows, err := a.db.QueryContext(
+func (s *StreamProjector) projectionExists(ctx context.Context) bool {
+	rows, err := s.db.QueryContext(
 		ctx,
 		fmt.Sprintf(
 			`SELECT 1 FROM %s WHERE name = $1 LIMIT 1`,
-			quoteIdentifier(a.projectionTable),
+			quoteIdentifier(s.projectionTable),
 		),
-		a.projection.Name(),
+		s.projection.Name(),
 	)
 	if err != nil {
-		a.logger.WithField("table", a.projectionTable).WithError(err).Error("failed to query projection table")
+		s.logger.WithField("table", s.projectionTable).WithError(err).Error("failed to query projection table")
 		return false
 	}
 	defer rows.Close()
@@ -472,22 +472,22 @@ func (a *SingleProjector) projectionExists(ctx context.Context) bool {
 
 	var found bool
 	if err := rows.Scan(&found); err != nil {
-		a.logger.WithField("table", a.projectionTable).WithError(err).Error("failed to scan projection table")
+		s.logger.WithField("table", s.projectionTable).WithError(err).Error("failed to scan projection table")
 		return false
 	}
 
 	return found
 }
 
-func (a *SingleProjector) createProjection(ctx context.Context) error {
+func (s *StreamProjector) createProjection(ctx context.Context) error {
 	// Ignore duplicate inserts. This can occur when multiple projectors are started at the same time.
-	_, err := a.db.ExecContext(
+	_, err := s.db.ExecContext(
 		ctx,
 		fmt.Sprintf(
 			`INSERT INTO %s (name) VALUES ($1) ON CONFLICT DO NOTHING`,
-			quoteIdentifier(a.projectionTable),
+			quoteIdentifier(s.projectionTable),
 		),
-		a.projection.Name(),
+		s.projection.Name(),
 	)
 	if err != nil {
 		return err
