@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/hellofresh/goengine/eventstore"
@@ -15,6 +16,9 @@ import (
 )
 
 var (
+	// ErrProjectionFailedToLock occurs when the projector cannot acquire the projection lock
+	ErrProjectionFailedToLock = errors.New("unable to acquire projection lock")
+	// Ensure that we satisfy the eventstore.Projector interface
 	_ eventstore.Projector = &SingleProjector{}
 )
 
@@ -25,6 +29,8 @@ type (
 	// to avoid projecting the same event multiple times.
 	// Updates to the event stream are received by using the postgres notify and listen.
 	SingleProjector struct {
+		sync.Mutex
+
 		db              *sql.DB
 		dbDSN           string
 		store           eventstore.EventStore
@@ -139,17 +145,31 @@ $$;`
 
 // Run executes the projection and manages the state of the projection
 func (a *SingleProjector) Run(ctx context.Context, keepRunning bool) error {
+	a.Lock()
+	defer a.Unlock()
+
+	// Check if the context is expired
+	select {
+	default:
+	case <-ctx.Done():
+		return nil
+	}
+
+	// Create the projection if none exists
 	if !a.projectionExists(ctx) {
 		if err := a.createProjection(ctx); err != nil {
 			return err
 		}
 	}
 
-	// Trigger a initial run of the projection
+	// Trigger an initial run of the projection
 	if err := a.triggerRun(ctx); err != nil {
-		return err
+		// If the projector needs to keep running but could not acquire a lock we still need to continue.
+		if err == ErrProjectionFailedToLock && !keepRunning {
+			return err
+		}
 	}
-	if keepRunning == false {
+	if !keepRunning {
 		return nil
 	}
 
@@ -204,7 +224,14 @@ func (a *SingleProjector) Run(ctx context.Context, keepRunning bool) error {
 				logger.Warn("received notification without data")
 			}
 
-			a.triggerRun(ctx)
+			if err := a.triggerRun(ctx); err != nil {
+				if err == ErrProjectionFailedToLock {
+					logger.WithError(err).Info("ignoring notification: the projection is already locked")
+					continue
+				}
+
+				return err
+			}
 		case <-ctx.Done():
 			a.logger.Debug("context closed stopping projection")
 			return nil
@@ -214,6 +241,9 @@ func (a *SingleProjector) Run(ctx context.Context, keepRunning bool) error {
 
 // Reset trigger a reset of the projection and the projections state
 func (a *SingleProjector) Reset(ctx context.Context) error {
+	a.Lock()
+	defer a.Unlock()
+
 	return a.do(ctx, func(ctx context.Context, conn *sql.Conn) error {
 		if err := a.projection.Reset(ctx); err != nil {
 			return err
@@ -228,12 +258,15 @@ func (a *SingleProjector) Reset(ctx context.Context) error {
 
 // Delete removes the projection and the projections state
 func (a *SingleProjector) Delete(ctx context.Context) error {
+	a.Lock()
+	defer a.Unlock()
+
 	return a.do(ctx, func(ctx context.Context, conn *sql.Conn) error {
 		if err := a.projection.Delete(ctx); err != nil {
 			return err
 		}
 
-		res, err := a.db.ExecContext(
+		_, err := a.db.ExecContext(
 			ctx,
 			fmt.Sprintf(
 				`DELETE FROM %s WHERE name = $1`,
@@ -245,8 +278,6 @@ func (a *SingleProjector) Delete(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-
-		res.RowsAffected()
 
 		return nil
 	})
@@ -279,6 +310,13 @@ func (a *SingleProjector) triggerRun(ctx context.Context) error {
 func (a *SingleProjector) handleStream(ctx context.Context, conn *sql.Conn, streamName eventstore.StreamName, stream eventstore.EventStream) error {
 	var msgCount int64
 	for stream.Next() {
+		// Check if the context is expired
+		select {
+		default:
+		case <-ctx.Done():
+			return nil
+		}
+
 		// Get the message
 		msg, msgNumber, err := stream.Message()
 		if err != nil {
@@ -355,7 +393,7 @@ func (a *SingleProjector) acquireProjection(ctx context.Context, conn *sql.Conn)
 	}
 
 	if !locked {
-		return errors.New("unable to acquire projection lock")
+		return ErrProjectionFailedToLock
 	}
 
 	var err error
@@ -396,7 +434,7 @@ func (a *SingleProjector) persist(ctx context.Context, conn *sql.Conn) error {
 		return err
 	}
 
-	res, err := conn.ExecContext(
+	_, err = conn.ExecContext(
 		ctx,
 		fmt.Sprintf(
 			`UPDATE %s SET position = $1, state = $2 WHERE name = $3`,
@@ -409,7 +447,6 @@ func (a *SingleProjector) persist(ctx context.Context, conn *sql.Conn) error {
 	if err != nil {
 		return err
 	}
-	res.RowsAffected()
 
 	return nil
 }
@@ -443,10 +480,11 @@ func (a *SingleProjector) projectionExists(ctx context.Context) bool {
 }
 
 func (a *SingleProjector) createProjection(ctx context.Context) error {
-	res, err := a.db.ExecContext(
+	// Ignore duplicate inserts. This can occur when multiple projectors are started at the same time.
+	_, err := a.db.ExecContext(
 		ctx,
 		fmt.Sprintf(
-			`INSERT INTO %s (name) VALUES ($1)`,
+			`INSERT INTO %s (name) VALUES ($1) ON CONFLICT DO NOTHING`,
 			quoteIdentifier(a.projectionTable),
 		),
 		a.projection.Name(),
@@ -454,7 +492,6 @@ func (a *SingleProjector) createProjection(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	res.RowsAffected()
 
 	return nil
 }

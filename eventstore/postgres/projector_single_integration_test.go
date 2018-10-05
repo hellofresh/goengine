@@ -11,8 +11,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sirupsen/logrus"
-
 	"github.com/hellofresh/goengine/aggregate"
 	"github.com/hellofresh/goengine/eventstore"
 	eventStoreJSON "github.com/hellofresh/goengine/eventstore/json"
@@ -47,13 +45,21 @@ func TestSingleProjector_Run(t *testing.T) {
 			transformer,
 			&DepositedProjection{},
 			"projections",
-			logrus.StandardLogger(),
+			nil,
 		)
 		if err != nil {
 			t.Fatalf("failed to create projector %s", err)
 		}
 
 		// Run the projector in the background
+		go func() {
+			err := projector.Run(projectorCtx, true)
+			if err != nil {
+				t.Fatalf("projector.Run returned an error. %s", err)
+			}
+		}()
+
+		// Be evil and start run the projection again to ensure mutex is used and the context is respected
 		go func() {
 			err := projector.Run(projectorCtx, true)
 			if err != nil {
@@ -79,7 +85,7 @@ func TestSingleProjector_Run(t *testing.T) {
 			},
 		)
 
-		time.Sleep(25 * time.Millisecond)
+		time.Sleep(50 * time.Millisecond)
 		assertProjectionState(
 			t,
 			db,
@@ -97,7 +103,7 @@ func TestSingleProjector_Run(t *testing.T) {
 			},
 		)
 
-		time.Sleep(25 * time.Millisecond)
+		time.Sleep(50 * time.Millisecond)
 		assertProjectionState(
 			t,
 			db,
