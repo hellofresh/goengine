@@ -328,6 +328,7 @@ func (s *StreamProjector) handleStream(ctx context.Context, conn *sql.Conn, stre
 		// Resolve the payload event name
 		eventName, err := s.resolver.ResolveName(msg.Payload())
 		if err != nil {
+			s.logger.WithField("payload", msg.Payload()).Debug("skipping event: unable to resolve payload name")
 			continue
 		}
 
