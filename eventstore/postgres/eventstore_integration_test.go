@@ -45,10 +45,10 @@ func TestEventStoreCreate(t *testing.T) {
 			var indexesCount int
 			err = db.QueryRowContext(
 				ctx,
-				`	select count(1) from pg_indexes where indexname in ('events_orders_unique_index___aggregate_type__aggregate_id__aggregate_version', 'events_orders_index__aggregate_type__aggregate_id');`,
+				`SELECT COUNT(*) FROM pg_indexes WHERE schemaname = 'public' AND tablename = 'events_orders';`,
 			).Scan(&indexesCount)
 			asserts.NoError(err)
-			asserts.Equal(2, indexesCount)
+			asserts.Equal(4, indexesCount)
 		})
 	})
 }

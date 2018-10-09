@@ -73,8 +73,8 @@ func TestEventStore_Create(t *testing.T) {
 		mockHasStreamQuery(false, dbMock)
 		dbMock.ExpectBegin()
 		dbMock.ExpectExec(`CREATE TABLE "events_orders"(.+)`).WillReturnResult(sqlmock.NewResult(0, 0))
-		dbMock.ExpectExec(`CREATE UNIQUE INDEX "events_orders_unique_index___aggregate_type__aggregate_id__aggregate_version" ON "events_orders"(.+)`).WillReturnResult(sqlmock.NewResult(0, 0))
-		dbMock.ExpectExec(`CREATE INDEX "events_orders_index__aggregate_type__aggregate_id" ON "events_orders"(.+)`).WillReturnResult(sqlmock.NewResult(0, 0))
+		dbMock.ExpectExec(`CREATE UNIQUE INDEX ON "events_orders"(.+)`).WillReturnResult(sqlmock.NewResult(0, 0))
+		dbMock.ExpectExec(`CREATE INDEX ON "events_orders"(.+)`).WillReturnResult(sqlmock.NewResult(0, 0))
 		dbMock.ExpectCommit()
 
 		store := createEventStore(t, db, &mocks.PayloadConverter{})
