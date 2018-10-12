@@ -402,6 +402,7 @@ func (s *StreamProjector) acquireProjection(ctx context.Context, conn *sql.Conn)
 	if err != nil {
 		return err
 	}
+	s.position = position
 
 	return nil
 }

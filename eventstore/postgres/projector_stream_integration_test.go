@@ -112,6 +112,32 @@ func TestStreamProjector_Run(t *testing.T) {
 		)
 
 		projectorCancel()
+
+		t.Run("projection should not rerun events", func(t *testing.T) {
+			projector, err := postgres.NewStreamProjector(
+				dbDSN,
+				db,
+				store,
+				transformer,
+				&DepositedProjection{},
+				"projections",
+				nil,
+			)
+			if err != nil {
+				t.Fatalf("failed to create projector %s", err)
+			}
+
+			err = projector.Run(context.Background(), false)
+			if assert.NoError(t, err) {
+				time.Sleep(50 * time.Millisecond)
+				assertProjectionState(
+					t,
+					db,
+					8,
+					`{"Total": 7, "TotalAmount": 317}`,
+				)
+			}
+		})
 	})
 }
 
