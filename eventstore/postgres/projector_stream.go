@@ -201,27 +201,32 @@ func (s *StreamProjector) Run(ctx context.Context, keepRunning bool) error {
 	for {
 		select {
 		case n := <-listener.Notify:
-			logger := s.logger.WithFields(logrus.Fields{
-				"channel":    n.Channel,
-				"data":       n.Extra,
-				"process_id": n.BePid,
-			})
-
-			// If extra data is provided use it to check if the projection needs to catch up
-			if n.Extra != "" {
-				// decode the extra's
-				var notification projectorNotification
-				if err := json.Unmarshal([]byte(n.Extra), &notification); err != nil {
-					logger.Warn("received notification with a invalid data")
-				} else if notification.No <= s.position {
-					// The current position is a head of the notification so ignore
-					logger.Debug("ignoring notification: it is behind the projection position")
-					continue
-				}
-
-				logger.Debug("received notification")
+			logger := s.logger
+			if n == nil {
+				logger.Warn("received nil notification")
 			} else {
-				logger.Warn("received notification without data")
+				logger := logger.WithFields(logrus.Fields{
+					"channel":    n.Channel,
+					"data":       n.Extra,
+					"process_id": n.BePid,
+				})
+
+				// If extra data is provided use it to check if the projection needs to catch up
+				if n.Extra != "" {
+					// decode the extra's
+					var notification projectorNotification
+					if err := json.Unmarshal([]byte(n.Extra), &notification); err != nil {
+						logger.Warn("received notification with a invalid data")
+					} else if notification.No <= s.position {
+						// The current position is a head of the notification so ignore
+						logger.Debug("ignoring notification: it is behind the projection position")
+						continue
+					}
+
+					logger.Debug("received notification")
+				} else {
+					logger.Warn("received notification without data")
+				}
 			}
 
 			if err := s.triggerRun(ctx); err != nil {
