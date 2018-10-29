@@ -27,8 +27,8 @@ var (
 	// ErrNoMessageFactory error on no message factory provided
 	ErrNoMessageFactory = errors.New("sql message factory should be provided")
 	// ErrTableAlreadyExists occurs when table cannot be created as it exists already
-	ErrTableAlreadyExists = errors.New("table name could not be empty")
-	// ErrTableNameEmpty occurs when create is called for an already created stream
+	ErrTableAlreadyExists = errors.New("table already exists")
+	// ErrTableNameEmpty occurs when table cannot be created because it has an empty name
 	ErrTableNameEmpty = errors.New("table name could not be empty")
 	// Ensure that we satisfy the eventstore.EventStore interface
 	_ eventstore.EventStore = &EventStore{}
