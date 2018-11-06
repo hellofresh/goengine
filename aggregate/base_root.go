@@ -18,6 +18,14 @@ type BaseRoot struct {
 	recordedEvents []*Changed
 }
 
+// AggregateVersion returns the version of the aggregate
+func (b *BaseRoot) AggregateVersion() uint {
+	b.Lock()
+	defer b.Unlock()
+
+	return b.version
+}
+
 func (b *BaseRoot) recordThat(aggregate EventApplier, event *Changed) {
 	b.Lock()
 	defer b.Unlock()
