@@ -40,7 +40,6 @@ func TestStreamProjector_Run(t *testing.T) {
 		projectorCtx, projectorCancel := context.WithCancel(context.Background())
 		projector, err := postgres.NewStreamProjector(
 			dbDSN,
-			db,
 			store,
 			transformer,
 			&DepositedProjection{},
@@ -66,7 +65,8 @@ func TestStreamProjector_Run(t *testing.T) {
 				t.Fatalf("projector.Run returned an error. %s", err)
 			}
 		}()
-		time.Sleep(25 * time.Millisecond)
+		// Sleep for a while so the projector can initialize
+		time.Sleep(100 * time.Millisecond)
 
 		// Add events to the event stream
 		aggregateIds := []aggregate.ID{
@@ -85,10 +85,10 @@ func TestStreamProjector_Run(t *testing.T) {
 			},
 		)
 
-		time.Sleep(50 * time.Millisecond)
-		assertProjectionState(
+		expectProjectionState(
 			t,
 			db,
+			"deposited_report",
 			6,
 			`{"Total": 5, "TotalAmount": 216}`,
 		)
@@ -103,10 +103,10 @@ func TestStreamProjector_Run(t *testing.T) {
 			},
 		)
 
-		time.Sleep(50 * time.Millisecond)
-		assertProjectionState(
+		expectProjectionState(
 			t,
 			db,
+			"deposited_report",
 			8,
 			`{"Total": 7, "TotalAmount": 317}`,
 		)
@@ -116,7 +116,6 @@ func TestStreamProjector_Run(t *testing.T) {
 		t.Run("projection should not rerun events", func(t *testing.T) {
 			projector, err := postgres.NewStreamProjector(
 				dbDSN,
-				db,
 				store,
 				transformer,
 				&DepositedProjection{},
@@ -129,10 +128,10 @@ func TestStreamProjector_Run(t *testing.T) {
 
 			err = projector.Run(context.Background(), false)
 			if assert.NoError(t, err) {
-				time.Sleep(50 * time.Millisecond)
-				assertProjectionState(
+				expectProjectionState(
 					t,
 					db,
+					"deposited_report",
 					8,
 					`{"Total": 7, "TotalAmount": 317}`,
 				)
@@ -176,7 +175,6 @@ func TestStreamProjector_Run_Once(t *testing.T) {
 
 		projector, err := postgres.NewStreamProjector(
 			dbDSN,
-			db,
 			store,
 			transformer,
 			&DepositedProjection{},
@@ -196,9 +194,10 @@ func TestStreamProjector_Run_Once(t *testing.T) {
 				t.Fail()
 			}
 
-			assertProjectionState(
+			expectProjectionState(
 				t,
 				db,
+				"deposited_report",
 				6,
 				`{"Total": 5, "TotalAmount": 216}`,
 			)
@@ -219,9 +218,10 @@ func TestStreamProjector_Run_Once(t *testing.T) {
 					t.Fail()
 				}
 
-				assertProjectionState(
+				expectProjectionState(
 					t,
 					db,
+					"deposited_report",
 					8,
 					`{"Total": 7, "TotalAmount": 317}`,
 				)
@@ -274,25 +274,42 @@ func setupEventStoreAndProjections(t *testing.T, db *sql.DB) (eventstore.StreamN
 
 	return eventStream, store, transformer
 }
-func assertProjectionState(t *testing.T, db *sql.DB, expectedPosition int64, expectedState string) {
+func expectProjectionState(t *testing.T, db *sql.DB, name string, expectedPosition int64, expectedState string) {
 	asserts := assert.New(t)
 
-	projections, err := db.Query(`SELECT position, state FROM projections`)
-	if !asserts.NoError(err) {
+	stmt, err := db.Prepare(`SELECT position, state FROM projections WHERE name = $1`)
+	if err != nil {
+		t.Fatal(err)
 		return
 	}
 
-	for projections.Next() {
-		var (
-			position int64
-			state    string
-		)
-		err := projections.Scan(&position, &state)
-		if asserts.NoError(err) {
+	var (
+		position int64
+		state    string
+	)
+
+	for i := 0; i < 10; i++ {
+		res := stmt.QueryRow(name)
+		if err := res.Scan(&position, &state); err != nil {
+			if err == sql.ErrNoRows {
+				continue
+			}
+
+			asserts.NoError(err)
+			return
+		}
+
+		if position >= expectedPosition {
 			asserts.Equal(expectedPosition, position)
 			asserts.JSONEq(expectedState, state)
+			return
 		}
+
+		// The expected state was not found to wait for a bit to allow the projector go routine/process to catch up
+		time.Sleep(50 * time.Millisecond)
 	}
+
+	t.Fatalf("failed to fetch expected projection state (expected %d got %d)", expectedPosition, position)
 }
 
 func appendEvents(t *testing.T, store *postgres.EventStore, streamName eventstore.StreamName, events map[aggregate.ID][]interface{}) {

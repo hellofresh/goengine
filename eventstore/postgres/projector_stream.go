@@ -31,7 +31,6 @@ type (
 	StreamProjector struct {
 		sync.Mutex
 
-		db              *sql.DB
 		dbDSN           string
 		store           eventstore.EventStore
 		resolver        eventstore.PayloadResolver
@@ -41,6 +40,7 @@ type (
 
 		eventHandlers map[string]eventstore.ProjectionHandler
 
+		db       *sql.DB
 		state    interface{}
 		position int64
 	}
@@ -56,7 +56,6 @@ type (
 // NewStreamProjector creates a new projector for a projection
 func NewStreamProjector(
 	dbDSN string,
-	db *sql.DB,
 	store eventstore.EventStore,
 	resolver eventstore.PayloadResolver,
 	projection eventstore.Projection,
@@ -72,7 +71,6 @@ func NewStreamProjector(
 	})
 
 	return &StreamProjector{
-		db:              db,
 		dbDSN:           dbDSN,
 		store:           store,
 		resolver:        resolver,
@@ -155,6 +153,12 @@ func (s *StreamProjector) Run(ctx context.Context, keepRunning bool) error {
 		return nil
 	}
 
+	// Open a database
+	if err := s.dbOpen(); err != nil {
+		return err
+	}
+	defer s.dbClose()
+
 	// Create the projection if none exists
 	if !s.projectionExists(ctx) {
 		if err := s.createProjection(ctx); err != nil {
@@ -186,6 +190,7 @@ func (s *StreamProjector) Run(ctx context.Context, keepRunning bool) error {
 			logger.Debug("connection listener: failed to connect")
 		case pq.ListenerEventDisconnected:
 			logger.Debug("connection listener: disconnected")
+			s.dbClose()
 		case pq.ListenerEventReconnected:
 			logger.Debug("connection listener: reconnected")
 		default:
@@ -201,6 +206,8 @@ func (s *StreamProjector) Run(ctx context.Context, keepRunning bool) error {
 	for {
 		select {
 		case n := <-listener.Notify:
+			s.dbOpen()
+
 			logger := s.logger
 			if n == nil {
 				logger.Warn("received nil notification")
@@ -454,6 +461,7 @@ func (s *StreamProjector) persist(ctx context.Context, conn *sql.Conn) error {
 	if err != nil {
 		return err
 	}
+	s.logger.WithField("position", s.position).Debug("updated projection state")
 
 	return nil
 }
@@ -501,4 +509,27 @@ func (s *StreamProjector) createProjection(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func (s *StreamProjector) dbOpen() error {
+	var err error
+	if s.db == nil {
+		s.logger.Debug("opening db connection")
+		s.db, err = sql.Open("postgres", s.dbDSN)
+	}
+
+	return err
+}
+
+func (s *StreamProjector) dbClose() {
+	if s.db == nil {
+		return
+	}
+
+	db := s.db
+	s.db = nil
+
+	if err := db.Close(); err != nil {
+		s.logger.WithError(err).Debug("failed to close db connection")
+	}
 }
