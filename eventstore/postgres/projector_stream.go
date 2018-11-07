@@ -111,7 +111,7 @@ $$;`
 			PRIMARY KEY (no),
 			UNIQUE (name)
 		)`,
-		quoteIdentifier(projectionTable),
+		pq.QuoteIdentifier(projectionTable),
 	)
 
 	triggerName := fmt.Sprintf("%s_notify", streamTable)
@@ -135,8 +135,8 @@ $$;`
 		 $$`,
 		quoteString(streamTable),
 		quoteString(triggerName),
-		quoteIdentifier(triggerName),
-		quoteIdentifier(streamTable),
+		pq.QuoteIdentifier(triggerName),
+		pq.QuoteIdentifier(streamTable),
 		quoteString(string(streamName)),
 	)
 
@@ -275,7 +275,7 @@ func (s *StreamProjector) Delete(ctx context.Context) error {
 			ctx,
 			fmt.Sprintf(
 				`DELETE FROM %s WHERE name = $1`,
-				quoteIdentifier(s.projectionTable),
+				pq.QuoteIdentifier(s.projectionTable),
 			),
 			s.projection.Name(),
 		)
@@ -384,7 +384,7 @@ func (s *StreamProjector) acquireProjection(ctx context.Context, conn *sql.Conn)
 		fmt.Sprintf(
 			`SELECT pg_try_advisory_lock(%s::regclass::oid::int, no), position, state FROM %s WHERE name = $1`,
 			quoteString(s.projectionTable),
-			quoteIdentifier(s.projectionTable),
+			pq.QuoteIdentifier(s.projectionTable),
 		),
 		s.projection.Name(),
 	)
@@ -418,7 +418,7 @@ func (s *StreamProjector) releaseProjection(ctx context.Context, conn *sql.Conn)
 		fmt.Sprintf(
 			`SELECT pg_advisory_unlock(%s::regclass::oid::int, no) FROM %s WHERE name = $1`,
 			quoteString(s.projectionTable),
-			quoteIdentifier(s.projectionTable),
+			pq.QuoteIdentifier(s.projectionTable),
 		),
 		s.projection.Name(),
 	)
@@ -445,7 +445,7 @@ func (s *StreamProjector) persist(ctx context.Context, conn *sql.Conn) error {
 		ctx,
 		fmt.Sprintf(
 			`UPDATE %s SET position = $1, state = $2 WHERE name = $3`,
-			quoteIdentifier(s.projectionTable),
+			pq.QuoteIdentifier(s.projectionTable),
 		),
 		s.position,
 		jsonState,
@@ -463,7 +463,7 @@ func (s *StreamProjector) projectionExists(ctx context.Context) bool {
 		ctx,
 		fmt.Sprintf(
 			`SELECT 1 FROM %s WHERE name = $1 LIMIT 1`,
-			quoteIdentifier(s.projectionTable),
+			pq.QuoteIdentifier(s.projectionTable),
 		),
 		s.projection.Name(),
 	)
@@ -492,7 +492,7 @@ func (s *StreamProjector) createProjection(ctx context.Context) error {
 		ctx,
 		fmt.Sprintf(
 			`INSERT INTO %s (name) VALUES ($1) ON CONFLICT DO NOTHING`,
-			quoteIdentifier(s.projectionTable),
+			pq.QuoteIdentifier(s.projectionTable),
 		),
 		s.projection.Name(),
 	)

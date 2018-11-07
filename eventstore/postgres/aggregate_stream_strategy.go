@@ -7,6 +7,8 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/lib/pq"
+
 	"github.com/hellofresh/goengine/eventstore"
 	"github.com/hellofresh/goengine/messaging"
 )
@@ -34,7 +36,7 @@ func NewPostgresStrategy(converter eventstore.PayloadConverter) (eventstore.Pers
 
 // CreateSchema returns a valid set of SQL statements to create the event store tables and indexes
 func (s *SingleStreamStrategy) CreateSchema(tableName string) []string {
-	tableName = quoteIdentifier(tableName)
+	tableName = pq.QuoteIdentifier(tableName)
 
 	statements := make([]string, 3)
 	statements[0] = fmt.Sprintf(
