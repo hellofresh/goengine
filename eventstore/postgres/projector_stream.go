@@ -219,7 +219,11 @@ func (s *StreamProjector) Run(ctx context.Context, keepRunning bool) error {
 			logger.Warn("connection listener: unknown event")
 		}
 	})
-	defer listener.Close()
+	defer func() {
+		if err := listener.Close(); err != nil {
+			s.logger.WithError(err).Warn("failed to close database listener")
+		}
+	}()
 
 	if err := listener.Listen(string(s.projection.FromStream())); err != nil {
 		return err
@@ -228,7 +232,10 @@ func (s *StreamProjector) Run(ctx context.Context, keepRunning bool) error {
 	for {
 		select {
 		case n := <-listener.Notify:
-			s.dbOpen()
+			if err := s.dbOpen(); err != nil {
+				s.logger.WithError(err).Error("failed to open db connection after receiving a notification")
+				continue
+			}
 
 			logger := s.logger
 			if n == nil {
@@ -397,12 +404,20 @@ func (s *StreamProjector) do(ctx context.Context, callback func(ctx context.Cont
 	if err != nil {
 		return err
 	}
-	defer conn.Close()
+	defer func() {
+		if err := conn.Close(); err != nil {
+			s.logger.WithError(err).Warn("failed to db close connection for projection action")
+		}
+	}()
 
 	if err := s.acquireProjection(ctx, conn); err != nil {
 		return err
 	}
-	defer s.releaseProjection(ctx, conn)
+	defer func() {
+		if err := s.releaseProjection(ctx, conn); err != nil {
+			s.logger.WithError(err).Error("failed to release projection")
+		}
+	}()
 
 	return callback(ctx, conn)
 }
@@ -501,7 +516,11 @@ func (s *StreamProjector) projectionExists(ctx context.Context) bool {
 		s.logger.WithField("table", s.projectionTable).WithError(err).Error("failed to query projection table")
 		return false
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			s.logger.WithField("table", s.projectionTable).WithError(err).Warn("failed to close rows")
+		}
+	}()
 
 	if !rows.Next() {
 		return false
