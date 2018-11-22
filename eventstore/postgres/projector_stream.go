@@ -18,6 +18,15 @@ import (
 var (
 	// ErrProjectionFailedToLock occurs when the projector cannot acquire the projection lock
 	ErrProjectionFailedToLock = errors.New("unable to acquire projection lock")
+	// ErrNoEventStore occurs when no event store is provided
+	ErrNoEventStore = errors.New("no event store provided")
+	// ErrNoPayloadResolver occurs when no payload resolver is provided
+	ErrNoPayloadResolver = errors.New("no payload resolver provided")
+	// ErrNoProjection occurs when no projection is provided
+	ErrNoProjection = errors.New("no projection provided")
+	// ErrNoProjectionTableName occurs when no projection table name is provided
+	ErrNoProjectionTableName = errors.New("no projection table name provided")
+
 	// Ensure that we satisfy the eventstore.Projector interface
 	_ eventstore.Projector = &StreamProjector{}
 )
@@ -62,6 +71,19 @@ func NewStreamProjector(
 	projectionTable string,
 	logger logrus.FieldLogger,
 ) (*StreamProjector, error) {
+	switch {
+	case dbDSN == "":
+		return nil, ErrNoDBConnect
+	case store == nil:
+		return nil, ErrNoEventStore
+	case resolver == nil:
+		return nil, ErrNoPayloadResolver
+	case projection == nil:
+		return nil, ErrNoProjection
+	case projectionTable == "":
+		return nil, ErrNoProjectionTableName
+	}
+
 	if logger == nil {
 		logger = log.NilLogger
 	}
