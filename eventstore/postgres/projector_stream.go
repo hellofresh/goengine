@@ -41,7 +41,7 @@ type (
 		sync.Mutex
 
 		dbDSN           string
-		store           eventstore.EventStore
+		store           eventstore.ReadOnlyEventStore
 		resolver        eventstore.PayloadResolver
 		projection      eventstore.Projection
 		projectionTable string
@@ -65,7 +65,7 @@ type (
 // NewStreamProjector creates a new projector for a projection
 func NewStreamProjector(
 	dbDSN string,
-	store eventstore.EventStore,
+	store eventstore.ReadOnlyEventStore,
 	resolver eventstore.PayloadResolver,
 	projection eventstore.Projection,
 	projectionTable string,
