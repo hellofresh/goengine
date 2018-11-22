@@ -230,6 +230,53 @@ func TestStreamProjector_Run_Once(t *testing.T) {
 	})
 }
 
+func TestStreamProjector_Delete(t *testing.T) {
+	dbDSN, exists := os.LookupEnv("POSTGRES_DSN")
+	if !exists {
+		t.Fatalf("missing POSTGRES_DSN enviroment variable")
+	}
+
+	test.PostgresDatabase(t, func(db *sql.DB) {
+		var projectionExists bool
+		asserts := assert.New(t)
+
+		_, store, transformer := setupEventStoreAndProjections(t, db)
+
+		projection := &DepositedProjection{}
+		projector, err := postgres.NewStreamProjector(
+			dbDSN,
+			store,
+			transformer,
+			projection,
+			"projections",
+			nil,
+		)
+		if err != nil {
+			t.Fatalf("failed to create projector %s", err)
+		}
+
+		// Run the projection to ensure it exists
+		if err := projector.Run(context.Background(), false); err != nil {
+			t.Fatalf("failed to run projector %s", err)
+		}
+		row := db.QueryRow(`SELECT EXISTS(SELECT 1 FROM projections WHERE name = $1)`, projection.Name())
+		if !asserts.NoError(row.Scan(&projectionExists)) || !projectionExists {
+			t.Fatal("projector.Run failed to create projection entry")
+		}
+
+		// Remove projection
+		err = projector.Delete(context.Background())
+		if !asserts.NoError(err) {
+			return
+		}
+
+		row = db.QueryRow(`SELECT EXISTS(SELECT 1 FROM projections WHERE name = $1)`, projection.Name())
+		if asserts.NoError(row.Scan(&projectionExists)) {
+			asserts.False(projectionExists)
+		}
+	})
+}
+
 func setupEventStoreAndProjections(t *testing.T, db *sql.DB) (eventstore.StreamName, *postgres.EventStore, *eventStoreJSON.PayloadTransformer) {
 	eventStream := eventstore.StreamName("event_stream")
 
@@ -274,6 +321,7 @@ func setupEventStoreAndProjections(t *testing.T, db *sql.DB) (eventstore.StreamN
 
 	return eventStream, store, transformer
 }
+
 func expectProjectionState(t *testing.T, db *sql.DB, name string, expectedPosition int64, expectedState string) {
 	asserts := assert.New(t)
 

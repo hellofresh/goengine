@@ -232,11 +232,6 @@ func (s *StreamProjector) Run(ctx context.Context, keepRunning bool) error {
 	for {
 		select {
 		case n := <-listener.Notify:
-			if err := s.dbOpen(); err != nil {
-				s.logger.WithError(err).Error("failed to open db connection after receiving a notification")
-				continue
-			}
-
 			logger := s.logger
 			if n == nil {
 				logger.Warn("received nil notification")
@@ -400,6 +395,10 @@ func (s *StreamProjector) handleStream(ctx context.Context, conn *sql.Conn, stre
 }
 
 func (s *StreamProjector) do(ctx context.Context, callback func(ctx context.Context, conn *sql.Conn) error) error {
+	if err := s.dbOpen(); err != nil {
+		return err
+	}
+
 	conn, err := s.db.Conn(ctx)
 	if err != nil {
 		return err
