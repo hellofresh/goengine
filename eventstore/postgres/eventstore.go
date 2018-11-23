@@ -30,8 +30,11 @@ var (
 	ErrTableAlreadyExists = errors.New("table already exists")
 	// ErrTableNameEmpty occurs when table cannot be created because it has an empty name
 	ErrTableNameEmpty = errors.New("table name could not be empty")
+
 	// Ensure that we satisfy the eventstore.EventStore interface
 	_ eventstore.EventStore = &EventStore{}
+	// Ensure that we satisfy the ReadOnlyEventStore interface
+	_ ReadOnlyEventStore = &EventStore{}
 )
 
 // EventStore a in postgres event store implementation
@@ -125,9 +128,26 @@ func (e *EventStore) HasStream(ctx context.Context, streamName eventstore.Stream
 	return e.tableExists(ctx, tableName)
 }
 
-// Load returns the eventstream based on the given constraints
+// Load returns an eventstream based on the provided constraints
 func (e *EventStore) Load(
 	ctx context.Context,
+	streamName eventstore.StreamName,
+	fromNumber int64,
+	count *uint,
+	matcher metadata.Matcher,
+) (eventstore.EventStream, error) {
+	conn, err := e.db.Conn(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return e.LoadWithConnection(ctx, conn, streamName, fromNumber, count, matcher)
+}
+
+// LoadWithConnection returns an eventstream based on the provided constraints using the provided sql.Conn
+func (e *EventStore) LoadWithConnection(
+	ctx context.Context,
+	conn *sql.Conn,
 	streamName eventstore.StreamName,
 	fromNumber int64,
 	count *uint,
@@ -148,7 +168,7 @@ func (e *EventStore) Load(
 		limit = fmt.Sprintf("LIMIT %d", *count)
 	}
 
-	rows, err := e.db.QueryContext(
+	rows, err := conn.QueryContext(
 		ctx,
 		fmt.Sprintf(
 			`SELECT * FROM %s WHERE %s ORDER BY no %s`,
@@ -183,7 +203,7 @@ func (e *EventStore) AppendTo(ctx context.Context, streamName eventstore.StreamN
 	result, err := e.db.ExecContext(
 		ctx,
 		fmt.Sprintf(
-			"INSERT INTO %s (%s) VALUES %s;",
+			"INSERT INTO %s (%s) VALUES %s",
 			tableName,
 			e.columns,
 			values,

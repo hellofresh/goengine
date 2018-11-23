@@ -38,6 +38,8 @@ func TestStreamProjector_Run(t *testing.T) {
 		})
 
 		projectorCtx, projectorCancel := context.WithCancel(context.Background())
+		defer projectorCancel()
+
 		projector, err := postgres.NewStreamProjector(
 			dbDSN,
 			store,

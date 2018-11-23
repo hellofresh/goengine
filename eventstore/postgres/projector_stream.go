@@ -11,6 +11,7 @@ import (
 
 	"github.com/hellofresh/goengine/eventstore"
 	"github.com/hellofresh/goengine/internal/log"
+	"github.com/hellofresh/goengine/metadata"
 	"github.com/lib/pq"
 	"github.com/sirupsen/logrus"
 )
@@ -41,7 +42,7 @@ type (
 		sync.Mutex
 
 		dbDSN           string
-		store           eventstore.ReadOnlyEventStore
+		store           ReadOnlyEventStore
 		resolver        eventstore.PayloadResolver
 		projection      eventstore.Projection
 		projectionTable string
@@ -52,6 +53,12 @@ type (
 		db       *sql.DB
 		state    interface{}
 		position int64
+	}
+
+	// ReadOnlyEventStore an interface describing a readonly event store that supports providing a SQL conn
+	ReadOnlyEventStore interface {
+		// LoadWithConnection returns a eventstream based on the provided constraints using the provided sql.Conn
+		LoadWithConnection(ctx context.Context, conn *sql.Conn, streamName eventstore.StreamName, fromNumber int64, count *uint, metadataMatcher metadata.Matcher) (eventstore.EventStream, error)
 	}
 
 	// projectorNotification is a representation of the data provided by postgres notify
@@ -65,7 +72,7 @@ type (
 // NewStreamProjector creates a new projector for a projection
 func NewStreamProjector(
 	dbDSN string,
-	store eventstore.ReadOnlyEventStore,
+	store ReadOnlyEventStore,
 	resolver eventstore.PayloadResolver,
 	projection eventstore.Projection,
 	projectionTable string,
@@ -323,7 +330,17 @@ func (s *StreamProjector) triggerRun(ctx context.Context) error {
 	streamName := s.projection.FromStream()
 
 	return s.do(ctx, func(ctx context.Context, conn *sql.Conn) error {
-		stream, err := s.store.Load(ctx, streamName, s.position+1, nil, nil)
+		streamConn, err := s.db.Conn(ctx)
+		if err != nil {
+			return err
+		}
+		defer func() {
+			if err := streamConn.Close(); err != nil {
+				s.logger.WithError(err).Warn("failed to db close connection for the event store")
+			}
+		}()
+
+		stream, err := s.store.LoadWithConnection(ctx, streamConn, streamName, s.position+1, nil, nil)
 		if err != nil {
 			return err
 		}
