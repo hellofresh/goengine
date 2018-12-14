@@ -37,15 +37,22 @@ var (
 	_ ReadOnlyEventStore = &EventStore{}
 )
 
-// EventStore a in postgres event store implementation
-type EventStore struct {
-	persistenceStrategy       eventstore.PersistenceStrategy
-	db                        *sql.DB
-	messageFactory            eventstoreSQL.MessageFactory
-	preparedInsertPlaceholder map[int]string
-	columns                   string
-	logger                    logrus.FieldLogger
-}
+type (
+	// EventStore a in postgres event store implementation
+	EventStore struct {
+		persistenceStrategy       eventstore.PersistenceStrategy
+		db                        *sql.DB
+		messageFactory            eventstoreSQL.MessageFactory
+		preparedInsertPlaceholder map[int]string
+		columns                   string
+		logger                    logrus.FieldLogger
+	}
+
+	// sqlQueryContext an interface used to query a sql.DB or sql.Conn
+	sqlQueryContext interface {
+		QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error)
+	}
+)
 
 // NewEventStore return a new postgres.EventStore
 func NewEventStore(
@@ -136,18 +143,26 @@ func (e *EventStore) Load(
 	count *uint,
 	matcher metadata.Matcher,
 ) (eventstore.EventStream, error) {
-	conn, err := e.db.Conn(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	return e.LoadWithConnection(ctx, conn, streamName, fromNumber, count, matcher)
+	return e.loadQuery(ctx, e.db, streamName, fromNumber, count, matcher)
 }
 
 // LoadWithConnection returns an eventstream based on the provided constraints using the provided sql.Conn
 func (e *EventStore) LoadWithConnection(
 	ctx context.Context,
 	conn *sql.Conn,
+	streamName eventstore.StreamName,
+	fromNumber int64,
+	count *uint,
+	matcher metadata.Matcher,
+) (eventstore.EventStream, error) {
+	return e.loadQuery(ctx, conn, streamName, fromNumber, count, matcher)
+}
+
+// loadQuery returns an eventstream based on the provided constraints
+// This func is used by Load and LoadWithConnection.
+func (e *EventStore) loadQuery(
+	ctx context.Context,
+	db sqlQueryContext,
 	streamName eventstore.StreamName,
 	fromNumber int64,
 	count *uint,
@@ -168,7 +183,7 @@ func (e *EventStore) LoadWithConnection(
 		limit = fmt.Sprintf("LIMIT %d", *count)
 	}
 
-	rows, err := conn.QueryContext(
+	rows, err := db.QueryContext(
 		ctx,
 		fmt.Sprintf(
 			`SELECT * FROM %s WHERE %s ORDER BY no %s`,
