@@ -267,6 +267,7 @@ func TestEventStoreLoad(t *testing.T) {
 		err = store.AppendTo(ctx, streamName, messages)
 		asserts.NoError(err)
 
+		initialConnectionCount := db.Stats().OpenConnections
 		for _, testCase := range testCases {
 			t.Run(testCase.title, func(t *testing.T) {
 				asserts := assert.New(t)
@@ -308,6 +309,9 @@ func TestEventStoreLoad(t *testing.T) {
 
 				asserts.NoError(results.Err())
 				asserts.Equal(len(testCase.messages), i, "expected to have received the right amount of messages")
+
+				asserts.NoError(results.Close())
+				asserts.Equal(initialConnectionCount, db.Stats().OpenConnections, "expected no more open connection than before the test ran")
 			})
 		}
 	})
@@ -324,13 +328,13 @@ func generateAppendMessages(aggregateIDs []messaging.UUID) []messaging.Message {
 				boolVal = false
 			}
 			meta := appendMeta(map[string]interface{}{
-				"_aggregate_version":                      i + 1,
-				"_aggregate_version_less_then_4":          boolVal,
-				"_aggregate_type":                         "basic",
-				"_aggregate_id":                           aggregateID.String(),
-				"_float_val":                              float64(i) + float64(3.12),
-				"rand_int":                                rand.Intn(100),
-				"rand_float_32":                           rand.Float32(),
+				"_aggregate_version":             i + 1,
+				"_aggregate_version_less_then_4": boolVal,
+				"_aggregate_type":                "basic",
+				"_aggregate_id":                  aggregateID.String(),
+				"_float_val":                     float64(i) + float64(3.12),
+				"rand_int":                       rand.Intn(100),
+				"rand_float_32":                  rand.Float32(),
 				"';''; DROP DATABASE events_orders_load;": "ok",
 			})
 			payload := &payloadData{Name: "alice", Balance: i * 11}
