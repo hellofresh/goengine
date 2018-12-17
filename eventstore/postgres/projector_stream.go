@@ -41,7 +41,8 @@ type (
 	StreamProjector struct {
 		sync.Mutex
 
-		dbDSN           string
+		projectorDB *projectorDB
+
 		store           ReadOnlyEventStore
 		resolver        eventstore.PayloadResolver
 		projection      eventstore.Projection
@@ -50,7 +51,6 @@ type (
 
 		eventHandlers map[string]eventstore.ProjectionHandler
 
-		db       *sql.DB
 		state    interface{}
 		position int64
 	}
@@ -59,13 +59,6 @@ type (
 	ReadOnlyEventStore interface {
 		// LoadWithConnection returns a eventstream based on the provided constraints using the provided sql.Conn
 		LoadWithConnection(ctx context.Context, conn *sql.Conn, streamName eventstore.StreamName, fromNumber int64, count *uint, metadataMatcher metadata.Matcher) (eventstore.EventStream, error)
-	}
-
-	// projectorNotification is a representation of the data provided by postgres notify
-	projectorNotification struct {
-		No          int64  `json:"no"`
-		EventName   string `json:"event_name"`
-		AggregateID string `json:"aggregate_id"`
 	}
 )
 
@@ -100,7 +93,13 @@ func NewStreamProjector(
 	})
 
 	return &StreamProjector{
-		dbDSN:           dbDSN,
+		projectorDB: &projectorDB{
+			dbDSN:                dbDSN,
+			dbChannel:            string(projection.FromStream()),
+			minReconnectInterval: time.Millisecond,
+			maxReconnectInterval: time.Second,
+			logger:               logger,
+		},
 		store:           store,
 		resolver:        resolver,
 		projection:      projection,
@@ -121,21 +120,30 @@ func (s *StreamProjector) Run(ctx context.Context, keepRunning bool) error {
 		return nil
 	}
 
-	// Open a database
-	if err := s.dbOpen(); err != nil {
-		return err
-	}
-	defer s.dbClose()
+	defer func() {
+		if err := s.projectorDB.Close(); err != nil {
+			s.logger.WithError(err).Error("failed to close projectorDB")
+		}
+	}()
 
 	// Create the projection if none exists
-	if !s.projectionExists(ctx) {
-		if err := s.createProjection(ctx); err != nil {
+	err := s.projectorDB.Exec(ctx, func(ctx context.Context, conn *sql.Conn) error {
+		if s.projectionExists(ctx, conn) {
+			return nil
+		}
+		if err := s.createProjection(ctx, conn); err != nil {
 			return err
 		}
+
+		return nil
+	})
+	if err != nil {
+		return err
 	}
 
 	// Trigger an initial run of the projection
-	if err := s.triggerRun(ctx); err != nil {
+	err = s.projectorDB.Trigger(ctx, s.project)
+	if err != nil {
 		// If the projector needs to keep running but could not acquire a lock we still need to continue.
 		if err == ErrProjectionFailedToLock && !keepRunning {
 			return err
@@ -145,80 +153,7 @@ func (s *StreamProjector) Run(ctx context.Context, keepRunning bool) error {
 		return nil
 	}
 
-	listener := pq.NewListener(s.dbDSN, time.Millisecond, time.Second, func(event pq.ListenerEventType, err error) {
-		logger := s.logger.WithField("listener_event", event)
-		if err != nil {
-			logger = logger.WithError(err)
-		}
-
-		switch event {
-		case pq.ListenerEventConnected:
-			logger.Debug("connection listener: connected")
-		case pq.ListenerEventConnectionAttemptFailed:
-			logger.Debug("connection listener: failed to connect")
-		case pq.ListenerEventDisconnected:
-			logger.Debug("connection listener: disconnected")
-			s.dbClose()
-		case pq.ListenerEventReconnected:
-			logger.Debug("connection listener: reconnected")
-		default:
-			logger.Warn("connection listener: unknown event")
-		}
-	})
-	defer func() {
-		if err := listener.Close(); err != nil {
-			s.logger.WithError(err).Warn("failed to close database listener")
-		}
-	}()
-
-	if err := listener.Listen(string(s.projection.FromStream())); err != nil {
-		return err
-	}
-
-	for {
-		select {
-		case n := <-listener.Notify:
-			logger := s.logger
-			if n == nil {
-				logger.Warn("received nil notification")
-			} else {
-				logger := logger.WithFields(logrus.Fields{
-					"channel":    n.Channel,
-					"data":       n.Extra,
-					"process_id": n.BePid,
-				})
-
-				// If extra data is provided use it to check if the projection needs to catch up
-				if n.Extra != "" {
-					// decode the extra's
-					var notification projectorNotification
-					if err := json.Unmarshal([]byte(n.Extra), &notification); err != nil {
-						logger.Warn("received notification with a invalid data")
-					} else if notification.No <= s.position {
-						// The current position is a head of the notification so ignore
-						logger.Debug("ignoring notification: it is behind the projection position")
-						continue
-					}
-
-					logger.Debug("received notification")
-				} else {
-					logger.Warn("received notification without data")
-				}
-			}
-
-			if err := s.triggerRun(ctx); err != nil {
-				if err == ErrProjectionFailedToLock {
-					logger.WithError(err).Info("ignoring notification: the projection is already locked")
-					continue
-				}
-
-				return err
-			}
-		case <-ctx.Done():
-			s.logger.Debug("context closed stopping projection")
-			return nil
-		}
-	}
+	return s.projectorDB.Listen(ctx, s.project)
 }
 
 // Reset trigger a reset of the projection and the projections state
@@ -226,7 +161,7 @@ func (s *StreamProjector) Reset(ctx context.Context) error {
 	s.Lock()
 	defer s.Unlock()
 
-	return s.do(ctx, func(ctx context.Context, conn *sql.Conn) error {
+	return s.projectorDB.Exec(ctx, func(ctx context.Context, conn *sql.Conn) error {
 		if err := s.projection.Reset(ctx); err != nil {
 			return err
 		}
@@ -243,12 +178,12 @@ func (s *StreamProjector) Delete(ctx context.Context) error {
 	s.Lock()
 	defer s.Unlock()
 
-	return s.do(ctx, func(ctx context.Context, conn *sql.Conn) error {
+	return s.projectorDB.Exec(ctx, func(ctx context.Context, conn *sql.Conn) error {
 		if err := s.projection.Delete(ctx); err != nil {
 			return err
 		}
 
-		_, err := s.db.ExecContext(
+		_, err := conn.ExecContext(
 			ctx,
 			fmt.Sprintf(
 				`DELETE FROM %s WHERE name = $1`,
@@ -265,38 +200,40 @@ func (s *StreamProjector) Delete(ctx context.Context) error {
 	})
 }
 
-func (s *StreamProjector) triggerRun(ctx context.Context) error {
-	streamName := s.projection.FromStream()
-
-	return s.do(ctx, func(ctx context.Context, conn *sql.Conn) error {
-		streamConn, err := s.db.Conn(ctx)
-		if err != nil {
-			return err
-		}
-		defer func() {
-			if err := streamConn.Close(); err != nil {
-				s.logger.WithError(err).Warn("failed to db close connection for the event store")
-			}
-		}()
-
-		stream, err := s.store.LoadWithConnection(ctx, streamConn, streamName, s.position+1, nil, nil)
-		if err != nil {
-			return err
-		}
-
-		if err := s.handleStream(ctx, conn, streamName, stream); err != nil {
-			if err := stream.Close(); err != nil {
-				s.logger.WithError(err).Warn("failed to close the stream after a handling error occurred")
-			}
-			return err
-		}
-
-		if err := stream.Close(); err != nil {
-			return err
-		}
-
+func (s *StreamProjector) project(ctx context.Context, projectConn *sql.Conn, streamConn *sql.Conn, notification *eventStoreNotification) error {
+	if notification != nil && notification.No <= s.position {
+		// The current position is a head of the notification so ignore
+		s.logger.Debug("ignoring notification: it is behind the projection position")
 		return nil
-	})
+	}
+
+	if err := s.acquireProjection(ctx, projectConn); err != nil {
+		return err
+	}
+	defer func() {
+		if err := s.releaseProjection(ctx, projectConn); err != nil {
+			s.logger.WithError(err).Error("failed to release projection")
+		}
+	}()
+
+	streamName := s.projection.FromStream()
+	stream, err := s.store.LoadWithConnection(ctx, streamConn, streamName, s.position+1, nil, nil)
+	if err != nil {
+		return err
+	}
+
+	if err := s.handleStream(ctx, projectConn, streamName, stream); err != nil {
+		if err := stream.Close(); err != nil {
+			s.logger.WithError(err).Warn("failed to close the stream after a handling error occurred")
+		}
+		return err
+	}
+
+	if err := stream.Close(); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (s *StreamProjector) handleStream(ctx context.Context, conn *sql.Conn, streamName eventstore.StreamName, stream eventstore.EventStream) error {
@@ -348,33 +285,6 @@ func (s *StreamProjector) handleStream(ctx context.Context, conn *sql.Conn, stre
 	}
 
 	return stream.Err()
-}
-
-func (s *StreamProjector) do(ctx context.Context, callback func(ctx context.Context, conn *sql.Conn) error) error {
-	if err := s.dbOpen(); err != nil {
-		return err
-	}
-
-	conn, err := s.db.Conn(ctx)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		if err := conn.Close(); err != nil {
-			s.logger.WithError(err).Warn("failed to db close connection for projection action")
-		}
-	}()
-
-	if err := s.acquireProjection(ctx, conn); err != nil {
-		return err
-	}
-	defer func() {
-		if err := s.releaseProjection(ctx, conn); err != nil {
-			s.logger.WithError(err).Error("failed to release projection")
-		}
-	}()
-
-	return callback(ctx, conn)
 }
 
 func (s *StreamProjector) acquireProjection(ctx context.Context, conn *sql.Conn) error {
@@ -458,8 +368,8 @@ func (s *StreamProjector) persist(ctx context.Context, conn *sql.Conn) error {
 	return nil
 }
 
-func (s *StreamProjector) projectionExists(ctx context.Context) bool {
-	rows, err := s.db.QueryContext(
+func (s *StreamProjector) projectionExists(ctx context.Context, conn *sql.Conn) bool {
+	rows, err := conn.QueryContext(
 		ctx,
 		fmt.Sprintf(
 			`SELECT 1 FROM %s WHERE name = $1 LIMIT 1`,
@@ -490,9 +400,9 @@ func (s *StreamProjector) projectionExists(ctx context.Context) bool {
 	return found
 }
 
-func (s *StreamProjector) createProjection(ctx context.Context) error {
+func (s *StreamProjector) createProjection(ctx context.Context, conn *sql.Conn) error {
 	// Ignore duplicate inserts. This can occur when multiple projectors are started at the same time.
-	_, err := s.db.ExecContext(
+	_, err := conn.ExecContext(
 		ctx,
 		fmt.Sprintf(
 			`INSERT INTO %s (name) VALUES ($1) ON CONFLICT DO NOTHING`,
@@ -505,27 +415,4 @@ func (s *StreamProjector) createProjection(ctx context.Context) error {
 	}
 
 	return nil
-}
-
-func (s *StreamProjector) dbOpen() error {
-	var err error
-	if s.db == nil {
-		s.logger.Debug("opening db connection")
-		s.db, err = sql.Open("postgres", s.dbDSN)
-	}
-
-	return err
-}
-
-func (s *StreamProjector) dbClose() {
-	if s.db == nil {
-		return
-	}
-
-	db := s.db
-	s.db = nil
-
-	if err := db.Close(); err != nil {
-		s.logger.WithError(err).Debug("failed to close db connection")
-	}
 }
