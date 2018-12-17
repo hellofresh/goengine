@@ -112,6 +112,17 @@ func (p *PayloadTransformer) RegisterPayload(payloadType string, initiator Paylo
 	return nil
 }
 
+// RegisterMultiplePayloads registers multiple payload types
+func (p *PayloadTransformer) RegisterMultiplePayloads(payloads map[string]PayloadInitiator) error {
+	for name, initiator := range payloads {
+		if err := p.RegisterPayload(name, initiator); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // CreatePayload reconstructs a payload based on it's type and the json data
 func (p *PayloadTransformer) CreatePayload(typeName string, data interface{}) (interface{}, error) {
 	var dataBytes []byte
