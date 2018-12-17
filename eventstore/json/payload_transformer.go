@@ -112,8 +112,8 @@ func (p *PayloadTransformer) RegisterPayload(payloadType string, initiator Paylo
 	return nil
 }
 
-// RegisterMultiplePayloads registers multiple payload types
-func (p *PayloadTransformer) RegisterMultiplePayloads(payloads map[string]PayloadInitiator) error {
+// RegisterPayloads registers multiple payload types
+func (p *PayloadTransformer) RegisterPayloads(payloads map[string]PayloadInitiator) error {
 	for name, initiator := range payloads {
 		if err := p.RegisterPayload(name, initiator); err != nil {
 			return err
