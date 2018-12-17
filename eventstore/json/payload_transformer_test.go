@@ -306,7 +306,7 @@ func TestJSONPayloadTransformer_RegisterPayload(t *testing.T) {
 func TestPayloadTransformer_RegisterMultiplePayloads(t *testing.T) {
 	t.Run("register multiple types", func(t *testing.T) {
 		transformer := eventstorejson.NewPayloadTransformer()
-		err := transformer.RegisterMultiplePayloads(map[string]eventstorejson.PayloadInitiator{
+		err := transformer.RegisterPayloads(map[string]eventstorejson.PayloadInitiator{
 			"order": func() interface{} {
 				return &struct{ order int }{}
 			},
@@ -315,57 +315,16 @@ func TestPayloadTransformer_RegisterMultiplePayloads(t *testing.T) {
 			},
 		})
 
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 
 		t.Run("duplicate registration", func(t *testing.T) {
-			err := transformer.RegisterMultiplePayloads(map[string]eventstorejson.PayloadInitiator{
+			err := transformer.RegisterPayloads(map[string]eventstorejson.PayloadInitiator{
 				"order": func() interface{} {
 					return &struct{ order int }{}
-				},
-				"box": func() interface{} {
-					return &struct{ box int }{}
 				},
 			})
 
 			assert.Equal(t, eventstorejson.ErrDuplicatePayloadType, err)
 		})
-	})
-
-	t.Run("failed registrations", func(t *testing.T) {
-		type invalidTestCase struct {
-			title         string
-			payloads      map[string]eventstorejson.PayloadInitiator
-			expectedError error
-		}
-
-		testCases := []invalidTestCase{
-			{
-				"nil initiator",
-				map[string]eventstorejson.PayloadInitiator{
-					"nil": func() interface{} {
-						return nil
-					},
-				},
-				eventstorejson.ErrInitiatorInvalidResult,
-			},
-			{
-				"nil reference initiator",
-				map[string]eventstorejson.PayloadInitiator{
-					"nil": func() interface{} {
-						return (*invalidTestCase)(nil)
-					},
-				},
-				eventstorejson.ErrInitiatorInvalidResult,
-			},
-		}
-
-		for _, testCase := range testCases {
-			t.Run(testCase.title, func(t *testing.T) {
-				transformer := eventstorejson.NewPayloadTransformer()
-				err := transformer.RegisterMultiplePayloads(testCase.payloads)
-
-				assert.Equal(t, testCase.expectedError, err)
-			})
-		}
 	})
 }
