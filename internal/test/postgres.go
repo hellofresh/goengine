@@ -10,29 +10,8 @@ import (
 	"testing"
 
 	"github.com/lib/pq"
+	"github.com/stretchr/testify/suite"
 )
-
-// PostgresDatabase provides a database connection to the callback for conducting integration tests
-func PostgresDatabase(t *testing.T, testCase func(db *sql.DB)) {
-	ctrl := postgresController(t)
-
-	dsn := postgresDSN(t)
-	dsnMatches := postgresDSNDatabaseMatch(dsn)
-	databaseName := dsn[dsnMatches[2]:dsnMatches[3]]
-
-	// Create the schema to use
-	ctrl.Create(t, databaseName)
-	defer ctrl.Drop(t, databaseName)
-
-	// Open db connection
-	db, err := sql.Open("postgres", dsn)
-	if err != nil {
-		t.Fatalf("test.postgres: Connection failed: %+v", err)
-	}
-	defer db.Close()
-
-	testCase(db)
-}
 
 var postgresControl *dbController
 
@@ -105,6 +84,83 @@ func (c *dbController) enableDatabaseAccess(t *testing.T, databaseName string) {
 	if err != nil {
 		t.Fatalf("test.postgres: Unable to allow connections to the db (%v)", err)
 	}
+}
+
+// PostgresDatabase provides a database connection to the callback for conducting integration tests
+func PostgresDatabase(t *testing.T, testCase func(db *sql.DB)) {
+	ctrl := postgresController(t)
+
+	dsn := postgresDSN(t)
+	dsnMatches := postgresDSNDatabaseMatch(dsn)
+	databaseName := dsn[dsnMatches[2]:dsnMatches[3]]
+
+	// Create the schema to use
+	ctrl.Create(t, databaseName)
+	defer ctrl.Drop(t, databaseName)
+
+	// Open db connection
+	db, err := sql.Open("postgres", dsn)
+	if err != nil {
+		t.Fatalf("test.postgres: Connection failed: %+v", err)
+	}
+	defer func() {
+		if err := db.Close(); err != nil {
+			t.Errorf("test.postgres: Connection failed to close: %+v", err)
+		}
+	}()
+
+	testCase(db)
+}
+
+var (
+	_ suite.SetupTestSuite    = &PostgresSuite{}
+	_ suite.TearDownTestSuite = &PostgresSuite{}
+)
+
+// PostgresSuite a testify suite that will create and drop a database before and after a test
+type PostgresSuite struct {
+	suite.Suite
+
+	PostgresDSN string
+
+	controller *dbController
+	db         *sql.DB
+	dbName     string
+}
+
+// SetupTest creates a database before a test
+func (s *PostgresSuite) SetupTest() {
+	s.controller = postgresController(s.T())
+
+	s.PostgresDSN = postgresDSN(s.T())
+	dsnMatches := postgresDSNDatabaseMatch(s.PostgresDSN)
+	s.dbName = s.PostgresDSN[dsnMatches[2]:dsnMatches[3]]
+
+	// Create the schema to use
+	s.controller.Create(s.T(), s.dbName)
+}
+
+// DB returns a database connection pool for managed by the suite
+func (s *PostgresSuite) DB() *sql.DB {
+	if s.db == nil {
+		var err error
+		s.db, err = sql.Open("postgres", s.PostgresDSN)
+		if err != nil {
+			s.T().Fatalf("test.postgres: Connection failed: %+v", err)
+		}
+	}
+
+	return s.db
+}
+
+// TearDownTest drops the database create by SetupTest
+func (s *PostgresSuite) TearDownTest() {
+	if err := s.db.Close(); err != nil {
+		s.T().Errorf("test.postgres: Connection failed to close: %+v", err)
+	}
+	s.db = nil
+
+	s.controller.Drop(s.T(), s.dbName)
 }
 
 // postgresDSN returns a parsed postgres dsn
