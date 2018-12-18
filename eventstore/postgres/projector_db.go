@@ -59,8 +59,8 @@ func (s *projectorDB) Exec(ctx context.Context, callback func(ctx context.Contex
 	return callback(ctx, conn)
 }
 
-// Trigger execute the provided trigger
-func (s *projectorDB) Trigger(ctx context.Context, trigger projectorTrigger) error {
+// Trigger runs a specified trigger with a set if db connections and the provided notification
+func (s *projectorDB) Trigger(ctx context.Context, trigger projectorTrigger, notification *eventStoreNotification) error {
 	// Check if the context is expired
 	select {
 	default:
@@ -68,7 +68,31 @@ func (s *projectorDB) Trigger(ctx context.Context, trigger projectorTrigger) err
 		return nil
 	}
 
-	return s.runTrigger(ctx, trigger, nil)
+	if err := s.dbOpen(); err != nil {
+		return err
+	}
+
+	projectConn, err := s.db.Conn(ctx)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err := projectConn.Close(); err != nil {
+			s.logger.WithError(err).Warn("failed to db close project connection")
+		}
+	}()
+
+	streamConn, err := s.db.Conn(ctx)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err := streamConn.Close(); err != nil {
+			s.logger.WithError(err).Warn("failed to db close stream connection")
+		}
+	}()
+
+	return trigger(ctx, streamConn, projectConn, notification)
 }
 
 // Listen start listening on the configures dbChannel and when a notification is received call the trigger
@@ -166,7 +190,7 @@ func (s *projectorDB) listenerNotificationCallback(ctx context.Context, trigger 
 
 	// Trigger the projection
 	// TODO add sync support
-	if err := s.runTrigger(ctx, trigger, notification); err != nil {
+	if err := s.Trigger(ctx, trigger, notification); err != nil {
 		if errors.Cause(err) == ErrProjectionFailedToLock {
 			logger.WithError(err).Info("ignoring notification: the projection is already locked")
 			return nil
@@ -176,35 +200,6 @@ func (s *projectorDB) listenerNotificationCallback(ctx context.Context, trigger 
 	}
 
 	return nil
-}
-
-// runTrigger runs a specified trigger with a set if db connections and the provided notification
-func (s *projectorDB) runTrigger(ctx context.Context, trigger projectorTrigger, notification *eventStoreNotification) error {
-	if err := s.dbOpen(); err != nil {
-		return err
-	}
-
-	projectConn, err := s.db.Conn(ctx)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		if err := projectConn.Close(); err != nil {
-			s.logger.WithError(err).Warn("failed to db close project connection")
-		}
-	}()
-
-	streamConn, err := s.db.Conn(ctx)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		if err := streamConn.Close(); err != nil {
-			s.logger.WithError(err).Warn("failed to db close stream connection")
-		}
-	}()
-
-	return trigger(ctx, streamConn, projectConn, notification)
 }
 
 // listenerStateCallback a callback used for getting state changes from a pq.Listener

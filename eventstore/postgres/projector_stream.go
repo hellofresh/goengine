@@ -142,7 +142,7 @@ func (s *StreamProjector) Run(ctx context.Context, keepRunning bool) error {
 	}
 
 	// Trigger an initial run of the projection
-	err = s.projectorDB.Trigger(ctx, s.project)
+	err = s.projectorDB.Trigger(ctx, s.project, nil)
 	if err != nil {
 		// If the projector needs to keep running but could not acquire a lock we still need to continue.
 		if err == ErrProjectionFailedToLock && !keepRunning {
