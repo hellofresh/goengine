@@ -4,7 +4,6 @@ package postgres_test
 
 import (
 	"context"
-	"database/sql"
 	"math/rand"
 	"testing"
 	"time"
@@ -17,102 +16,114 @@ import (
 	"github.com/hellofresh/goengine/messaging"
 	"github.com/hellofresh/goengine/metadata"
 	"github.com/hellofresh/goengine/mocks"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/suite"
 )
 
-type payloadData struct {
-	Name    string
-	Balance int
+type (
+	eventStoreTestSuite struct {
+		test.PostgresSuite
+
+		eventStore eventstore.EventStore
+	}
+
+	payloadData struct {
+		Name    string
+		Balance int
+	}
+)
+
+func TestEventStoreSuite(t *testing.T) {
+	suite.Run(t, new(eventStoreTestSuite))
 }
 
-func TestEventStoreCreate(t *testing.T) {
-	t.Run("Check create table with indexes", func(t *testing.T) {
-		asserts := assert.New(t)
-		ctx := context.Background()
-		test.PostgresDatabase(t, func(db *sql.DB) {
-			store := initEventStore(t, db)
-			err := store.Create(ctx, "orders")
-			asserts.NoError(err)
+func (s *eventStoreTestSuite) SetupTest() {
+	s.PostgresSuite.SetupTest()
 
-			var existsTable bool
-			err = db.QueryRowContext(
-				ctx,
-				`SELECT EXISTS(SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'events_orders')`,
-			).Scan(&existsTable)
-			asserts.NoError(err)
-			asserts.True(existsTable)
-
-			var indexesCount int
-			err = db.QueryRowContext(
-				ctx,
-				`SELECT COUNT(*) FROM pg_indexes WHERE schemaname = 'public' AND tablename = 'events_orders';`,
-			).Scan(&indexesCount)
-			asserts.NoError(err)
-			asserts.Equal(4, indexesCount)
-		})
-	})
+	s.eventStore = s.createEventStore()
 }
 
-func TestEventStoreHasStream(t *testing.T) {
-	t.Run("Check if stream exists", func(t *testing.T) {
-		asserts := assert.New(t)
-		ctx := context.Background()
-		streamName := eventstore.StreamName("orders")
-		anotherStreamName := eventstore.StreamName("orders2")
-		test.PostgresDatabase(t, func(db *sql.DB) {
-			store := initEventStore(t, db)
-			exists := store.HasStream(ctx, streamName)
-			asserts.False(exists)
-
-			store.Create(ctx, streamName)
-			exists = store.HasStream(ctx, streamName)
-			asserts.True(exists)
-
-			exists = store.HasStream(ctx, anotherStreamName)
-			asserts.False(exists)
-		})
-	})
+func (s *eventStoreTestSuite) TearDownTest() {
+	s.eventStore = nil
+	s.PostgresSuite.TearDownTest()
 }
 
-func TestEventStoreAppendTo(t *testing.T) {
-	asserts := assert.New(t)
-	t.Run("Check insert into the DB", func(t *testing.T) {
-		agregateID := messaging.GenerateUUID()
-		ctx := context.Background()
-		streamName := eventstore.StreamName("orders_my")
+func (s *eventStoreTestSuite) TestCreate() {
+	ctx := context.Background()
 
-		test.PostgresDatabase(t, func(db *sql.DB) {
-			store := initEventStore(t, db)
-			err := store.Create(ctx, streamName)
-			asserts.NoError(err)
+	err := s.eventStore.Create(ctx, "orders")
+	s.Require().NoError(err)
 
-			messages := generateAppendMessages([]messaging.UUID{agregateID})
-			err = store.AppendTo(ctx, streamName, messages)
-			asserts.NoError(err)
+	var existsTable bool
+	err = s.DB().QueryRowContext(
+		ctx,
+		`SELECT EXISTS(SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'events_orders')`,
+	).Scan(&existsTable)
+	s.Require().NoError(err)
+	s.True(existsTable)
 
-			var count int
-			rows, err := db.QueryContext(ctx, `SELECT event_id from events_orders_my order by no ASC`)
-			if asserts.NoError(err) {
-				defer rows.Close()
-			}
-			count = 0
-			for rows.Next() {
-				var eventID messaging.UUID
-				err := rows.Scan(&eventID)
-				if asserts.NoError(err) {
-					asserts.Equal(messages[count].UUID(), eventID)
-				}
-				count++
-			}
-			asserts.Equal(len(messages), count)
-		})
-	})
+	var indexesCount int
+	err = s.DB().QueryRowContext(
+		ctx,
+		`SELECT COUNT(*) FROM pg_indexes WHERE schemaname = 'public' AND tablename = 'events_orders';`,
+	).Scan(&indexesCount)
+	s.Require().NoError(err)
+	s.Equal(4, indexesCount)
 }
 
-func TestEventStoreLoad(t *testing.T) {
+func (s *eventStoreTestSuite) TestHasStream() {
+	ctx := context.Background()
+
+	streamName := eventstore.StreamName("orders")
+	anotherStreamName := eventstore.StreamName("orders2")
+
+	exists := s.eventStore.HasStream(ctx, streamName)
+	s.Assert().False(exists)
+
+	err := s.eventStore.Create(ctx, streamName)
+	s.Require().NoError(err)
+
+	exists = s.eventStore.HasStream(ctx, streamName)
+	s.True(exists)
+
+	exists = s.eventStore.HasStream(ctx, anotherStreamName)
+	s.False(exists)
+}
+
+func (s *eventStoreTestSuite) TestAppendTo() {
+	agregateID := messaging.GenerateUUID()
+	ctx := context.Background()
+	streamName := eventstore.StreamName("orders_my")
+
+	err := s.eventStore.Create(ctx, streamName)
+	s.Require().NoError(err)
+
+	messages := s.generateAppendMessages([]messaging.UUID{agregateID})
+	err = s.eventStore.AppendTo(ctx, streamName, messages)
+	s.Require().NoError(err)
+
+	var count int
+	rows, err := s.DB().QueryContext(ctx, `SELECT event_id from events_orders_my order by no ASC`)
+	s.Require().NoError(err)
+	defer func() {
+		s.Require().NoError(rows.Close())
+	}()
+
+	count = 0
+	for rows.Next() {
+		var eventID messaging.UUID
+		err := rows.Scan(&eventID)
+		if s.NoError(err) {
+			s.Equal(messages[count].UUID(), eventID)
+		}
+		count++
+	}
+	s.Equal(len(messages), count)
+}
+
+func (s *eventStoreTestSuite) TestLoad() {
 	aggregateIDFirst := messaging.GenerateUUID()
 	aggregateIDSecond := messaging.GenerateUUID()
-	messages := generateAppendMessages([]messaging.UUID{aggregateIDFirst, aggregateIDSecond})
+	messages := s.generateAppendMessages([]messaging.UUID{aggregateIDFirst, aggregateIDSecond})
 	countPrepared := int64(len(messages))
 	ctx := context.Background()
 	streamName := eventstore.StreamName("orders_load")
@@ -255,69 +266,79 @@ func TestEventStoreLoad(t *testing.T) {
 		},
 	}
 
-	test.PostgresDatabase(t, func(db *sql.DB) {
-		asserts := assert.New(t)
+	// create table
+	err := s.eventStore.Create(ctx, streamName)
+	s.Require().NoError(err)
 
-		store := initEventStore(t, db)
-		// create table
-		err := store.Create(ctx, streamName)
-		asserts.NoError(err)
+	// store messages
+	err = s.eventStore.AppendTo(ctx, streamName, messages)
+	s.Require().NoError(err)
 
-		// store messages
-		err = store.AppendTo(ctx, streamName, messages)
-		asserts.NoError(err)
+	initialConnectionCount := s.DB().Stats().OpenConnections
+	for _, testCase := range testCases {
+		s.Run(testCase.title, func() {
+			expectedMessageCount := len(testCase.messages)
+			s.Require().Len(testCase.messageNumbers, expectedMessageCount, "invalid test case messages len must be equal to messageNumbers")
 
-		initialConnectionCount := db.Stats().OpenConnections
-		for _, testCase := range testCases {
-			t.Run(testCase.title, func(t *testing.T) {
-				asserts := assert.New(t)
-				expectedMessageCount := len(testCase.messages)
-				if !asserts.Len(testCase.messageNumbers, expectedMessageCount, "invalid test case messages len must be equal to messageNumbers") {
-					return
-				}
+			// read events
+			storeLoadInstance := s.createEventStore()
+			results, err := storeLoadInstance.Load(ctx, streamName, testCase.fromNumber, testCase.count, testCase.matcher())
+			s.Require().NoError(err)
 
-				// read events
-				storeLoadInstance := initEventStore(t, db)
-				results, err := storeLoadInstance.Load(ctx, streamName, testCase.fromNumber, testCase.count, testCase.matcher())
-				asserts.NoError(err)
-
-				var i int
-				for results.Next() {
-					resultEvent, resultNumber, err := results.Message()
-					if !asserts.NoError(err) ||
-						!asserts.Truef(expectedMessageCount > i, "unexpected message received %d", i) {
-						i++
-						continue
-					}
-
-					expectedEvent := testCase.messages[i]
-
-					asserts.Equal(expectedEvent.Payload(), resultEvent.Payload())
-					asserts.Equal(expectedEvent.UUID(), resultEvent.UUID())
-					asserts.Equal(expectedEvent.Metadata().Value("_aggregate_type"), resultEvent.Metadata().Value("_aggregate_type"))
-					asserts.Equal(expectedEvent.Metadata().Value("_aggregate_id"), resultEvent.Metadata().Value("_aggregate_id"))
-					asserts.Equal(expectedEvent.Metadata().Value("_float_val"), resultEvent.Metadata().Value("_float_val"))
-
-					aggregateVersionExpected := resultEvent.Metadata().Value("_aggregate_version").(float64)
-					asserts.Equal(aggregateVersionExpected, resultEvent.Metadata().Value("_aggregate_version"))
-					asserts.Equal(len(expectedEvent.Metadata().AsMap()), len(resultEvent.Metadata().AsMap()))
-
-					asserts.Equal(testCase.messageNumbers[i], resultNumber)
-
+			var i int
+			for results.Next() {
+				resultEvent, resultNumber, err := results.Message()
+				if !s.NoError(err) ||
+					!s.Truef(expectedMessageCount > i, "unexpected message received %d", i) {
 					i++
+					continue
 				}
 
-				asserts.NoError(results.Err())
-				asserts.Equal(len(testCase.messages), i, "expected to have received the right amount of messages")
+				expectedEvent := testCase.messages[i]
 
-				asserts.NoError(results.Close())
-				asserts.Equal(initialConnectionCount, db.Stats().OpenConnections, "expected no more open connection than before the test ran")
-			})
-		}
-	})
+				s.Equal(expectedEvent.Payload(), resultEvent.Payload())
+				s.Equal(expectedEvent.UUID(), resultEvent.UUID())
+				s.Equal(expectedEvent.Metadata().Value("_aggregate_type"), resultEvent.Metadata().Value("_aggregate_type"))
+				s.Equal(expectedEvent.Metadata().Value("_aggregate_id"), resultEvent.Metadata().Value("_aggregate_id"))
+				s.Equal(expectedEvent.Metadata().Value("_float_val"), resultEvent.Metadata().Value("_float_val"))
+
+				aggregateVersionExpected := resultEvent.Metadata().Value("_aggregate_version").(float64)
+				s.Equal(aggregateVersionExpected, resultEvent.Metadata().Value("_aggregate_version"))
+				s.Equal(len(expectedEvent.Metadata().AsMap()), len(resultEvent.Metadata().AsMap()))
+
+				s.Equal(testCase.messageNumbers[i], resultNumber)
+
+				i++
+			}
+
+			s.NoError(results.Err())
+			s.Equal(len(testCase.messages), i, "expected to have received the right amount of messages")
+
+			s.NoError(results.Close())
+			s.Equal(initialConnectionCount, s.DB().Stats().OpenConnections, "expected no more open connection than before the test ran")
+		})
+	}
 }
 
-func generateAppendMessages(aggregateIDs []messaging.UUID) []messaging.Message {
+func (s *eventStoreTestSuite) createEventStore() eventstore.EventStore {
+	transformer := eventstorejson.NewPayloadTransformer()
+	s.Require().NoError(
+		transformer.RegisterPayload("tests", func() interface{} { return &payloadData{} }),
+	)
+
+	persistenceStrategy, err := postgres.NewPostgresStrategy(transformer)
+	s.Require().NoError(err, "failed initializing persistent strategy")
+
+	messageFactory, err := eventstoresql.NewAggregateChangedFactory(transformer)
+	s.Require().NoError(err, "failed on dependencies load")
+
+	eventStore, err := postgres.NewEventStore(persistenceStrategy, s.DB(), messageFactory, nil)
+	s.Require().NoError(err, "failed on dependencies load")
+
+	return eventStore
+}
+
+func (s *eventStoreTestSuite) generateAppendMessages(aggregateIDs []messaging.UUID) []messaging.Message {
 	var messages []messaging.Message
 	for _, aggregateID := range aggregateIDs {
 		for i := 0; i < 5; i++ {
@@ -327,7 +348,7 @@ func generateAppendMessages(aggregateIDs []messaging.UUID) []messaging.Message {
 			if i > 2 {
 				boolVal = false
 			}
-			meta := appendMeta(map[string]interface{}{
+			meta := s.appendMeta(map[string]interface{}{
 				"_aggregate_version":             i + 1,
 				"_aggregate_version_less_then_4": boolVal,
 				"_aggregate_type":                "basic",
@@ -338,14 +359,16 @@ func generateAppendMessages(aggregateIDs []messaging.UUID) []messaging.Message {
 				"';''; DROP DATABASE events_orders_load;": "ok",
 			})
 			payload := &payloadData{Name: "alice", Balance: i * 11}
-			message := mockAppendMessage(id, payload, meta, createdAt)
-			messages = append(messages, message)
+			messages = append(
+				messages,
+				s.mockAppendMessage(id, payload, meta, createdAt),
+			)
 		}
 	}
 	return messages
 }
 
-func appendMeta(metadataInfo map[string]interface{}) metadata.Metadata {
+func (s *eventStoreTestSuite) appendMeta(metadataInfo map[string]interface{}) metadata.Metadata {
 	meta := metadata.New()
 	for key, val := range metadataInfo {
 		meta = metadata.WithValue(meta, key, val)
@@ -353,32 +376,11 @@ func appendMeta(metadataInfo map[string]interface{}) metadata.Metadata {
 	return meta
 }
 
-func mockAppendMessage(id messaging.UUID, payload interface{}, meta interface{}, time time.Time) *mocks.Message {
+func (s *eventStoreTestSuite) mockAppendMessage(id messaging.UUID, payload interface{}, meta interface{}, time time.Time) *mocks.Message {
 	m := &mocks.Message{}
 	m.On("UUID").Return(id)
 	m.On("Payload").Return(payload)
 	m.On("Metadata").Return(meta)
 	m.On("CreatedAt").Return(time)
 	return m
-}
-
-func initEventStore(t *testing.T, db *sql.DB) eventstore.EventStore {
-	transformer := eventstorejson.NewPayloadTransformer()
-	transformer.RegisterPayload("tests", func() interface{} { return &payloadData{} })
-	persistenceStrategy, err := postgres.NewPostgresStrategy(transformer)
-	if err != nil {
-		t.Fatalf("failed initializing persistent strategy %s", err)
-	}
-
-	messageFactory, err := eventstoresql.NewAggregateChangedFactory(transformer)
-	if err != nil {
-		t.Fatalf("failed on dependencies load %s", err)
-	}
-
-	store, err := postgres.NewEventStore(persistenceStrategy, db, messageFactory, nil)
-	if err != nil {
-		t.Fatalf("failed on dependencies load %s", err)
-	}
-
-	return store
 }
