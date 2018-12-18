@@ -129,6 +129,19 @@ func (s *PostgresSuite) DB() *sql.DB {
 	return s.db
 }
 
+// DBTableExists return true if the provided table name exists in the public table schema of the suite's database
+func (s *PostgresSuite) DBTableExists(tableName string) bool {
+	var exists bool
+	err := s.db.QueryRow(
+		`SELECT EXISTS(SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = $1)`,
+		tableName,
+	).Scan(&exists)
+
+	s.Require().NoError(err, "failed to check if table %s exists", tableName)
+
+	return exists
+}
+
 // TearDownTest drops the database create by SetupTest
 func (s *PostgresSuite) TearDownTest() {
 	if err := s.db.Close(); err != nil {

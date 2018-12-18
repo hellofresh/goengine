@@ -53,13 +53,7 @@ func (s *eventStoreTestSuite) TestCreate() {
 	err := s.eventStore.Create(ctx, "orders")
 	s.Require().NoError(err)
 
-	var existsTable bool
-	err = s.DB().QueryRowContext(
-		ctx,
-		`SELECT EXISTS(SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'events_orders')`,
-	).Scan(&existsTable)
-	s.Require().NoError(err)
-	s.True(existsTable)
+	s.True(s.DBTableExists("events_orders"))
 
 	var indexesCount int
 	err = s.DB().QueryRowContext(
