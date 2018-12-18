@@ -137,63 +137,62 @@ func (s *projectorSuite) TearDownTest() {
 	s.PostgresSuite.TearDownTest()
 }
 
-func (s *projectorSuite) appendEvents(events map[aggregate.ID][]interface{}) {
+func (s *projectorSuite) appendEvents(aggregateID aggregate.ID, events []interface{}) {
 	ctx := context.Background()
-	for aggID, aggEvents := range events {
-		// Find the last event
-		matcher := metadata.WithConstraint(
-			metadata.WithConstraint(
-				metadata.NewMatcher(),
-				aggregate.TypeKey,
-				metadata.Equals,
-				"account",
-			),
-			aggregate.IDKey,
+
+	// Find the last event
+	matcher := metadata.WithConstraint(
+		metadata.WithConstraint(
+			metadata.NewMatcher(),
+			aggregate.TypeKey,
 			metadata.Equals,
-			aggID,
-		)
-		stream, err := s.eventStore.Load(ctx, s.eventStream, 0, nil, matcher)
+			"account",
+		),
+		aggregate.IDKey,
+		metadata.Equals,
+		aggregateID,
+	)
+	stream, err := s.eventStore.Load(ctx, s.eventStream, 0, nil, matcher)
+	s.Require().NoError(err)
+
+	var lastVersion int
+	for stream.Next() {
+		msg, _, err := stream.Message()
 		s.Require().NoError(err)
 
-		var lastVersion int
-		for stream.Next() {
-			msg, _, err := stream.Message()
-			s.Require().NoError(err)
-
-			lastVersion = int(msg.Metadata().Value(aggregate.VersionKey).(float64))
-		}
-		s.Require().NoError(stream.Err())
-
-		// Transform the events into messages
-		messages := make([]messaging.Message, len(aggEvents))
-		for i, event := range aggEvents {
-			m := metadata.WithValue(
-				metadata.WithValue(
-					metadata.WithValue(metadata.New(), aggregate.IDKey, aggID),
-					aggregate.VersionKey,
-					lastVersion+i+1,
-				),
-				aggregate.TypeKey,
-				"account",
-			)
-
-			message, err := aggregate.ReconstituteChange(
-				aggID,
-				messaging.GenerateUUID(),
-				event,
-				m,
-				time.Now().UTC(),
-				uint(i+1),
-			)
-			s.Require().NoError(err, "failed on create messages")
-
-			messages[i] = message
-		}
-
-		// Append the messages to the stream
-		err = s.eventStore.AppendTo(ctx, s.eventStream, messages)
-		s.Require().NoError(err, "failed to append messages")
+		lastVersion = int(msg.Metadata().Value(aggregate.VersionKey).(float64))
 	}
+	s.Require().NoError(stream.Err())
+
+	// Transform the events into messages
+	messages := make([]messaging.Message, len(events))
+	for i, event := range events {
+		m := metadata.WithValue(
+			metadata.WithValue(
+				metadata.WithValue(metadata.New(), aggregate.IDKey, aggregateID),
+				aggregate.VersionKey,
+				lastVersion+i+1,
+			),
+			aggregate.TypeKey,
+			"account",
+		)
+
+		message, err := aggregate.ReconstituteChange(
+			aggregateID,
+			messaging.GenerateUUID(),
+			event,
+			m,
+			time.Now().UTC(),
+			uint(i+1),
+		)
+		s.Require().NoError(err, "failed on create messages")
+
+		messages[i] = message
+	}
+
+	// Append the messages to the stream
+	err = s.eventStore.AppendTo(ctx, s.eventStream, messages)
+	s.Require().NoError(err, "failed to append messages")
 }
 
 // waitTimeout waits for the waitgroup for the specified max timeout.

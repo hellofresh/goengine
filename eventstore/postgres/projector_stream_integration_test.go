@@ -102,24 +102,20 @@ func (s *streamProjectorTestSuite) TestRun() {
 	aggregateIds := []aggregate.ID{
 		aggregate.GenerateID(),
 	}
-	s.appendEvents(map[aggregate.ID][]interface{}{
-		aggregateIds[0]: {
-			AccountDeposited{Amount: 100},
-			AccountCredited{Amount: 50},
-			AccountDeposited{Amount: 10},
-			AccountDeposited{Amount: 5},
-			AccountDeposited{Amount: 100},
-			AccountDeposited{Amount: 1},
-		},
+	s.appendEvents(aggregateIds[0], []interface{}{
+		AccountDeposited{Amount: 100},
+		AccountCredited{Amount: 50},
+		AccountDeposited{Amount: 10},
+		AccountDeposited{Amount: 5},
+		AccountDeposited{Amount: 100},
+		AccountDeposited{Amount: 1},
 	})
 	s.expectProjectionState("deposited_report", 6, `{"Total": 5, "TotalAmount": 216}`)
 
 	// Add events to the event stream
-	s.appendEvents(map[aggregate.ID][]interface{}{
-		aggregateIds[0]: {
-			AccountDeposited{Amount: 100},
-			AccountDeposited{Amount: 1},
-		},
+	s.appendEvents(aggregateIds[0], []interface{}{
+		AccountDeposited{Amount: 100},
+		AccountDeposited{Amount: 1},
 	})
 
 	s.expectProjectionState("deposited_report", 8, `{"Total": 7, "TotalAmount": 317}`)
@@ -160,15 +156,13 @@ func (s *streamProjectorTestSuite) TestRun_Once() {
 		aggregate.GenerateID(),
 	}
 	// Add events to the event stream
-	s.appendEvents(map[aggregate.ID][]interface{}{
-		aggregateIds[0]: {
-			AccountDeposited{Amount: 100},
-			AccountCredited{Amount: 50},
-			AccountDeposited{Amount: 10},
-			AccountDeposited{Amount: 5},
-			AccountDeposited{Amount: 100},
-			AccountDeposited{Amount: 1},
-		},
+	s.appendEvents(aggregateIds[0], []interface{}{
+		AccountDeposited{Amount: 100},
+		AccountCredited{Amount: 50},
+		AccountDeposited{Amount: 10},
+		AccountDeposited{Amount: 5},
+		AccountDeposited{Amount: 100},
+		AccountDeposited{Amount: 1},
 	})
 
 	projector, err := postgres.NewStreamProjector(
@@ -191,11 +185,9 @@ func (s *streamProjectorTestSuite) TestRun_Once() {
 
 		s.Run("Run projection again", func() {
 			// Append more events
-			s.appendEvents(map[aggregate.ID][]interface{}{
-				aggregateIds[0]: {
-					AccountDeposited{Amount: 100},
-					AccountDeposited{Amount: 1},
-				},
+			s.appendEvents(aggregateIds[0], []interface{}{
+				AccountDeposited{Amount: 100},
+				AccountDeposited{Amount: 1},
 			})
 
 			err := projector.Run(ctx, false)
