@@ -119,7 +119,7 @@ var (
 
 // PostgresSuite a testify suite that will create and drop a database before and after a test
 type PostgresSuite struct {
-	suite.Suite
+	Suite
 
 	PostgresDSN string
 
