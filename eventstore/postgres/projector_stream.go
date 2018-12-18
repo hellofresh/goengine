@@ -105,6 +105,7 @@ func NewStreamProjector(
 		projection:      projection,
 		projectionTable: projectionTable,
 		logger:          logger,
+		eventHandlers:   projection.Handlers(),
 	}, nil
 }
 
@@ -252,11 +253,6 @@ func (s *StreamProjector) handleStream(ctx context.Context, conn *sql.Conn, stre
 		if err != nil {
 			s.logger.WithField("payload", msg.Payload()).Debug("skipping event: unable to resolve payload name")
 			continue
-		}
-
-		// Load event handlers if needed
-		if s.eventHandlers == nil {
-			s.eventHandlers = s.projection.Handlers()
 		}
 
 		// Resolve the payload handler using the event name
