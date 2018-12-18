@@ -86,32 +86,6 @@ func (c *dbController) enableDatabaseAccess(t *testing.T, databaseName string) {
 	}
 }
 
-// PostgresDatabase provides a database connection to the callback for conducting integration tests
-func PostgresDatabase(t *testing.T, testCase func(db *sql.DB)) {
-	ctrl := postgresController(t)
-
-	dsn := postgresDSN(t)
-	dsnMatches := postgresDSNDatabaseMatch(dsn)
-	databaseName := dsn[dsnMatches[2]:dsnMatches[3]]
-
-	// Create the schema to use
-	ctrl.Create(t, databaseName)
-	defer ctrl.Drop(t, databaseName)
-
-	// Open db connection
-	db, err := sql.Open("postgres", dsn)
-	if err != nil {
-		t.Fatalf("test.postgres: Connection failed: %+v", err)
-	}
-	defer func() {
-		if err := db.Close(); err != nil {
-			t.Errorf("test.postgres: Connection failed to close: %+v", err)
-		}
-	}()
-
-	testCase(db)
-}
-
 var (
 	_ suite.SetupTestSuite    = &PostgresSuite{}
 	_ suite.TearDownTestSuite = &PostgresSuite{}
