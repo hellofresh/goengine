@@ -7,7 +7,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"os"
+	"fmt"
 	"testing"
 	"time"
 
@@ -20,318 +20,259 @@ import (
 	"github.com/hellofresh/goengine/messaging"
 	"github.com/hellofresh/goengine/metadata"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/suite"
 )
 
-func TestStreamProjector_Run(t *testing.T) {
-	dbDSN, exists := os.LookupEnv("POSTGRES_DSN")
-	if !exists {
-		t.Fatalf("missing POSTGRES_DSN enviroment variable")
+type (
+	streamProjectorTestSuite struct {
+		test.PostgresSuite
+
+		eventStream        eventstore.StreamName
+		eventStore         *postgres.EventStore
+		payloadTransformer *eventStoreJSON.PayloadTransformer
 	}
-	test.PostgresDatabase(t, func(db *sql.DB) {
-		eventStream, store, transformer := setupEventStoreAndProjections(t, db)
+)
 
-		transformer.RegisterPayload("account_debited", func() interface{} {
-			return AccountDeposited{}
-		})
-		transformer.RegisterPayload("account_credited", func() interface{} {
-			return AccountCredited{}
-		})
-
-		projectorCtx, projectorCancel := context.WithCancel(context.Background())
-		defer projectorCancel()
-
-		projector, err := postgres.NewStreamProjector(
-			dbDSN,
-			store,
-			transformer,
-			&DepositedProjection{},
-			"projections",
-			nil,
-		)
-		if err != nil {
-			t.Fatalf("failed to create projector %s", err)
-		}
-
-		// Run the projector in the background
-		go func() {
-			err := projector.Run(projectorCtx, true)
-			if err != nil {
-				t.Fatalf("projector.Run returned an error. %s", err)
-			}
-		}()
-
-		// Be evil and start run the projection again to ensure mutex is used and the context is respected
-		go func() {
-			err := projector.Run(projectorCtx, true)
-			if err != nil {
-				t.Fatalf("projector.Run returned an error. %s", err)
-			}
-		}()
-		// Sleep for a while so the projector can initialize
-		time.Sleep(100 * time.Millisecond)
-
-		// Add events to the event stream
-		aggregateIds := []aggregate.ID{
-			aggregate.GenerateID(),
-		}
-		appendEvents(t, store, eventStream,
-			map[aggregate.ID][]interface{}{
-				aggregateIds[0]: {
-					AccountDeposited{Amount: 100},
-					AccountCredited{Amount: 50},
-					AccountDeposited{Amount: 10},
-					AccountDeposited{Amount: 5},
-					AccountDeposited{Amount: 100},
-					AccountDeposited{Amount: 1},
-				},
-			},
-		)
-
-		expectProjectionState(
-			t,
-			db,
-			"deposited_report",
-			6,
-			`{"Total": 5, "TotalAmount": 216}`,
-		)
-
-		// Add events to the event stream
-		appendEvents(t, store, eventStream,
-			map[aggregate.ID][]interface{}{
-				aggregateIds[0]: {
-					AccountDeposited{Amount: 100},
-					AccountDeposited{Amount: 1},
-				},
-			},
-		)
-
-		expectProjectionState(
-			t,
-			db,
-			"deposited_report",
-			8,
-			`{"Total": 7, "TotalAmount": 317}`,
-		)
-
-		projectorCancel()
-
-		t.Run("projection should not rerun events", func(t *testing.T) {
-			projector, err := postgres.NewStreamProjector(
-				dbDSN,
-				store,
-				transformer,
-				&DepositedProjection{},
-				"projections",
-				nil,
-			)
-			if err != nil {
-				t.Fatalf("failed to create projector %s", err)
-			}
-
-			err = projector.Run(context.Background(), false)
-			if assert.NoError(t, err) {
-				expectProjectionState(
-					t,
-					db,
-					"deposited_report",
-					8,
-					`{"Total": 7, "TotalAmount": 317}`,
-				)
-			}
-		})
-	})
+func TestStreamProjectorSuite(t *testing.T) {
+	suite.Run(t, new(streamProjectorTestSuite))
 }
 
-func TestStreamProjector_Run_Once(t *testing.T) {
-	dbDSN, exists := os.LookupEnv("POSTGRES_DSN")
-	if !exists {
-		t.Fatalf("missing POSTGRES_DSN enviroment variable")
-	}
+func (s *streamProjectorTestSuite) SetupTest() {
+	s.PostgresSuite.SetupTest()
+	db := s.DB()
 
-	test.PostgresDatabase(t, func(db *sql.DB) {
-		eventStream, store, transformer := setupEventStoreAndProjections(t, db)
-
-		transformer.RegisterPayload("account_debited", func() interface{} {
-			return AccountDeposited{}
-		})
-		transformer.RegisterPayload("account_credited", func() interface{} {
-			return AccountCredited{}
-		})
-
-		aggregateIds := []aggregate.ID{
-			aggregate.GenerateID(),
-		}
-		// Add events to the event stream
-		appendEvents(t, store, eventStream,
-			map[aggregate.ID][]interface{}{
-				aggregateIds[0]: {
-					AccountDeposited{Amount: 100},
-					AccountCredited{Amount: 50},
-					AccountDeposited{Amount: 10},
-					AccountDeposited{Amount: 5},
-					AccountDeposited{Amount: 100},
-					AccountDeposited{Amount: 1},
-				},
-			},
-		)
-
-		projector, err := postgres.NewStreamProjector(
-			dbDSN,
-			store,
-			transformer,
-			&DepositedProjection{},
-			"projections",
-			nil,
-		)
-		if err != nil {
-			t.Fatalf("failed to create projector %s", err)
-		}
-
-		t.Run("Run projections", func(t *testing.T) {
-			asserts := assert.New(t)
-			ctx := context.Background()
-
-			err := projector.Run(ctx, false)
-			if !asserts.NoError(err) {
-				t.Fail()
-			}
-
-			expectProjectionState(
-				t,
-				db,
-				"deposited_report",
-				6,
-				`{"Total": 5, "TotalAmount": 216}`,
-			)
-
-			t.Run("Run projection again", func(t *testing.T) {
-				// Append more events
-				appendEvents(t, store, eventStream,
-					map[aggregate.ID][]interface{}{
-						aggregateIds[0]: {
-							AccountDeposited{Amount: 100},
-							AccountDeposited{Amount: 1},
-						},
-					},
-				)
-
-				err := projector.Run(ctx, false)
-				if !asserts.NoError(err) {
-					t.Fail()
-				}
-
-				expectProjectionState(
-					t,
-					db,
-					"deposited_report",
-					8,
-					`{"Total": 7, "TotalAmount": 317}`,
-				)
-			})
-		})
-	})
-}
-
-func TestStreamProjector_Delete(t *testing.T) {
-	dbDSN, exists := os.LookupEnv("POSTGRES_DSN")
-	if !exists {
-		t.Fatalf("missing POSTGRES_DSN enviroment variable")
-	}
-
-	test.PostgresDatabase(t, func(db *sql.DB) {
-		var projectionExists bool
-		asserts := assert.New(t)
-
-		_, store, transformer := setupEventStoreAndProjections(t, db)
-
-		projection := &DepositedProjection{}
-		projector, err := postgres.NewStreamProjector(
-			dbDSN,
-			store,
-			transformer,
-			projection,
-			"projections",
-			nil,
-		)
-		if err != nil {
-			t.Fatalf("failed to create projector %s", err)
-		}
-
-		// Run the projection to ensure it exists
-		if err := projector.Run(context.Background(), false); err != nil {
-			t.Fatalf("failed to run projector %s", err)
-		}
-		row := db.QueryRow(`SELECT EXISTS(SELECT 1 FROM projections WHERE name = $1)`, projection.Name())
-		if !asserts.NoError(row.Scan(&projectionExists)) || !projectionExists {
-			t.Fatal("projector.Run failed to create projection entry")
-		}
-
-		// Remove projection
-		err = projector.Delete(context.Background())
-		if !asserts.NoError(err) {
-			return
-		}
-
-		row = db.QueryRow(`SELECT EXISTS(SELECT 1 FROM projections WHERE name = $1)`, projection.Name())
-		if asserts.NoError(row.Scan(&projectionExists)) {
-			asserts.False(projectionExists)
-		}
-	})
-}
-
-func setupEventStoreAndProjections(t *testing.T, db *sql.DB) (eventstore.StreamName, *postgres.EventStore, *eventStoreJSON.PayloadTransformer) {
-	eventStream := eventstore.StreamName("event_stream")
+	s.eventStream = eventstore.StreamName("event_stream")
 
 	// Create payload transformer
-	transformer := eventStoreJSON.NewPayloadTransformer()
+	s.payloadTransformer = eventStoreJSON.NewPayloadTransformer()
 
 	// Use a persistence strategy
-	persistenceStrategy, err := postgres.NewPostgresStrategy(transformer)
-	if err != nil {
-		t.Fatalf("failed initializing persistent strategy %s", err)
-	}
+	persistenceStrategy, err := postgres.NewPostgresStrategy(s.payloadTransformer)
+	s.Require().NoError(err, "failed initializing persistent strategy")
 
 	// Create message factory
-	messageFactory, err := eventStoreSQL.NewAggregateChangedFactory(transformer)
-	if err != nil {
-		t.Fatalf("failed on dependencies load %s", err)
-	}
+	messageFactory, err := eventStoreSQL.NewAggregateChangedFactory(s.payloadTransformer)
+	s.Require().NoError(err, "failed on dependencies load")
 
 	// Create event store
-	store, err := postgres.NewEventStore(persistenceStrategy, db, messageFactory, nil)
-	if err != nil {
-		t.Fatalf("failed on dependencies load %s", err)
-	}
+	s.eventStore, err = postgres.NewEventStore(persistenceStrategy, db, messageFactory, nil)
+	s.Require().NoError(err, "failed on dependencies load")
 
 	// Create the event stream
 	ctx := context.Background()
-	if err := store.Create(ctx, eventStream); err != nil {
-		t.Fatalf("failed on create event stream %s", err)
-	}
+	err = s.eventStore.Create(ctx, s.eventStream)
+	s.Require().NoError(err, "failed on create event stream")
 
 	// Setup the projection tables etc.
-	eventStreamTable, err := persistenceStrategy.GenerateTableName(eventStream)
-	if err != nil {
-		t.Fatalf("failed to generate eventstream table name %s", err)
-	}
-	queries := postgres.StreamProjectorCreateSchema("projections", eventStream, eventStreamTable)
-	for _, query := range queries {
-		if _, err := db.ExecContext(ctx, query); err != nil {
-			t.Fatalf("failed to create projection tables etc. %s", err)
-		}
-	}
+	eventStreamTable, err := persistenceStrategy.GenerateTableName(s.eventStream)
+	s.Require().NoError(err, "failed to generate eventstream table name")
 
-	return eventStream, store, transformer
+	queries := postgres.StreamProjectorCreateSchema("projections", s.eventStream, eventStreamTable)
+	for _, query := range queries {
+		_, err := db.ExecContext(ctx, query)
+		s.Require().NoError(err, "failed to create projection tables etc.")
+	}
 }
 
-func expectProjectionState(t *testing.T, db *sql.DB, name string, expectedPosition int64, expectedState string) {
-	asserts := assert.New(t)
+func (s *streamProjectorTestSuite) TearDownTest() {
+	s.eventStore = nil
+	s.eventStream = ""
+	s.payloadTransformer = nil
 
-	stmt, err := db.Prepare(`SELECT position, state FROM projections WHERE name = $1`)
-	if err != nil {
-		t.Fatal(err)
-		return
+	s.PostgresSuite.TearDownTest()
+}
+
+func (s *streamProjectorTestSuite) TestRun() {
+	s.Require().NoError(
+		s.payloadTransformer.RegisterPayload("account_debited", func() interface{} {
+			return AccountDeposited{}
+		}),
+	)
+	s.Require().NoError(
+		s.payloadTransformer.RegisterPayload("account_credited", func() interface{} {
+			return AccountCredited{}
+		}),
+	)
+
+	projectorCtx, projectorCancel := context.WithCancel(context.Background())
+	defer projectorCancel()
+
+	projector, err := postgres.NewStreamProjector(
+		s.PostgresDSN,
+		s.eventStore,
+		s.payloadTransformer,
+		&DepositedProjection{},
+		"projections",
+		nil,
+	)
+	s.Require().NoError(err, "failed to create projector")
+
+	// Run the projector in the background
+	go func() {
+		if err := projector.Run(projectorCtx, true); err != nil {
+			if context.Canceled == projectorCtx.Err() {
+				fmt.Printf("projector.Run returned an error. %v\n", err)
+			} else {
+				assert.NoError(s.T(), err, "projector.Run returned an error")
+			}
+		}
+	}()
+
+	// Be evil and start run the projection again to ensure mutex is used and the context is respected
+	go func() {
+		if err := projector.Run(projectorCtx, true); err != nil {
+			if context.Canceled == projectorCtx.Err() {
+				fmt.Printf("projector.Run returned an error. %v\n", err)
+			} else {
+				assert.NoError(s.T(), err, "projector.Run returned an error")
+			}
+		}
+	}()
+	// Sleep for a while so the projector can initialize
+	time.Sleep(100 * time.Millisecond)
+
+	// Add events to the event stream
+	aggregateIds := []aggregate.ID{
+		aggregate.GenerateID(),
 	}
+	s.appendEvents(map[aggregate.ID][]interface{}{
+		aggregateIds[0]: {
+			AccountDeposited{Amount: 100},
+			AccountCredited{Amount: 50},
+			AccountDeposited{Amount: 10},
+			AccountDeposited{Amount: 5},
+			AccountDeposited{Amount: 100},
+			AccountDeposited{Amount: 1},
+		},
+	})
+	s.expectProjectionState("deposited_report", 6, `{"Total": 5, "TotalAmount": 216}`)
+
+	// Add events to the event stream
+	s.appendEvents(map[aggregate.ID][]interface{}{
+		aggregateIds[0]: {
+			AccountDeposited{Amount: 100},
+			AccountDeposited{Amount: 1},
+		},
+	})
+
+	s.expectProjectionState("deposited_report", 8, `{"Total": 7, "TotalAmount": 317}`)
+
+	projectorCancel()
+
+	s.Run("projection should not rerun events", func() {
+		projector, err := postgres.NewStreamProjector(
+			s.PostgresDSN,
+			s.eventStore,
+			s.payloadTransformer,
+			&DepositedProjection{},
+			"projections",
+			nil,
+		)
+		s.Require().NoError(err, "failed to create projector")
+
+		err = projector.Run(context.Background(), false)
+		s.Require().NoError(err, "failed to run projector")
+
+		s.expectProjectionState("deposited_report", 8, `{"Total": 7, "TotalAmount": 317}`)
+	})
+}
+
+func (s *streamProjectorTestSuite) TestRun_Once() {
+	s.Require().NoError(
+		s.payloadTransformer.RegisterPayload("account_debited", func() interface{} {
+			return AccountDeposited{}
+		}),
+	)
+	s.Require().NoError(
+		s.payloadTransformer.RegisterPayload("account_credited", func() interface{} {
+			return AccountCredited{}
+		}),
+	)
+
+	aggregateIds := []aggregate.ID{
+		aggregate.GenerateID(),
+	}
+	// Add events to the event stream
+	s.appendEvents(map[aggregate.ID][]interface{}{
+		aggregateIds[0]: {
+			AccountDeposited{Amount: 100},
+			AccountCredited{Amount: 50},
+			AccountDeposited{Amount: 10},
+			AccountDeposited{Amount: 5},
+			AccountDeposited{Amount: 100},
+			AccountDeposited{Amount: 1},
+		},
+	})
+
+	projector, err := postgres.NewStreamProjector(
+		s.PostgresDSN,
+		s.eventStore,
+		s.payloadTransformer,
+		&DepositedProjection{},
+		"projections",
+		nil,
+	)
+	s.Require().NoError(err, "failed to create projector")
+
+	s.Run("Run projections", func() {
+		ctx := context.Background()
+
+		err := projector.Run(ctx, false)
+		s.Require().NoError(err)
+
+		s.expectProjectionState("deposited_report", 6, `{"Total": 5, "TotalAmount": 216}`)
+
+		s.Run("Run projection again", func() {
+			// Append more events
+			s.appendEvents(map[aggregate.ID][]interface{}{
+				aggregateIds[0]: {
+					AccountDeposited{Amount: 100},
+					AccountDeposited{Amount: 1},
+				},
+			})
+
+			err := projector.Run(ctx, false)
+			s.Require().NoError(err)
+
+			s.expectProjectionState("deposited_report", 8, `{"Total": 7, "TotalAmount": 317}`)
+		})
+	})
+}
+
+func (s *streamProjectorTestSuite) TestDelete() {
+	var projectionExists bool
+
+	projection := &DepositedProjection{}
+	projector, err := postgres.NewStreamProjector(
+		s.PostgresDSN,
+		s.eventStore,
+		s.payloadTransformer,
+		projection,
+		"projections",
+		nil,
+	)
+	s.Require().NoError(err, "failed to create projector")
+
+	// Run the projection to ensure it exists
+	err = projector.Run(context.Background(), false)
+	s.Require().NoError(err, "failed to run projector")
+
+	row := s.DB().QueryRow(`SELECT EXISTS(SELECT 1 FROM projections WHERE name = $1)`, projection.Name())
+	s.Require().NoError(row.Scan(&projectionExists))
+	s.Require().True(projectionExists, "projector.Run failed to create projection entry")
+
+	// Remove projection
+	err = projector.Delete(context.Background())
+	s.Require().NoError(err)
+
+	row = s.DB().QueryRow(`SELECT EXISTS(SELECT 1 FROM projections WHERE name = $1)`, projection.Name())
+	s.Require().NoError(row.Scan(&projectionExists))
+	s.Require().False(projectionExists)
+}
+
+func (s *streamProjectorTestSuite) expectProjectionState(name string, expectedPosition int64, expectedState string) {
+	stmt, err := s.DB().Prepare(`SELECT position, state FROM projections WHERE name = $1`)
+	s.Require().NoError(err)
 
 	var (
 		position int64
@@ -345,13 +286,13 @@ func expectProjectionState(t *testing.T, db *sql.DB, name string, expectedPositi
 				continue
 			}
 
-			asserts.NoError(err)
+			s.NoError(err)
 			return
 		}
 
 		if position >= expectedPosition {
-			asserts.Equal(expectedPosition, position)
-			asserts.JSONEq(expectedState, state)
+			s.Equal(expectedPosition, position)
+			s.JSONEq(expectedState, state)
 			return
 		}
 
@@ -359,10 +300,10 @@ func expectProjectionState(t *testing.T, db *sql.DB, name string, expectedPositi
 		time.Sleep(50 * time.Millisecond)
 	}
 
-	t.Fatalf("failed to fetch expected projection state (expected %d got %d)", expectedPosition, position)
+	s.Require().Equal(expectedPosition, position, "failed to fetch expected projection state")
 }
 
-func appendEvents(t *testing.T, store *postgres.EventStore, streamName eventstore.StreamName, events map[aggregate.ID][]interface{}) {
+func (s *streamProjectorTestSuite) appendEvents(events map[aggregate.ID][]interface{}) {
 	ctx := context.Background()
 	for aggID, aggEvents := range events {
 		// Find the last event
@@ -377,17 +318,13 @@ func appendEvents(t *testing.T, store *postgres.EventStore, streamName eventstor
 			metadata.Equals,
 			aggID,
 		)
-		stream, err := store.Load(ctx, streamName, 0, nil, matcher)
-		if !assert.NoError(t, err) {
-			t.Fail()
-		}
+		stream, err := s.eventStore.Load(ctx, s.eventStream, 0, nil, matcher)
+		s.Require().NoError(err)
 
 		var lastVersion int
 		for stream.Next() {
 			msg, _, err := stream.Message()
-			if !assert.NoError(t, err) {
-				t.Fail()
-			}
+			s.Require().NoError(err)
 
 			lastVersion = int(msg.Metadata().Value(aggregate.VersionKey).(float64))
 		}
@@ -413,17 +350,14 @@ func appendEvents(t *testing.T, store *postgres.EventStore, streamName eventstor
 				time.Now().UTC(),
 				uint(i+1),
 			)
-			if err != nil {
-				t.Fatalf("failed on create messages %s", err)
-			}
+			s.Require().NoError(err, "failed on create messages")
 
 			messages[i] = message
 		}
 
 		// Append the messages to the stream
-		if err := store.AppendTo(ctx, streamName, messages); !assert.NoError(t, err) {
-			t.Fail()
-		}
+		err = s.eventStore.AppendTo(ctx, s.eventStream, messages)
+		s.Require().NoError(err, "failed to append messages")
 	}
 }
 
