@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"runtime"
 	"testing"
 	"time"
 
@@ -128,8 +129,8 @@ func (s *streamProjectorTestSuite) TestRun() {
 			}
 		}
 	}()
-	// Sleep for a while so the projector can initialize
-	time.Sleep(100 * time.Millisecond)
+	// Let the go routines start
+	runtime.Gosched()
 
 	// Add events to the event stream
 	aggregateIds := []aggregate.ID{
