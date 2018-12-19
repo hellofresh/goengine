@@ -284,14 +284,14 @@ func (s *streamProjectorTestSuite) expectProjectionState(name string, expectedPo
 		state    string
 	)
 
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 20; i++ {
 		res := stmt.QueryRow(name)
 		if err := res.Scan(&position, &state); err != nil {
 			if err == sql.ErrNoRows {
 				continue
 			}
 
-			s.NoError(err)
+			s.Require().NoError(err)
 			return
 		}
 
