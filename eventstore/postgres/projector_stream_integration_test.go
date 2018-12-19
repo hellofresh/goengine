@@ -7,8 +7,8 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"runtime"
+	"sync"
 	"testing"
 	"time"
 
@@ -84,6 +84,13 @@ func (s *streamProjectorTestSuite) TearDownTest() {
 }
 
 func (s *streamProjectorTestSuite) TestRun() {
+	var wg sync.WaitGroup
+	defer func() {
+		if s.waitTimeout(&wg, 5*time.Second) {
+			s.T().Fatal("projection.Run in go routines failed to return")
+		}
+	}()
+
 	s.Require().NoError(
 		s.payloadTransformer.RegisterPayload("account_debited", func() interface{} {
 			return AccountDeposited{}
@@ -109,26 +116,23 @@ func (s *streamProjectorTestSuite) TestRun() {
 	s.Require().NoError(err, "failed to create projector")
 
 	// Run the projector in the background
+	wg.Add(1)
 	go func() {
 		if err := projector.Run(projectorCtx, true); err != nil {
-			if context.Canceled == projectorCtx.Err() {
-				fmt.Printf("projector.Run returned an error. %v\n", err)
-			} else {
-				assert.NoError(s.T(), err, "projector.Run returned an error")
-			}
+			assert.NoError(s.T(), err, "projector.Run returned an error")
 		}
+		wg.Done()
 	}()
 
 	// Be evil and start run the projection again to ensure mutex is used and the context is respected
+	wg.Add(1)
 	go func() {
 		if err := projector.Run(projectorCtx, true); err != nil {
-			if context.Canceled == projectorCtx.Err() {
-				fmt.Printf("projector.Run returned an error. %v\n", err)
-			} else {
-				assert.NoError(s.T(), err, "projector.Run returned an error")
-			}
+			assert.NoError(s.T(), err, "projector.Run returned an error")
 		}
+		wg.Done()
 	}()
+
 	// Let the go routines start
 	runtime.Gosched()
 
@@ -359,6 +363,22 @@ func (s *streamProjectorTestSuite) appendEvents(events map[aggregate.ID][]interf
 		// Append the messages to the stream
 		err = s.eventStore.AppendTo(ctx, s.eventStream, messages)
 		s.Require().NoError(err, "failed to append messages")
+	}
+}
+
+// waitTimeout waits for the waitgroup for the specified max timeout.
+// Returns true if waiting timed out.
+func (s *streamProjectorTestSuite) waitTimeout(wg *sync.WaitGroup, timeout time.Duration) bool {
+	c := make(chan struct{})
+	go func() {
+		defer close(c)
+		wg.Wait()
+	}()
+	select {
+	case <-c:
+		return false // completed normally
+	case <-time.After(timeout):
+		return true // timed out
 	}
 }
 
