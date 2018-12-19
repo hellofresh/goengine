@@ -111,7 +111,7 @@ func (s *streamProjectorTestSuite) TestRun() {
 		s.payloadTransformer,
 		&DepositedProjection{},
 		"projections",
-		nil,
+		s.Logger,
 	)
 	s.Require().NoError(err, "failed to create projector")
 
@@ -171,7 +171,7 @@ func (s *streamProjectorTestSuite) TestRun() {
 			s.payloadTransformer,
 			&DepositedProjection{},
 			"projections",
-			nil,
+			s.Logger,
 		)
 		s.Require().NoError(err, "failed to create projector")
 
@@ -215,7 +215,7 @@ func (s *streamProjectorTestSuite) TestRun_Once() {
 		s.payloadTransformer,
 		&DepositedProjection{},
 		"projections",
-		nil,
+		s.Logger,
 	)
 	s.Require().NoError(err, "failed to create projector")
 
@@ -254,7 +254,7 @@ func (s *streamProjectorTestSuite) TestDelete() {
 		s.payloadTransformer,
 		projection,
 		"projections",
-		nil,
+		s.Logger,
 	)
 	s.Require().NoError(err, "failed to create projector")
 

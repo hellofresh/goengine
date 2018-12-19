@@ -104,6 +104,8 @@ type PostgresSuite struct {
 
 // SetupTest creates a database before a test
 func (s *PostgresSuite) SetupTest() {
+	s.Suite.SetupTest()
+
 	s.controller = postgresController(s.T())
 
 	s.PostgresDSN = postgresDSN(s.T())
@@ -135,6 +137,8 @@ func (s *PostgresSuite) TearDownTest() {
 	s.db = nil
 
 	s.controller.Drop(s.T(), s.dbName)
+
+	s.Suite.TearDownTest()
 }
 
 // postgresDSN returns a parsed postgres dsn
