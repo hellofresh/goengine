@@ -9,17 +9,17 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hellofresh/goengine/aggregate"
+	"github.com/hellofresh/goengine/eventstore"
 	eventStoreJSON "github.com/hellofresh/goengine/eventstore/json"
 	"github.com/hellofresh/goengine/eventstore/postgres"
 	eventStoreSQL "github.com/hellofresh/goengine/eventstore/sql"
-
-	"github.com/hellofresh/goengine/aggregate"
 	"github.com/hellofresh/goengine/internal/test"
-	"github.com/hellofresh/goengine/metadata"
-
-	"github.com/hellofresh/goengine/eventstore"
 	"github.com/hellofresh/goengine/messaging"
+	"github.com/hellofresh/goengine/metadata"
 )
+
+const accountAggregateTypeName = "account"
 
 var _ eventstore.Projection = &DepositedProjection{}
 
@@ -146,7 +146,7 @@ func (s *projectorSuite) appendEvents(aggregateID aggregate.ID, events []interfa
 			metadata.NewMatcher(),
 			aggregate.TypeKey,
 			metadata.Equals,
-			"account",
+			accountAggregateTypeName,
 		),
 		aggregate.IDKey,
 		metadata.Equals,

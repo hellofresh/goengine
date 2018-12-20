@@ -9,6 +9,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hellofresh/goengine/aggregate"
+
 	"github.com/hellofresh/goengine/eventstore"
 	"github.com/hellofresh/goengine/internal/log"
 	"github.com/hellofresh/goengine/metadata"
@@ -19,6 +21,9 @@ import (
 var (
 	// ErrNoEventStoreTable occurs when no event store table name is provided
 	ErrNoEventStoreTable = errors.New("no event store table provided")
+	// ErrEmptyAggregateTypeName occurs when an empty aggregate type name is provided
+	ErrEmptyAggregateTypeName = errors.New("empty aggregate type name provided")
+
 	// Ensure that we satisfy the eventstore.Projector interface
 	_ eventstore.Projector = &AggregateProjector{}
 )
@@ -30,13 +35,14 @@ type (
 
 		projectorDB *projectorDB
 
-		eventStore      ReadOnlyEventStore
-		eventStoreTable string
-		resolver        eventstore.PayloadResolver
-		projection      eventstore.Projection
-		projectionTable string
-		eventHandlers   map[string]eventstore.ProjectionHandler
-		logger          logrus.FieldLogger
+		eventStore        ReadOnlyEventStore
+		eventStoreTable   string
+		aggregateTypeName string
+		resolver          eventstore.PayloadResolver
+		projection        eventstore.Projection
+		projectionTable   string
+		eventHandlers     map[string]eventstore.ProjectionHandler
+		logger            logrus.FieldLogger
 	}
 
 	// aggregateProjectorState contains the state of a single projection
@@ -50,8 +56,9 @@ type (
 func NewAggregateProjector(
 	dbDSN string,
 	eventStore ReadOnlyEventStore,
-	eventstoreTable string,
+	eventStoreTable string,
 	resolver eventstore.PayloadResolver,
+	aggregateTypeName string,
 	projection eventstore.Projection,
 	projectionTable string,
 	logger logrus.FieldLogger,
@@ -61,7 +68,7 @@ func NewAggregateProjector(
 		return nil, ErrNoDBConnect
 	case eventStore == nil:
 		return nil, ErrNoEventStore
-	case eventstoreTable == "":
+	case eventStoreTable == "":
 		return nil, ErrNoEventStoreTable
 	case resolver == nil:
 		return nil, ErrNoPayloadResolver
@@ -69,6 +76,8 @@ func NewAggregateProjector(
 		return nil, ErrNoProjection
 	case projectionTable == "":
 		return nil, ErrNoProjectionTableName
+	case aggregateTypeName == "":
+		return nil, ErrEmptyAggregateTypeName
 	}
 
 	if logger == nil {
@@ -87,13 +96,14 @@ func NewAggregateProjector(
 			maxReconnectInterval: time.Second,
 			logger:               logger,
 		},
-		eventStore:      eventStore,
-		eventStoreTable: eventstoreTable,
-		resolver:        resolver,
-		projection:      projection,
-		projectionTable: projectionTable,
-		eventHandlers:   projection.Handlers(),
-		logger:          logger,
+		eventStore:        eventStore,
+		eventStoreTable:   eventStoreTable,
+		aggregateTypeName: aggregateTypeName,
+		resolver:          resolver,
+		projection:        projection,
+		projectionTable:   projectionTable,
+		eventHandlers:     projection.Handlers(),
+		logger:            logger,
 	}, nil
 }
 
@@ -239,12 +249,12 @@ func (a *AggregateProjector) projectAggregate(ctx context.Context, streamConn *s
 		}
 	}()
 
-	aggregateMatcher := metadata.NewMatcher()
-	aggregateMatcher = metadata.WithConstraint(aggregateMatcher, "_aggregate_id", metadata.Equals, aggregateID)
-	// TODO add aggregate type
+	matcher := metadata.NewMatcher()
+	matcher = metadata.WithConstraint(matcher, aggregate.IDKey, metadata.Equals, aggregateID)
+	matcher = metadata.WithConstraint(matcher, aggregate.TypeKey, metadata.Equals, a.aggregateTypeName)
 
 	streamName := a.projection.FromStream()
-	stream, err := a.eventStore.LoadWithConnection(ctx, streamConn, streamName, info.position+1, nil, aggregateMatcher)
+	stream, err := a.eventStore.LoadWithConnection(ctx, streamConn, streamName, info.position+1, nil, matcher)
 	if err != nil {
 		return err
 	}
