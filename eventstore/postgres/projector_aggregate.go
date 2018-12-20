@@ -127,16 +127,9 @@ func (a *AggregateProjector) Run(ctx context.Context, keepRunning bool) error {
 
 	// TODO add check to ensure table exists
 
-	// Trigger an initial run of the projection
-	err := a.projectorDB.Trigger(ctx, a.project, nil)
-	if err != nil {
-		// If the projector needs to keep running but could not acquire a lock we still need to continue.
-		if err == ErrProjectionFailedToLock && !keepRunning {
-			return err
-		}
-	}
 	if !keepRunning {
-		return nil
+		// Trigger an single run of the projection
+		return a.projectorDB.Trigger(ctx, a.project, nil)
 	}
 
 	return a.projectorDB.Listen(ctx, a.project)

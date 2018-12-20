@@ -121,6 +121,13 @@ func (s *projectorDB) Listen(ctx context.Context, trigger projectorTrigger) erro
 	if err := listener.Listen(s.dbChannel); err != nil {
 		return err
 	}
+
+	// Trigger an initial run of the projection.
+	// This is done after db listen is started to avoid losing a set of messages while the listener creates a db connection.
+	if err := s.listenerNotificationCallback(ctx, trigger, nil); err != nil {
+		return err
+	}
+
 	for {
 		select {
 		case n := <-listener.Notify:
