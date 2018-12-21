@@ -156,6 +156,15 @@ func (s *StreamProjector) Reset(ctx context.Context) error {
 	defer s.Unlock()
 
 	return s.projectorDB.Exec(ctx, func(ctx context.Context, conn *sql.Conn) error {
+		if err := s.acquireProjection(ctx, conn); err != nil {
+			return err
+		}
+		defer func() {
+			if err := s.releaseProjection(conn); err != nil {
+				s.logger.WithError(err).Error("failed to release projection")
+			}
+		}()
+
 		if err := s.projection.Reset(ctx); err != nil {
 			return err
 		}
