@@ -163,7 +163,7 @@ func (s *StreamProjector) Reset(ctx context.Context) error {
 		s.position = 0
 		s.state = nil
 
-		return s.persist(ctx, conn)
+		return s.persist(conn)
 	})
 }
 
@@ -267,8 +267,10 @@ func (s *StreamProjector) handleStream(ctx context.Context, conn *sql.Conn, stre
 			return err
 		}
 
+		// TODO find a good way to recover when conn go's way here
+
 		// Persist state and position changes
-		if err := s.persist(ctx, conn); err != nil {
+		if err := s.persist(conn); err != nil {
 			return err
 		}
 	}
@@ -333,14 +335,14 @@ func (s *StreamProjector) releaseProjection(ctx context.Context, conn *sql.Conn)
 	return nil
 }
 
-func (s *StreamProjector) persist(ctx context.Context, conn *sql.Conn) error {
+func (s *StreamProjector) persist(conn *sql.Conn) error {
 	jsonState, err := json.Marshal(s.state)
 	if err != nil {
 		return err
 	}
 
 	_, err = conn.ExecContext(
-		ctx,
+		context.Background(),
 		fmt.Sprintf(
 			`UPDATE %s SET position = $1, state = $2 WHERE name = $3`,
 			pq.QuoteIdentifier(s.projectionTable),

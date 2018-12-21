@@ -310,8 +310,10 @@ func (a *AggregateProjector) handleStream(
 			return err
 		}
 
+		// TODO find a good way to recover when conn go's way here
+
 		// Persist state and position changes
-		if err := a.persist(ctx, conn, aggregateID, projectionInfo); err != nil {
+		if err := a.persist(conn, aggregateID, projectionInfo); err != nil {
 			return err
 		}
 	}
@@ -319,7 +321,7 @@ func (a *AggregateProjector) handleStream(
 	return stream.Err()
 }
 
-func (a *AggregateProjector) persist(ctx context.Context, conn *sql.Conn, aggregateID string, projectionInfo *aggregateProjectorState) error {
+func (a *AggregateProjector) persist(conn *sql.Conn, aggregateID string, projectionInfo *aggregateProjectorState) error {
 	jsonState, err := json.Marshal(projectionInfo.state)
 	if err != nil {
 		return err
@@ -330,7 +332,7 @@ func (a *AggregateProjector) persist(ctx context.Context, conn *sql.Conn, aggreg
 		pq.QuoteIdentifier(a.projectionTable),
 	)
 
-	_, err = conn.ExecContext(ctx, updateQuery, aggregateID, projectionInfo.position, jsonState)
+	_, err = conn.ExecContext(context.Background(), updateQuery, aggregateID, projectionInfo.position, jsonState)
 	if err != nil {
 		return err
 	}
