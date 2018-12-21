@@ -205,7 +205,7 @@ func (s *StreamProjector) project(ctx context.Context, projectConn *sql.Conn, st
 		return err
 	}
 	defer func() {
-		if err := s.releaseProjection(ctx, projectConn); err != nil {
+		if err := s.releaseProjection(projectConn); err != nil {
 			s.logger.WithError(err).Error("failed to release projection")
 		}
 	}()
@@ -312,9 +312,9 @@ func (s *StreamProjector) acquireProjection(ctx context.Context, conn *sql.Conn)
 	return nil
 }
 
-func (s *StreamProjector) releaseProjection(ctx context.Context, conn *sql.Conn) error {
+func (s *StreamProjector) releaseProjection(conn *sql.Conn) error {
 	res := conn.QueryRowContext(
-		ctx,
+		context.Background(),
 		fmt.Sprintf(
 			`SELECT pg_advisory_unlock(%s::regclass::oid::int, no) FROM %s WHERE name = $1`,
 			quoteString(s.projectionTable),

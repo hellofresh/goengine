@@ -237,7 +237,7 @@ func (a *AggregateProjector) projectAggregate(ctx context.Context, streamConn *s
 		return err
 	}
 	defer func() {
-		if err := a.releaseProjection(ctx, projectConn, aggregateID); err != nil {
+		if err := a.releaseProjection(projectConn, aggregateID); err != nil {
 			a.logger.WithError(err).Error("failed to release projection")
 		}
 	}()
@@ -387,9 +387,9 @@ func (a *AggregateProjector) acquireProjection(ctx context.Context, conn *sql.Co
 	}, nil
 }
 
-func (a *AggregateProjector) releaseProjection(ctx context.Context, conn *sql.Conn, aggregateID string) error {
+func (a *AggregateProjector) releaseProjection(conn *sql.Conn, aggregateID string) error {
 	res := conn.QueryRowContext(
-		ctx,
+		context.Background(),
 		fmt.Sprintf(
 			`SELECT pg_advisory_unlock(%s::regclass::oid::int, no) FROM %s WHERE aggregate_id = $1`,
 			quoteString(a.projectionTable),
