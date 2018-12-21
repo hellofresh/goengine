@@ -193,6 +193,11 @@ func (a *AggregateProjector) project(ctx context.Context, projectConn *sql.Conn,
 		if err != nil {
 			return err
 		}
+		defer func() {
+			if err := rows.Close(); err != nil {
+				a.logger.WithError(err).Error("failed to close dirty rows")
+			}
+		}()
 
 		for rows.Next() {
 			// Check if the context is expired
@@ -238,7 +243,10 @@ func (a *AggregateProjector) projectAggregate(ctx context.Context, streamConn *s
 	}
 	defer func() {
 		if err := a.releaseProjection(projectConn, aggregateID); err != nil {
-			a.logger.WithError(err).Error("failed to release projection")
+			a.logger.
+				WithField("projection_aggregate", aggregateID).
+				WithError(err).
+				Error("failed to release projection")
 		}
 	}()
 
@@ -254,7 +262,10 @@ func (a *AggregateProjector) projectAggregate(ctx context.Context, streamConn *s
 
 	if err := a.handleStream(ctx, projectConn, streamName, stream, aggregateID, info); err != nil {
 		if err := stream.Close(); err != nil {
-			a.logger.WithError(err).Warn("failed to close the stream after a handling error occurred")
+			a.logger.
+				WithField("projection_aggregate", aggregateID).
+				WithError(err).
+				Warn("failed to close the stream after a handling error occurred")
 		}
 		return err
 	}
@@ -294,7 +305,10 @@ func (a *AggregateProjector) handleStream(
 		// Resolve the payload event name
 		eventName, err := a.resolver.ResolveName(msg.Payload())
 		if err != nil {
-			a.logger.WithField("payload", msg.Payload()).Debug("skipping event: unable to resolve payload name")
+			a.logger.WithFields(logrus.Fields{
+				"payload":              msg.Payload(),
+				"projection_aggregate": aggregateID,
+			}).Debug("skipping event: unable to resolve payload name")
 			continue
 		}
 
