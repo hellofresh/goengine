@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/lib/pq"
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -29,9 +30,7 @@ func postgresController(t *testing.T) *dbController {
 
 		// Open the connection
 		postgresDB, err := sql.Open("postgres", postgresDSN)
-		if err != nil {
-			t.Fatalf("test.postgres: failed to connect to postgres db: %+v", err)
-		}
+		require.NoError(t, err, "test.postgres: failed to connect to postgres db")
 
 		postgresControl = &dbController{postgresDB}
 	}
@@ -43,9 +42,7 @@ func (c *dbController) Drop(t *testing.T, databaseName string) {
 	c.disableDatabaseAccess(t, databaseName)
 
 	_, err := c.db.Exec(fmt.Sprintf(`DROP DATABASE IF EXISTS "%s"`, databaseName))
-	if err != nil {
-		t.Fatalf("test.postgres: Fail to drop database. %+v", err)
-	}
+	require.NoError(t, err, "test.postgres: Fail to drop database")
 }
 
 func (c *dbController) Create(t *testing.T, databaseName string) {
@@ -57,8 +54,9 @@ func (c *dbController) Create(t *testing.T, databaseName string) {
 			return
 		}
 
-		t.Fatalf("test.postgres: Fail to create database. %+v", err)
+		require.NoError(t, err, "test.postgres: Fail to create database")
 	}
+
 	c.enableDatabaseAccess(t, databaseName)
 }
 
@@ -71,9 +69,7 @@ func (c *dbController) disableDatabaseAccess(t *testing.T, databaseName string) 
 	}
 	// Disallow new connections
 	_, err := c.db.Exec(fmt.Sprintf(`ALTER DATABASE "%s" WITH ALLOW_CONNECTIONS false`, databaseName))
-	if err != nil {
-		t.Fatalf("test.postgres: Unable to disallow connections to the db (%v)", err)
-	}
+	require.NoError(t, err, "test.postgres: Unable to disallow connections to the db")
 
 	// Terminate existing connections
 	row = c.db.QueryRow("SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = $1", databaseName)
@@ -81,9 +77,7 @@ func (c *dbController) disableDatabaseAccess(t *testing.T, databaseName string) 
 
 func (c *dbController) enableDatabaseAccess(t *testing.T, databaseName string) {
 	_, err := c.db.Exec(fmt.Sprintf(`ALTER DATABASE "%s" WITH ALLOW_CONNECTIONS true`, databaseName))
-	if err != nil {
-		t.Fatalf("test.postgres: Unable to allow connections to the db (%v)", err)
-	}
+	require.NoError(t, err, "test.postgres: Unable to allow connections to the db")
 }
 
 var (
@@ -121,9 +115,8 @@ func (s *PostgresSuite) DB() *sql.DB {
 	if s.db == nil {
 		var err error
 		s.db, err = sql.Open("postgres", s.PostgresDSN)
-		if err != nil {
-			s.T().Fatalf("test.postgres: Connection failed: %+v", err)
-		}
+		s.Require().NoError(err, "test.postgres: Connection failed")
+		s.Require().NoError(s.db.Ping(), "test.postgres: Failed to Ping db")
 	}
 
 	return s.db
@@ -158,15 +151,11 @@ func (s *PostgresSuite) TearDownTest() {
 func postgresDSN(t *testing.T) string {
 	// Fetch the postgres dsn from the env var
 	osDSN, exists := os.LookupEnv("POSTGRES_DSN")
-	if !exists {
-		t.Fatalf("test.postgres: missing POSTGRES_DSN enviroment variable")
-	}
+	require.True(t, exists, "test.postgres: missing POSTGRES_DSN enviroment variable")
 
 	// Parse the postgres dsn
 	parsedDSN, err := pq.ParseURL(osDSN)
-	if err != nil {
-		t.Fatalf("test.postgres: failed to parse postgres dsn (%v)\n", err)
-	}
+	require.NoError(t, err, "test.postgres: failed to parse postgres dsn")
 
 	return parsedDSN
 }
