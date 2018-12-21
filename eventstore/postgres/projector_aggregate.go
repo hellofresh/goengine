@@ -310,8 +310,6 @@ func (a *AggregateProjector) handleStream(
 			return err
 		}
 
-		// TODO find a good way to recover when conn go's way here
-
 		// Persist state and position changes
 		if err := a.persist(conn, aggregateID, projectionInfo); err != nil {
 			return err
@@ -355,29 +353,58 @@ func (a *AggregateProjector) acquireProjection(ctx context.Context, conn *sql.Co
 		  )
 		  RETURNING *
 		)
-		SELECT pg_try_advisory_lock(%[2]s::regclass::oid::int, no), position, state FROM new_projection
+		SELECT pg_try_advisory_lock(%[2]s::regclass::oid::int, no), locked, position, state FROM new_projection
 		UNION
-		SELECT pg_try_advisory_lock(%[2]s::regclass::oid::int, no), position, state FROM  %[1]s WHERE aggregate_id = $1`,
+		SELECT pg_try_advisory_lock(%[2]s::regclass::oid::int, no), locked, position, state FROM %[1]s WHERE aggregate_id = $1`,
 		pq.QuoteIdentifier(a.projectionTable),
 		quoteString(a.projectionTable),
 	)
 	res := conn.QueryRowContext(ctx, acquireLockQuery, aggregateID)
 
 	var (
-		locked    bool
-		jsonState []byte
-		position  int64
+		acquiredLock bool
+		locked       bool
+		jsonState    []byte
+		position     int64
 	)
-	if err := res.Scan(&locked, &position, &jsonState); err != nil {
+	if err := res.Scan(&acquiredLock, &locked, &position, &jsonState); err != nil {
 		return nil, err
 	}
 
-	if !locked {
+	if !acquiredLock {
 		return nil, ErrProjectionFailedToLock
+	}
+
+	if locked {
+		// The projection was locked by another process that died and for this reason not unlocked
+		// In this case a application needs to decide what to do to avoid invalid projection states
+		if err := a.releaseProjectionConnectionLock(conn, aggregateID); err != nil {
+			a.logger.WithError(err).Error("failed to release lock for a projection with a locked row")
+		}
+
+		return nil, ErrProjectionPreviouslyLocked
+	}
+
+	// Set the projection as row locked
+	_, err := conn.ExecContext(
+		ctx,
+		fmt.Sprintf(`UPDATE ONLY %[1]s SET locked = TRUE WHERE aggregate_id = $1`, pq.QuoteIdentifier(a.projectionTable)),
+		aggregateID,
+	)
+	if err != nil {
+		if err := a.releaseProjection(conn, aggregateID); err != nil {
+			a.logger.WithError(err).Error("failed to release lock while setting projection rows as locked")
+		}
+
+		return nil, err
 	}
 
 	state, err := a.projection.ReconstituteState(jsonState)
 	if err != nil {
+		if err := a.releaseProjection(conn, aggregateID); err != nil {
+			a.logger.WithError(err).Error("failed to release lock after ReconstituteState failure")
+		}
+
 		return nil, err
 	}
 
@@ -388,6 +415,30 @@ func (a *AggregateProjector) acquireProjection(ctx context.Context, conn *sql.Co
 }
 
 func (a *AggregateProjector) releaseProjection(conn *sql.Conn, aggregateID string) error {
+	res := conn.QueryRowContext(
+		context.Background(),
+		fmt.Sprintf(
+			`UPDATE ONLY %[2]s SET locked = FALSE WHERE aggregate_id = $1 
+			 RETURNING pg_advisory_unlock(%[1]s::regclass::oid::int, no)`,
+			quoteString(a.projectionTable),
+			pq.QuoteIdentifier(a.projectionTable),
+		),
+		aggregateID,
+	)
+
+	var unlocked bool
+	if err := res.Scan(&unlocked); err != nil {
+		return err
+	}
+
+	if !unlocked {
+		return errors.New("failed to release projection lock")
+	}
+
+	return nil
+}
+
+func (a *AggregateProjector) releaseProjectionConnectionLock(conn *sql.Conn, aggregateID string) error {
 	res := conn.QueryRowContext(
 		context.Background(),
 		fmt.Sprintf(

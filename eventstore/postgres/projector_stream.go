@@ -19,6 +19,8 @@ import (
 var (
 	// ErrProjectionFailedToLock occurs when the projector cannot acquire the projection lock
 	ErrProjectionFailedToLock = errors.New("unable to acquire projection lock")
+	// ErrProjectionPreviouslyLocked occurs when a projection was lock was acquired but a previous lock is still in place
+	ErrProjectionPreviouslyLocked = errors.New("unable to lock projection due to a previous lock being in place")
 	// ErrNoEventStore occurs when no event store is provided
 	ErrNoEventStore = errors.New("no event store provided")
 	// ErrNoPayloadResolver occurs when no payload resolver is provided
@@ -160,7 +162,7 @@ func (s *StreamProjector) Reset(ctx context.Context) error {
 			return err
 		}
 		defer func() {
-			if err := s.releaseProjection(conn); err != nil {
+			if err := s.releaseProjectionLock(conn); err != nil {
 				s.logger.WithError(err).Error("failed to release projection")
 			}
 		}()
@@ -214,7 +216,7 @@ func (s *StreamProjector) project(ctx context.Context, projectConn *sql.Conn, st
 		return err
 	}
 	defer func() {
-		if err := s.releaseProjection(projectConn); err != nil {
+		if err := s.releaseProjectionLock(projectConn); err != nil {
 			s.logger.WithError(err).Error("failed to release projection")
 		}
 	}()
@@ -276,8 +278,6 @@ func (s *StreamProjector) handleStream(ctx context.Context, conn *sql.Conn, stre
 			return err
 		}
 
-		// TODO find a good way to recover when conn go's way here
-
 		// Persist state and position changes
 		if err := s.persist(conn); err != nil {
 			return err
@@ -291,7 +291,7 @@ func (s *StreamProjector) acquireProjection(ctx context.Context, conn *sql.Conn)
 	res := conn.QueryRowContext(
 		ctx,
 		fmt.Sprintf(
-			`SELECT pg_try_advisory_lock(%s::regclass::oid::int, no), position, state FROM %s WHERE name = $1`,
+			`SELECT pg_try_advisory_lock(%s::regclass::oid::int, no), locked, position, state FROM %s WHERE name = $1`,
 			quoteString(s.projectionTable),
 			pq.QuoteIdentifier(s.projectionTable),
 		),
@@ -299,21 +299,49 @@ func (s *StreamProjector) acquireProjection(ctx context.Context, conn *sql.Conn)
 	)
 
 	var (
-		locked    bool
-		jsonState []byte
-		position  int64
+		acquiredLock bool
+		locked       bool
+		jsonState    []byte
+		position     int64
 	)
-	if err := res.Scan(&locked, &position, &jsonState); err != nil {
+	if err := res.Scan(&acquiredLock, &locked, &position, &jsonState); err != nil {
 		return err
 	}
 
-	if !locked {
+	if !acquiredLock {
 		return ErrProjectionFailedToLock
 	}
 
-	var err error
+	if locked {
+		// The projection was locked by another process that died and for this reason not unlocked
+		// In this case a application needs to decide what to do to avoid invalid projection states
+		if err := s.releaseProjectionConnectionLock(conn); err != nil {
+			s.logger.WithError(err).Error("failed to release lock for a projection with a locked row")
+		}
+
+		return ErrProjectionPreviouslyLocked
+	}
+
+	// Set the projection as row locked
+	_, err := conn.ExecContext(
+		ctx,
+		fmt.Sprintf(`UPDATE ONLY %[1]s SET locked = TRUE WHERE name = $1`, pq.QuoteIdentifier(s.projectionTable)),
+		s.projection.Name(),
+	)
+	if err != nil {
+		if err := s.releaseProjectionLock(conn); err != nil {
+			s.logger.WithError(err).Error("failed to release lock while setting projection row as locked")
+		}
+
+		return err
+	}
+
 	s.state, err = s.projection.ReconstituteState(jsonState)
 	if err != nil {
+		if err := s.releaseProjectionLock(conn); err != nil {
+			s.logger.WithError(err).Error("failed to release lock after ReconstituteState failure")
+		}
+
 		return err
 	}
 	s.position = position
@@ -321,7 +349,31 @@ func (s *StreamProjector) acquireProjection(ctx context.Context, conn *sql.Conn)
 	return nil
 }
 
-func (s *StreamProjector) releaseProjection(conn *sql.Conn) error {
+func (s *StreamProjector) releaseProjectionLock(conn *sql.Conn) error {
+	res := conn.QueryRowContext(
+		context.Background(),
+		fmt.Sprintf(
+			`UPDATE ONLY %[2]s SET locked = FALSE WHERE name = $1 
+			 RETURNING pg_advisory_unlock(%[1]s::regclass::oid::int, no)`,
+			quoteString(s.projectionTable),
+			pq.QuoteIdentifier(s.projectionTable),
+		),
+		s.projection.Name(),
+	)
+
+	var unlocked bool
+	if err := res.Scan(&unlocked); err != nil {
+		return err
+	}
+
+	if !unlocked {
+		return errors.New("failed to release projection lock")
+	}
+
+	return nil
+}
+
+func (s *StreamProjector) releaseProjectionConnectionLock(conn *sql.Conn) error {
 	res := conn.QueryRowContext(
 		context.Background(),
 		fmt.Sprintf(
@@ -338,7 +390,7 @@ func (s *StreamProjector) releaseProjection(conn *sql.Conn) error {
 	}
 
 	if !unlocked {
-		return errors.New("failed to release projection lock")
+		return errors.New("failed to release projection connection lock")
 	}
 
 	return nil

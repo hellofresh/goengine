@@ -64,11 +64,11 @@ func StreamProjectorCreateSchema(projectionTable string, streamName eventstore.S
 		fmt.Sprintf(
 			`CREATE TABLE IF NOT EXISTS %s (
 				no SERIAL,
-				name VARCHAR(150) NOT NULL,
+				name VARCHAR(150) UNIQUE NOT NULL,
 				position BIGINT NOT NULL DEFAULT 0,
 				state JSONB NOT NULL DEFAULT ('{}'),
-				PRIMARY KEY (no),
-				UNIQUE (name)
+				locked BOOLEAN NOT NULL DEFAULT (FALSE), 
+				PRIMARY KEY (no)
 			)`,
 			pq.QuoteIdentifier(projectionTable),
 		),
@@ -87,6 +87,7 @@ func AggregateProjectorCreateSchema(projectionTable string, streamName eventstor
 				aggregate_id UUID UNIQUE NOT NULL,
 				position BIGINT NOT NULL DEFAULT 0,
   				state JSONB,
+				locked BOOLEAN NOT NULL DEFAULT (FALSE),
   				PRIMARY KEY (no)
 			)`,
 			pq.QuoteIdentifier(projectionTable),
