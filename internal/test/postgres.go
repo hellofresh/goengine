@@ -3,11 +3,14 @@
 package test
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"os"
 	"regexp"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/lib/pq"
 	"github.com/stretchr/testify/require"
@@ -80,6 +83,8 @@ func (c *dbController) enableDatabaseAccess(t *testing.T, databaseName string) {
 	require.NoError(t, err, "test.postgres: Unable to allow connections to the db")
 }
 
+const postgressAppName = "goengine_dev_tests"
+
 var (
 	_ suite.SetupTestSuite    = &PostgresSuite{}
 	_ suite.TearDownTestSuite = &PostgresSuite{}
@@ -135,6 +140,42 @@ func (s *PostgresSuite) DBTableExists(tableName string) bool {
 	return exists
 }
 
+// DBQueryIsRunningWithTimeout Check if a query matching the regex is currently running
+func (s *PostgresSuite) DBQueryIsRunningWithTimeout(queryRegex *regexp.Regexp, timeout time.Duration) (bool, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	for {
+		res, err := s.DB().QueryContext(
+			ctx,
+			`SELECT query FROM pg_stat_activity WHERE datname = $1 AND application_name=$2`,
+			s.dbName,
+			postgressAppName,
+		)
+		if err != nil {
+			return false, err
+		}
+
+		for res.Next() {
+			var query string
+			if err := res.Scan(&query); err != nil {
+				return false, err
+			}
+
+			if queryRegex.MatchString(query) {
+				return true, nil
+			}
+		}
+
+		select {
+		case <-ctx.Done():
+			return false, nil
+		default:
+			time.Sleep(50 * time.Millisecond)
+		}
+	}
+}
+
 // TearDownTest drops the database create by SetupTest
 func (s *PostgresSuite) TearDownTest() {
 	if err := s.db.Close(); err != nil {
@@ -156,6 +197,14 @@ func postgresDSN(t *testing.T) string {
 	// Parse the postgres dsn
 	parsedDSN, err := pq.ParseURL(osDSN)
 	require.NoError(t, err, "test.postgres: failed to parse postgres dsn")
+
+	// Set the connection application name
+	if strings.Contains(parsedDSN, "application_name") {
+		parsedDSN = regexp.MustCompile("application_name=([^ ]|$)*").
+			ReplaceAllString(parsedDSN, "application_name="+postgressAppName)
+	} else {
+		parsedDSN += " application_name=" + postgressAppName
+	}
 
 	return parsedDSN
 }

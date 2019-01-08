@@ -5,6 +5,7 @@ package postgres_test
 import (
 	"context"
 	"database/sql"
+	"regexp"
 	"runtime"
 	"sync"
 	"testing"
@@ -97,6 +98,14 @@ func (s *streamProjectorTestSuite) TestRun() {
 
 	// Let the go routines start
 	runtime.Gosched()
+
+	// Ensure the projector is listening
+	projectorIsListening, err := s.DBQueryIsRunningWithTimeout(regexp.MustCompile("LISTEN .*"), 5*time.Second)
+	s.Require().NoError(err)
+	s.Require().True(
+		projectorIsListening,
+		"expect projection to Listen for notifications",
+	)
 
 	// Add events to the event stream
 	aggregateIds := []aggregate.ID{
