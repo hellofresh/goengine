@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -11,7 +12,8 @@ import (
 type Suite struct {
 	suite.Suite
 
-	Logger *logrus.Logger
+	Logger     *logrus.Logger
+	LoggerHook *test.Hook
 }
 
 // SetupTest set logrus output to use the current testing.T
@@ -19,6 +21,8 @@ func (s *Suite) SetupTest() {
 	s.Logger = logrus.New()
 	s.Logger.SetLevel(logrus.DebugLevel)
 	s.Logger.SetOutput(NewLogWriter(s.T()))
+
+	s.LoggerHook = test.NewLocal(s.Logger)
 }
 
 // TearDownTest cleanup suite variables
@@ -44,4 +48,17 @@ func (s *Suite) Run(name string, f func()) bool {
 
 		f()
 	})
+}
+
+// AssertNoLogsWithLevelOrHigher check that there are now log entries witch or of the given level or higher
+// For example `AssertNoLogsWithLevelOrHigher(logrus.ErrorLevel)` will assert that no log entries with level error, fatal or panic where recorded.
+func (s *Suite) AssertNoLogsWithLevelOrHigher(lvl logrus.Level) {
+	assert := s.Assert()
+	for _, logEntry := range s.LoggerHook.AllEntries() {
+		assert.False(
+			logEntry.Level <= lvl,
+			"No error level log was expected but got: %s",
+			logEntry.Message,
+		)
+	}
 }

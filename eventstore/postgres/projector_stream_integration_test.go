@@ -13,6 +13,7 @@ import (
 
 	"github.com/hellofresh/goengine/aggregate"
 	"github.com/hellofresh/goengine/eventstore/postgres"
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 )
@@ -147,6 +148,8 @@ func (s *streamProjectorTestSuite) TestRun() {
 
 		s.expectProjectionState("deposited_report", 8, `{"Total": 7, "TotalAmount": 317}`)
 	})
+
+	s.AssertNoLogsWithLevelOrHigher(logrus.ErrorLevel)
 }
 
 func (s *streamProjectorTestSuite) TestRun_Once() {
@@ -205,6 +208,8 @@ func (s *streamProjectorTestSuite) TestRun_Once() {
 			s.expectProjectionState("deposited_report", 8, `{"Total": 7, "TotalAmount": 317}`)
 		})
 	})
+
+	s.AssertNoLogsWithLevelOrHigher(logrus.ErrorLevel)
 }
 
 func (s *streamProjectorTestSuite) TestDelete() {
@@ -236,6 +241,8 @@ func (s *streamProjectorTestSuite) TestDelete() {
 	row = s.DB().QueryRow(`SELECT EXISTS(SELECT 1 FROM projections WHERE name = $1)`, projection.Name())
 	s.Require().NoError(row.Scan(&projectionExists))
 	s.Require().False(projectionExists)
+
+	s.AssertNoLogsWithLevelOrHigher(logrus.ErrorLevel)
 }
 
 func (s *streamProjectorTestSuite) expectProjectionState(name string, expectedPosition int64, expectedState string) {

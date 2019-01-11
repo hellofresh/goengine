@@ -12,6 +12,7 @@ import (
 
 	"github.com/hellofresh/goengine/aggregate"
 	"github.com/hellofresh/goengine/eventstore/postgres"
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 )
@@ -178,6 +179,8 @@ func (s *aggregateProjectorTestSuite) TestRun() {
 			},
 		})
 	})
+
+	s.AssertNoLogsWithLevelOrHigher(logrus.ErrorLevel)
 }
 
 func (s *aggregateProjectorTestSuite) TestRun_Once() {
@@ -253,6 +256,8 @@ func (s *aggregateProjectorTestSuite) TestRun_Once() {
 			})
 		})
 	})
+
+	s.AssertNoLogsWithLevelOrHigher(logrus.ErrorLevel)
 }
 
 func (s *aggregateProjectorTestSuite) TestReset() {
@@ -297,6 +302,8 @@ func (s *aggregateProjectorTestSuite) TestReset() {
 	err = s.DB().QueryRow(`SELECT COUNT(*) FROM agg_projections`).Scan(&rowCount)
 	s.Require().NoError(err)
 	s.Require().Equal(0, rowCount)
+
+	s.AssertNoLogsWithLevelOrHigher(logrus.ErrorLevel)
 }
 
 func (s *aggregateProjectorTestSuite) TestDelete() {
@@ -319,8 +326,9 @@ func (s *aggregateProjectorTestSuite) TestDelete() {
 	// Remove projection
 	err = projector.Delete(context.Background())
 	s.Require().NoError(err)
-
 	s.Require().False(s.DBTableExists("agg_projections"), "expected projection table to be removed")
+
+	s.AssertNoLogsWithLevelOrHigher(logrus.ErrorLevel)
 }
 
 func (s *aggregateProjectorTestSuite) assertAggregateProjectionStates(expectedProjections map[aggregate.ID]projectionInfo) {
