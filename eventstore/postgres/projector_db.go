@@ -188,15 +188,11 @@ func (s *projectorDB) listenerNotificationCallback(ctx context.Context, trigger 
 	}
 
 	// Unmarshal the notification
-	notification, err := s.unmarshalNotification(n)
-	if err != nil {
-		logger.WithError(err).Warn("invalid notification")
-	} else {
-		logger.WithField("data", notification).Debug("received notification")
-	}
+	notification := s.unmarshalNotification(n)
 
 	// Trigger the projection
 	// TODO add sync support
+	logger = logger.WithField("notification", notification)
 	if err := s.Trigger(ctx, trigger, notification); err != nil {
 		if errors.Cause(err) == ErrProjectionFailedToLock {
 			logger.WithError(err).Info("ignoring notification: the projection is already locked")
@@ -235,19 +231,29 @@ func (s *projectorDB) listenerStateCallback(event pq.ListenerEventType, err erro
 }
 
 // unmarshalNotification takes a postgres notification and unmarshal it into a eventStoreNotification
-func (*projectorDB) unmarshalNotification(n *pq.Notification) (*eventStoreNotification, error) {
+func (s *projectorDB) unmarshalNotification(n *pq.Notification) (notification *eventStoreNotification) {
 	if n == nil {
-		return nil, errors.New("nil notification")
+		s.logger.Info("received nil notification")
+		return
 	}
 
+	logger := s.logger.WithFields(logrus.Fields{
+		"notification_channel":    n.Channel,
+		"notification_data":       n.Extra,
+		"notification_process_id": n.BePid,
+	})
 	if n.Extra == "" {
-		return nil, errors.New("no notification data")
+		logger.Error("received notification without extra data")
+		return
 	}
 
-	var notification *eventStoreNotification
+	notification = &eventStoreNotification{}
 	if err := json.Unmarshal([]byte(n.Extra), notification); err != nil {
-		return nil, errors.Wrap(err, "invalid notification data")
+		logger.WithError(err).Error("received invalid notification data")
+		return nil
 	}
 
-	return notification, nil
+	logger.WithField("notification", notification).Debug("received notification")
+
+	return notification
 }
