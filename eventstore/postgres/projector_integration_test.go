@@ -80,14 +80,6 @@ func (p *DepositedProjection) ReconstituteState(data []byte) (interface{}, error
 	return state, nil
 }
 
-func (p *DepositedProjection) Reset(ctx context.Context) error {
-	return nil
-}
-
-func (p *DepositedProjection) Delete(ctx context.Context) error {
-	return nil
-}
-
 type projectorSuite struct {
 	test.PostgresSuite
 

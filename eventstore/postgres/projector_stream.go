@@ -152,59 +152,6 @@ func (s *StreamProjector) Run(ctx context.Context, keepRunning bool) error {
 	return s.projectorDB.Listen(ctx, s.project)
 }
 
-// Reset trigger a reset of the projection and the projections state
-func (s *StreamProjector) Reset(ctx context.Context) error {
-	s.Lock()
-	defer s.Unlock()
-
-	return s.projectorDB.Exec(ctx, func(ctx context.Context, conn *sql.Conn) error {
-		if err := s.acquireProjection(ctx, conn); err != nil {
-			return err
-		}
-		defer func() {
-			if err := s.releaseProjectionLock(conn); err != nil {
-				s.logger.WithError(err).Error("failed to release projection")
-			}
-		}()
-
-		if err := s.projection.Reset(ctx); err != nil {
-			return err
-		}
-
-		s.position = 0
-		s.state = nil
-
-		return s.persist(conn)
-	})
-}
-
-// Delete removes the projection and the projections state
-func (s *StreamProjector) Delete(ctx context.Context) error {
-	s.Lock()
-	defer s.Unlock()
-
-	return s.projectorDB.Exec(ctx, func(ctx context.Context, conn *sql.Conn) error {
-		if err := s.projection.Delete(ctx); err != nil {
-			return err
-		}
-
-		_, err := conn.ExecContext(
-			ctx,
-			fmt.Sprintf(
-				`DELETE FROM %s WHERE name = $1`,
-				pq.QuoteIdentifier(s.projectionTable),
-			),
-			s.projection.Name(),
-		)
-
-		if err != nil {
-			return err
-		}
-
-		return nil
-	})
-}
-
 func (s *StreamProjector) project(ctx context.Context, projectConn *sql.Conn, streamConn *sql.Conn, notification *eventStoreNotification) error {
 	if notification != nil && notification.No <= s.position {
 		// The current position is a head of the notification so ignore

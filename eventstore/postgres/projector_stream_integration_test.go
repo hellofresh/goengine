@@ -212,39 +212,6 @@ func (s *streamProjectorTestSuite) TestRun_Once() {
 	s.AssertNoLogsWithLevelOrHigher(logrus.ErrorLevel)
 }
 
-func (s *streamProjectorTestSuite) TestDelete() {
-	var projectionExists bool
-
-	projection := &DepositedProjection{}
-	projector, err := postgres.NewStreamProjector(
-		s.PostgresDSN,
-		s.eventStore,
-		s.payloadTransformer,
-		projection,
-		"projections",
-		s.Logger,
-	)
-	s.Require().NoError(err, "failed to create projector")
-
-	// Run the projection to ensure it exists
-	err = projector.Run(context.Background(), false)
-	s.Require().NoError(err, "failed to run projector")
-
-	row := s.DB().QueryRow(`SELECT EXISTS(SELECT 1 FROM projections WHERE name = $1)`, projection.Name())
-	s.Require().NoError(row.Scan(&projectionExists))
-	s.Require().True(projectionExists, "projector.Run failed to create projection entry")
-
-	// Remove projection
-	err = projector.Delete(context.Background())
-	s.Require().NoError(err)
-
-	row = s.DB().QueryRow(`SELECT EXISTS(SELECT 1 FROM projections WHERE name = $1)`, projection.Name())
-	s.Require().NoError(row.Scan(&projectionExists))
-	s.Require().False(projectionExists)
-
-	s.AssertNoLogsWithLevelOrHigher(logrus.ErrorLevel)
-}
-
 func (s *streamProjectorTestSuite) expectProjectionState(name string, expectedPosition int64, expectedState string) {
 	stmt, err := s.DB().Prepare(`SELECT position, state FROM projections WHERE name = $1`)
 	s.Require().NoError(err)

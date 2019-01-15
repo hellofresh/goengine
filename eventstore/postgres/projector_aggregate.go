@@ -135,45 +135,6 @@ func (a *AggregateProjector) Run(ctx context.Context, keepRunning bool) error {
 	return a.projectorDB.Listen(ctx, a.project)
 }
 
-// Reset trigger a reset of all aggregate projections
-func (a *AggregateProjector) Reset(ctx context.Context) error {
-	a.Lock()
-	defer a.Unlock()
-
-	return a.projectorDB.Exec(ctx, func(ctx context.Context, conn *sql.Conn) error {
-		if err := a.projection.Reset(ctx); err != nil {
-			return err
-		}
-
-		// TODO fix possible locking issue by acquiring advisory locks for each row and then removing them.
-		_, err := conn.ExecContext(ctx, fmt.Sprintf(
-			`TRUNCATE TABLE %s`,
-			pq.QuoteIdentifier(a.projectionTable),
-		))
-
-		return err
-	})
-}
-
-// Delete removes the projection
-func (a *AggregateProjector) Delete(ctx context.Context) error {
-	a.Lock()
-	defer a.Unlock()
-
-	return a.projectorDB.Exec(ctx, func(ctx context.Context, conn *sql.Conn) error {
-		if err := a.projection.Delete(ctx); err != nil {
-			return err
-		}
-
-		_, err := conn.ExecContext(ctx, fmt.Sprintf(
-			`DROP TABLE %s`,
-			pq.QuoteIdentifier(a.projectionTable),
-		))
-
-		return err
-	})
-}
-
 func (a *AggregateProjector) project(ctx context.Context, projectConn *sql.Conn, streamConn *sql.Conn, notification *eventStoreNotification) error {
 	if notification == nil {
 		// Time to play catchup and check everything
