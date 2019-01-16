@@ -206,6 +206,9 @@ func postgresDSN(t *testing.T) string {
 		parsedDSN += " application_name=" + postgressAppName
 	}
 
+	parsedDSN = regexp.MustCompile(`dbname=((?:(\\ )|[^ ])+)`).
+		ReplaceAllString(parsedDSN, fmt.Sprintf("dbname=${1}-%d", time.Now().UnixNano()))
+
 	return parsedDSN
 }
 
