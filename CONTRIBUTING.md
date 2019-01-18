@@ -1,71 +1,66 @@
-# Request for contributions
+# Contributing to GoEngine
 
-Please contribute to this repository if any of the following is true:
-- You have expertise in community development, communication, or education
-- You want open source communities to be more collaborative and inclusive
-- You want to help lower the burden to first time contributors
+:+1::tada: First off, thanks for taking the time to contribute! :tada::+1:
 
-# How to contribute
+The following is a set of guidelines for contributing to GoEngine and its packages, 
+which are hosted in the [HelloFresh Organization](https://github.com/hellofresh) on GitHub.
+These are just guidelines, not rules. Use your best judgment, and feel free to propose changes 
+to this document in a pull request.
 
-Prerequisites:
+## Code of Conduct
 
-- familiarity with [GitHub PRs](https://help.github.com/articles/using-pull-requests) (pull requests) and issues
-- knowledge of Markdown for editing `.md` documents
+This project adheres to the Contributor Covenant [code of conduct](CODE_OF_CONDUCT.md).
+By participating, you are expected to uphold this code.
+Please report unacceptable behavior to [engineering@hellofresh.com](mailto:engineering@hellofresh.com).
 
-In particular, this community seeks the following types of contributions:
+We accept contributions via Pull Requests on [Github](https://github.com/hellofresh/goengine).
 
-- ideas: participate in an Issues thread or start your own to have your voice
-heard
-- resources: submit a PR to add to [docs README.md](README.md) with links to related content
-- outline sections: help us ensure that this repository is comprehensive. if
-there is a topic that is overlooked, please add it, even if it is just a stub
-in the form of a header and single sentence. Initially, most things fall into
-this category
-- write: contribute your expertise in an area by helping us expand the included
-content
-- copy editing: fix typos, clarify language, and generally improve the quality
-of the content
-- formatting: help keep content easy to read with consistent formatting
-- code: Fix issues or contribute new features to this or any related projects
+## How Can I Contribute?
 
-# Conduct
+### Reporting Bugs
 
-We are committed to providing a friendly, safe and welcoming environment for
-all, regardless of gender, sexual orientation, disability, ethnicity, religion,
-or similar personal characteristic.
+This section guides you through submitting a bug report for GoEngine. Following these guidelines helps maintainers 
+and the community understand your report :pencil:, reproduce the behavior :computer: :computer:, and find related 
+reports :mag_right:.
 
-Please be kind and courteous. There's no need to be mean or rude.
-Respect that people have differences of opinion and that every design or
-implementation choice carries a trade-off and numerous costs. There is seldom
-a right answer, merely an optimal answer given a set of values and
-circumstances.
+Before creating bug reports, please check if the bug was already reported before as you might find out that you don't 
+need to create one. When you are creating a bug report, please [include as many details as possible](#how-do-i-submit-a-good-bug-report). 
 
-Please keep unstructured critique to a minimum. If you have solid ideas you
-want to experiment with, make a fork and see how it works.
+#### How Do I Submit A (Good) Bug Report?
 
-We will exclude you from interaction if you insult, demean or harass anyone.
-That is not welcome behavior. We interpret the term "harassment" as
-including the definition in the
-[Citizen Code of Conduct](http://citizencodeofconduct.org/);
-if you have any lack of clarity about what might be included in that concept,
-please read their definition. In particular, we don't tolerate behavior that
-excludes people in socially marginalized groups.
+Bugs are tracked as [GitHub issues](https://guides.github.com/features/issues/). Create an issue on provide the following information.
 
-Private harassment is also unacceptable. No matter who you are, if you feel
-you have been or are being harassed or made uncomfortable by a community
-member, please contact one of the
-[hellofresh](https://github.com/orgs/hellofresh/people) core team
-immediately. Whether you're a regular contributor or a newcomer, we care about
-making this community a safe place for you and we've got your back.
+Explain the problem and include additional details to help maintainers reproduce the problem:
 
-Likewise any spamming, trolling, flaming, baiting or other attention-stealing
-behavior is not welcome.
+* **Use a clear and descriptive title** for the issue to identify the problem.
+* **Describe the exact steps which reproduce the problem** in as many details as possible. For example, start by explaining how you started GoEngine, 
+e.g. which command exactly you used in the terminal. When listing steps, **don't just say what you did, but explain how you did it**.
+* **Provide specific examples to demonstrate the steps**. Include links to files or GitHub projects, or copy/pasteable snippets, which you use in those examples. 
+If you're providing snippets in the issue, use [Markdown code blocks](https://help.github.com/articles/markdown-basics/#multiple-lines).
+* **Describe the behavior you observed after following the steps** and point out what exactly is the problem with that behavior.
+* **Explain which behavior you expected to see instead and why.**
 
-# Communication
+Include details about your configuration and environment:
 
-GitHub issues are the primary way for communicating about specific proposed
-changes to this project.
+* **Which version of GoEngine are you using?**
+* **What's the name and version of the OS you're using**?
 
-In both contexts, please follow the conduct guidelines above. Language issues
-are often contentious and we'd like to keep discussion brief, civil and focused
-on what we're actually doing, not wandering off into too much imaginary stuff.
+### Your First Code Contribution
+
+Unsure where to begin contributing to GoEngine? You can start by looking through these `beginner` and `help-wanted` issues:
+
+* [Beginner issues][beginner] - issues which should only require a few lines of code, and a test or two.
+* [Help wanted issues][help-wanted] - issues which should be a bit more involved than `beginner` issues.
+
+Both issue lists are sorted by total number of comments. While not perfect, number of comments is a reasonable proxy for impact a given change will have.
+
+### Pull Requests
+
+* Include screenshots and animated GIFs in your pull request whenever possible.
+* Follow the [Go](https://github.com/golang/go/wiki/CodeReviewComments) styleguides.
+* Include thoughtfully-worded, well-structured tests.
+* Document new code
+* End files with a newline.
+
+
+Happy Coding from the HelloFresh Engineering team!
