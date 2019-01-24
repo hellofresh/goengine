@@ -125,7 +125,7 @@ func (s *streamProjectionStorage) Acquire(ctx context.Context, conn *sql.Conn, n
 		if err := s.releaseProjectionLock(conn); err != nil {
 			logger.WithError(err).Error("failed to release lock while setting projection row as locked")
 		} else {
-			logger.WithError(err).Debug("failed to set projection as locked")
+			logger.Debug("failed to set projection as locked")
 		}
 
 		return nil, nil, err

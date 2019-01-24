@@ -243,7 +243,6 @@ func (e *EventStore) AppendTo(ctx context.Context, streamName eventstore.StreamN
 			"streamName":   streamName,
 			"streamEvents": streamEvents,
 		}).
-		WithError(err).
 		Debug("inserted messages into the event stream")
 
 	return nil

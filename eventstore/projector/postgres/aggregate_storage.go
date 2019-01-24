@@ -161,7 +161,7 @@ func (a *aggregateProjectionStorage) Acquire(ctx context.Context, conn *sql.Conn
 		if err := a.releaseProjection(conn, aggregateID); err != nil {
 			logger.WithError(err).Error("failed to release lock while setting projection rows as locked")
 		} else {
-			logger.WithError(err).Debug("failed to set projection as locked")
+			logger.Debug("failed to set projection as locked")
 		}
 
 		return nil, nil, err
@@ -172,7 +172,7 @@ func (a *aggregateProjectionStorage) Acquire(ctx context.Context, conn *sql.Conn
 		if err := a.releaseProjection(conn, aggregateID); err != nil {
 			logger.WithError(err).Error("failed to release projection lock")
 		} else {
-			logger.WithError(err).Debug("released projection lock")
+			logger.Debug("released projection lock")
 		}
 	}, &internal.AcquiredState{ProjectionState: jsonState, Position: position}, nil
 }
