@@ -10,7 +10,7 @@ import (
 
 	"github.com/hellofresh/goengine/eventstore"
 	eventstorejson "github.com/hellofresh/goengine/eventstore/json"
-	"github.com/hellofresh/goengine/eventstore/postgres"
+	postgres "github.com/hellofresh/goengine/eventstore/postgres"
 	eventstoresql "github.com/hellofresh/goengine/eventstore/sql"
 	"github.com/hellofresh/goengine/internal/test"
 	"github.com/hellofresh/goengine/messaging"

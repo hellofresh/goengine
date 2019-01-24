@@ -34,7 +34,7 @@ var (
 	// Ensure that we satisfy the eventstore.EventStore interface
 	_ eventstore.EventStore = &EventStore{}
 	// Ensure that we satisfy the ReadOnlyEventStore interface
-	_ ReadOnlyEventStore = &EventStore{}
+	_ eventstoreSQL.ReadOnlyEventStore = &EventStore{}
 )
 
 type (

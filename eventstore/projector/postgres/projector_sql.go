@@ -88,6 +88,7 @@ func AggregateProjectorCreateSchema(projectionTable string, streamName eventstor
 				position BIGINT NOT NULL DEFAULT 0,
   				state JSONB,
 				locked BOOLEAN NOT NULL DEFAULT (FALSE),
+				failed BOOLEAN NOT NULL DEFAULT (FALSE),
   				PRIMARY KEY (no)
 			)`,
 			pq.QuoteIdentifier(projectionTable),

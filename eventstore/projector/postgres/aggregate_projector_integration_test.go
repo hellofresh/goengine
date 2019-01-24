@@ -11,7 +11,8 @@ import (
 	"time"
 
 	"github.com/hellofresh/goengine/aggregate"
-	"github.com/hellofresh/goengine/eventstore/postgres"
+	"github.com/hellofresh/goengine/eventstore/projector"
+	"github.com/hellofresh/goengine/eventstore/projector/postgres"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
@@ -54,7 +55,7 @@ func (s *aggregateProjectorTestSuite) SetupTest() {
 	)
 }
 
-func (s *aggregateProjectorTestSuite) TestRun() {
+func (s *aggregateProjectorTestSuite) TestRunAndListen() {
 	var wg sync.WaitGroup
 	defer func() {
 		if s.waitTimeout(&wg, 5*time.Second) {
@@ -65,14 +66,18 @@ func (s *aggregateProjectorTestSuite) TestRun() {
 	projectorCtx, projectorCancel := context.WithCancel(context.Background())
 	defer projectorCancel()
 
-	projector, err := postgres.NewAggregateProjector(
+	project, err := postgres.NewAggregateProjector(
 		s.PostgresDSN,
+		nil,
 		s.eventStore,
 		s.eventStoreTable,
 		s.payloadTransformer,
 		accountAggregateTypeName,
 		&DepositedProjection{},
 		"agg_projections",
+		func(error, *projector.Notification) projector.ErrorAction {
+			return projector.ProjectionFail
+		},
 		s.Logger,
 	)
 	s.Require().NoError(err, "failed to create projector")
@@ -80,8 +85,8 @@ func (s *aggregateProjectorTestSuite) TestRun() {
 	// Run the projector in the background
 	wg.Add(1)
 	go func() {
-		if err := projector.Run(projectorCtx, true); err != nil {
-			assert.NoError(s.T(), err, "projector.Run returned an error")
+		if err := project.RunAndListen(projectorCtx); err != nil {
+			assert.NoError(s.T(), err, "project.Run returned an error")
 		}
 		wg.Done()
 	}()
@@ -89,8 +94,8 @@ func (s *aggregateProjectorTestSuite) TestRun() {
 	// Be evil and start run the projection again to ensure mutex is used and the context is respected
 	wg.Add(1)
 	go func() {
-		if err := projector.Run(projectorCtx, true); err != nil {
-			assert.NoError(s.T(), err, "projector.Run returned an error")
+		if err := project.RunAndListen(projectorCtx); err != nil {
+			assert.NoError(s.T(), err, "project.Run returned an error")
 		}
 		wg.Done()
 	}()
@@ -107,10 +112,10 @@ func (s *aggregateProjectorTestSuite) TestRun() {
 	)
 
 	// Add events to the event stream
-	aggregateIds := []aggregate.ID{
-		aggregate.GenerateID(),
-		aggregate.GenerateID(),
-	}
+	aggregateIds := createAggregateIds([]string{
+		"3300b507-29cb-4899-a467-603b6409d0ce",
+		"ce241bf3-2f8f-4e39-9a66-153bdca506fd",
+	})
 	s.appendEvents(aggregateIds[0], []interface{}{
 		AccountDeposited{Amount: 100},
 		AccountCredited{Amount: 50},
@@ -153,19 +158,23 @@ func (s *aggregateProjectorTestSuite) TestRun() {
 	projectorCancel()
 
 	s.Run("projection should not rerun events", func() {
-		projector, err := postgres.NewAggregateProjector(
+		project, err := postgres.NewAggregateProjector(
 			s.PostgresDSN,
+			nil,
 			s.eventStore,
 			s.eventStoreTable,
 			s.payloadTransformer,
 			accountAggregateTypeName,
 			&DepositedProjection{},
 			"agg_projections",
+			func(error, *projector.Notification) projector.ErrorAction {
+				return projector.ProjectionFail
+			},
 			s.Logger,
 		)
 		s.Require().NoError(err, "failed to create projector")
 
-		err = projector.Run(context.Background(), false)
+		err = project.Run(context.Background())
 		s.Require().NoError(err)
 
 		s.assertAggregateProjectionStates(map[aggregate.ID]projectionInfo{
@@ -183,7 +192,7 @@ func (s *aggregateProjectorTestSuite) TestRun() {
 	s.AssertNoLogsWithLevelOrHigher(logrus.ErrorLevel)
 }
 
-func (s *aggregateProjectorTestSuite) TestRun_Once() {
+func (s *aggregateProjectorTestSuite) TestRun() {
 	aggregateIds := []aggregate.ID{
 		aggregate.GenerateID(),
 		aggregate.GenerateID(),
@@ -199,14 +208,18 @@ func (s *aggregateProjectorTestSuite) TestRun_Once() {
 		AccountDeposited{Amount: 1},
 	})
 
-	projector, err := postgres.NewAggregateProjector(
+	project, err := postgres.NewAggregateProjector(
 		s.PostgresDSN,
+		nil,
 		s.eventStore,
 		s.eventStoreTable,
 		s.payloadTransformer,
 		accountAggregateTypeName,
 		&DepositedProjection{},
 		"agg_projections",
+		func(error, *projector.Notification) projector.ErrorAction {
+			return projector.ProjectionFail
+		},
 		s.Logger,
 	)
 	s.Require().NoError(err, "failed to create projector")
@@ -214,7 +227,7 @@ func (s *aggregateProjectorTestSuite) TestRun_Once() {
 	s.Run("Run projections", func() {
 		ctx := context.Background()
 
-		err := projector.Run(ctx, false)
+		err := project.Run(ctx)
 		s.Require().NoError(err)
 
 		s.assertAggregateProjectionStates(map[aggregate.ID]projectionInfo{
@@ -237,7 +250,7 @@ func (s *aggregateProjectorTestSuite) TestRun_Once() {
 				AccountDeposited{Amount: 1},
 			})
 
-			err := projector.Run(ctx, false)
+			err := project.Run(ctx)
 			s.Require().NoError(err)
 
 			s.assertAggregateProjectionStates(map[aggregate.ID]projectionInfo{
@@ -298,4 +311,18 @@ func (s *aggregateProjectorTestSuite) assertAggregateProjectionStates(expectedPr
 	}
 
 	s.Require().Equal(expectedProjections, result, "failed to fetch expected projection state")
+}
+
+func createAggregateIds(ids []string) []aggregate.ID {
+	var err error
+	res := make([]aggregate.ID, len(ids))
+
+	for i, id := range ids {
+		res[i], err = aggregate.IDFromString(id)
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	return res
 }

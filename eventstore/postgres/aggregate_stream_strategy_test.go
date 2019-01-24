@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/hellofresh/goengine/eventstore"
-	"github.com/hellofresh/goengine/eventstore/postgres"
+	postgres "github.com/hellofresh/goengine/eventstore/postgres"
 	"github.com/hellofresh/goengine/messaging"
 	"github.com/hellofresh/goengine/metadata"
 	"github.com/hellofresh/goengine/mocks"

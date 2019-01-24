@@ -12,7 +12,8 @@ import (
 	"time"
 
 	"github.com/hellofresh/goengine/aggregate"
-	"github.com/hellofresh/goengine/eventstore/postgres"
+	"github.com/hellofresh/goengine/eventstore/projector"
+	"github.com/hellofresh/goengine/eventstore/projector/postgres"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
@@ -47,7 +48,7 @@ func (s *streamProjectorTestSuite) TearDownTest() {
 	s.PostgresSuite.TearDownTest()
 }
 
-func (s *streamProjectorTestSuite) TestRun() {
+func (s *streamProjectorTestSuite) TestRunAndListen() {
 	var wg sync.WaitGroup
 	defer func() {
 		if s.waitTimeout(&wg, 5*time.Second) {
@@ -69,12 +70,16 @@ func (s *streamProjectorTestSuite) TestRun() {
 	projectorCtx, projectorCancel := context.WithCancel(context.Background())
 	defer projectorCancel()
 
-	projector, err := postgres.NewStreamProjector(
+	project, err := postgres.NewStreamProjector(
 		s.PostgresDSN,
+		nil,
 		s.eventStore,
 		s.payloadTransformer,
 		&DepositedProjection{},
 		"projections",
+		func(error, *projector.Notification) projector.ErrorAction {
+			return projector.ProjectionFail
+		},
 		s.Logger,
 	)
 	s.Require().NoError(err, "failed to create projector")
@@ -82,8 +87,8 @@ func (s *streamProjectorTestSuite) TestRun() {
 	// Run the projector in the background
 	wg.Add(1)
 	go func() {
-		if err := projector.Run(projectorCtx, true); err != nil {
-			assert.NoError(s.T(), err, "projector.Run returned an error")
+		if err := project.RunAndListen(projectorCtx); err != nil {
+			assert.NoError(s.T(), err, "project.Run returned an error")
 		}
 		wg.Done()
 	}()
@@ -91,8 +96,8 @@ func (s *streamProjectorTestSuite) TestRun() {
 	// Be evil and start run the projection again to ensure mutex is used and the context is respected
 	wg.Add(1)
 	go func() {
-		if err := projector.Run(projectorCtx, true); err != nil {
-			assert.NoError(s.T(), err, "projector.Run returned an error")
+		if err := project.RunAndListen(projectorCtx); err != nil {
+			assert.NoError(s.T(), err, "project.Run returned an error")
 		}
 		wg.Done()
 	}()
@@ -133,17 +138,21 @@ func (s *streamProjectorTestSuite) TestRun() {
 	projectorCancel()
 
 	s.Run("projection should not rerun events", func() {
-		projector, err := postgres.NewStreamProjector(
+		project, err := postgres.NewStreamProjector(
 			s.PostgresDSN,
+			nil,
 			s.eventStore,
 			s.payloadTransformer,
 			&DepositedProjection{},
 			"projections",
+			func(error, *projector.Notification) projector.ErrorAction {
+				return projector.ProjectionFail
+			},
 			s.Logger,
 		)
 		s.Require().NoError(err, "failed to create projector")
 
-		err = projector.Run(context.Background(), false)
+		err = project.Run(context.Background())
 		s.Require().NoError(err, "failed to run projector")
 
 		s.expectProjectionState("deposited_report", 8, `{"Total": 7, "TotalAmount": 317}`)
@@ -152,7 +161,7 @@ func (s *streamProjectorTestSuite) TestRun() {
 	s.AssertNoLogsWithLevelOrHigher(logrus.ErrorLevel)
 }
 
-func (s *streamProjectorTestSuite) TestRun_Once() {
+func (s *streamProjectorTestSuite) TestRun() {
 	s.Require().NoError(
 		s.payloadTransformer.RegisterPayload("account_debited", func() interface{} {
 			return AccountDeposited{}
@@ -177,12 +186,16 @@ func (s *streamProjectorTestSuite) TestRun_Once() {
 		AccountDeposited{Amount: 1},
 	})
 
-	projector, err := postgres.NewStreamProjector(
+	project, err := postgres.NewStreamProjector(
 		s.PostgresDSN,
+		nil,
 		s.eventStore,
 		s.payloadTransformer,
 		&DepositedProjection{},
 		"projections",
+		func(error, *projector.Notification) projector.ErrorAction {
+			return projector.ProjectionFail
+		},
 		s.Logger,
 	)
 	s.Require().NoError(err, "failed to create projector")
@@ -190,7 +203,7 @@ func (s *streamProjectorTestSuite) TestRun_Once() {
 	s.Run("Run projections", func() {
 		ctx := context.Background()
 
-		err := projector.Run(ctx, false)
+		err := project.Run(ctx)
 		s.Require().NoError(err)
 
 		s.expectProjectionState("deposited_report", 6, `{"Total": 5, "TotalAmount": 216}`)
@@ -202,7 +215,7 @@ func (s *streamProjectorTestSuite) TestRun_Once() {
 				AccountDeposited{Amount: 1},
 			})
 
-			err := projector.Run(ctx, false)
+			err := project.Run(ctx)
 			s.Require().NoError(err)
 
 			s.expectProjectionState("deposited_report", 8, `{"Total": 7, "TotalAmount": 317}`)

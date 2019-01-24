@@ -10,9 +10,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/DATA-DOG/go-sqlmock"
+	sqlmock "github.com/DATA-DOG/go-sqlmock"
 	"github.com/hellofresh/goengine/eventstore"
-	"github.com/hellofresh/goengine/eventstore/postgres"
+	postgres "github.com/hellofresh/goengine/eventstore/postgres"
 	eventstoreSQL "github.com/hellofresh/goengine/eventstore/sql"
 	"github.com/hellofresh/goengine/internal/test"
 	"github.com/hellofresh/goengine/messaging"

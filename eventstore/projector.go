@@ -27,11 +27,4 @@ type (
 		// Handlers ...
 		Handlers() map[string]ProjectionHandler
 	}
-
-	// Projector is used to manage the execution of a projection
-	Projector interface {
-		// Run executes the projection
-		// If keepRunning is set to true the projector will monitor the event stream and run any appended events
-		Run(ctx context.Context, keepRunning bool) error
-	}
 )
