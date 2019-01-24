@@ -143,27 +143,20 @@ func (s *streamProjectionStorage) Acquire(ctx context.Context, conn *sql.Conn, n
 }
 
 func (s *streamProjectionStorage) releaseProjectionLock(conn *sql.Conn) error {
-	res := conn.QueryRowContext(
+	// Set the projection as row unlocked
+	_, err := conn.ExecContext(
 		context.Background(),
 		fmt.Sprintf(
-			`UPDATE ONLY %[2]s SET locked = FALSE WHERE name = $1 
-			 RETURNING pg_advisory_unlock(%[1]s::regclass::oid::int, no)`,
-			quoteString(s.projectionTable),
+			`UPDATE ONLY %[1]s SET locked = FALSE WHERE name = $1`,
 			pq.QuoteIdentifier(s.projectionTable),
 		),
 		s.projectionName,
 	)
-
-	var unlocked bool
-	if err := res.Scan(&unlocked); err != nil {
+	if err != nil {
 		return err
 	}
 
-	if !unlocked {
-		return errors.New("failed to release projection lock")
-	}
-
-	return nil
+	return s.releaseProjectionConnectionLock(conn)
 }
 
 func (s *streamProjectionStorage) releaseProjectionConnectionLock(conn *sql.Conn) error {

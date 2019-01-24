@@ -178,27 +178,20 @@ func (a *aggregateProjectionStorage) Acquire(ctx context.Context, conn *sql.Conn
 }
 
 func (a *aggregateProjectionStorage) releaseProjection(conn *sql.Conn, aggregateID string) error {
-	res := conn.QueryRowContext(
+	// Set the projection as row unlocked
+	_, err := conn.ExecContext(
 		context.Background(),
 		fmt.Sprintf(
-			`UPDATE ONLY %[2]s SET locked = FALSE WHERE aggregate_id = $1 
-			 RETURNING pg_advisory_unlock(%[1]s::regclass::oid::int, no)`,
-			quoteString(a.projectionTable),
+			`UPDATE ONLY %[1]s SET locked = FALSE WHERE aggregate_id = $1`,
 			pq.QuoteIdentifier(a.projectionTable),
 		),
 		aggregateID,
 	)
-
-	var unlocked bool
-	if err := res.Scan(&unlocked); err != nil {
+	if err != nil {
 		return err
 	}
 
-	if !unlocked {
-		return errors.New("failed to release projection lock")
-	}
-
-	return nil
+	return a.releaseProjectionConnectionLock(conn, aggregateID)
 }
 
 func (a *aggregateProjectionStorage) releaseProjectionConnectionLock(conn *sql.Conn, aggregateID string) error {
@@ -218,7 +211,7 @@ func (a *aggregateProjectionStorage) releaseProjectionConnectionLock(conn *sql.C
 	}
 
 	if !unlocked {
-		return errors.New("failed to release projection lock")
+		return errors.New("failed to release db connection projection lock")
 	}
 
 	return nil
