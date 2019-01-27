@@ -18,6 +18,8 @@ var (
 	ErrEmptyStreamName = errors.New("stream name cannot be empty")
 	// ErrNoPayloadConverter error on no payload converter provided
 	ErrNoPayloadConverter = errors.New("payload converter should be provided")
+
+	tableNameInvalidCharRegex = regexp.MustCompile("[^a-z0-9_]+")
 )
 
 // SingleStreamStrategy struct represents eventstore with single stream
@@ -104,20 +106,11 @@ func (s *SingleStreamStrategy) GenerateTableName(streamName eventstore.StreamNam
 		return "", ErrEmptyStreamName
 	}
 
-	// remove underscore at the end
-	regLastUnderScores, err := regexp.Compile("_+$")
-	if err != nil {
-		return "", err
-	}
-
-	// remove not allowed symbols
-	regNotAllowed, err := regexp.Compile("[^a-z0-9_]+")
-	if err != nil {
-		return "", err
-	}
-
 	name := strings.ToLower(string(streamName))
-	name = regNotAllowed.ReplaceAllString(name, "")
-	name = regLastUnderScores.ReplaceAllString(name, "")
+	// remove not allowed symbols
+	name = tableNameInvalidCharRegex.ReplaceAllString(name, "")
+	// remove underscore at the end
+	name = strings.TrimRight(name, "_")
+	// prefix with events_
 	return fmt.Sprintf("events_%s", name), nil
 }
