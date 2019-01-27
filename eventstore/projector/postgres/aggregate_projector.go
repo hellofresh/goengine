@@ -92,11 +92,7 @@ func NewAggregateProjector(
 		return nil, err
 	}
 
-	storage := &aggregateProjectionStorage{
-		eventStoreTable: eventStoreTable,
-		projectionTable: projectionTable,
-		logger:          logger,
-	}
+	storage := newAggregateProjectionStorage(projectionTable, eventStoreTable, logger)
 
 	executor, err := internal.NewNotificationProjector(
 		db,

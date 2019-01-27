@@ -30,16 +30,30 @@ func aggregateProjectionEventStreamLoader(eventStore eventStoreSQL.ReadOnlyEvent
 var _ internal.Storage = &aggregateProjectionStorage{}
 
 type aggregateProjectionStorage struct {
-	projectionTable string
-	eventStoreTable string
-
 	logger logrus.FieldLogger
+
+	queryOutOfSyncProjections string
+	queryPersistState         string
+	queryPersistFailure       string
+	queryAcquireLock          string
+	queryReleaseLock          string
+	querySetRowLocked         string
 }
 
-func (a *aggregateProjectionStorage) LoadOutOfSync(ctx context.Context, conn *sql.Conn) (*sql.Rows, error) {
-	// Time to play catchup and check everything
-	dirtyAggregatesQuery := fmt.Sprintf(
-		`WITH aggregate_position AS (
+func newAggregateProjectionStorage(
+	projectionTable,
+	eventStoreTable string,
+	logger logrus.FieldLogger,
+) *aggregateProjectionStorage {
+	projectionTableQuoted := pq.QuoteIdentifier(projectionTable)
+	projectionTableStr := quoteString(projectionTable)
+	eventStoreTableQuoted := pq.QuoteIdentifier(eventStoreTable)
+
+	return &aggregateProjectionStorage{
+		logger: logger,
+
+		queryOutOfSyncProjections: fmt.Sprintf(
+			`WITH aggregate_position AS (
 			   SELECT e.metadata ->> '_aggregate_id' AS aggregate_id, MAX(e.no) AS no
 		        FROM %[1]s AS e
 			   GROUP BY aggregate_id
@@ -47,11 +61,47 @@ func (a *aggregateProjectionStorage) LoadOutOfSync(ctx context.Context, conn *sq
 			 SELECT a.aggregate_id, a.no FROM aggregate_position AS a
 			   LEFT JOIN %[2]s AS p ON p.aggregate_id::text = a.aggregate_id
 			 WHERE p.aggregate_id IS NULL OR (a.no > p.position)`,
-		pq.QuoteIdentifier(a.eventStoreTable),
-		pq.QuoteIdentifier(a.projectionTable),
-	)
+			eventStoreTableQuoted,
+			projectionTableQuoted,
+		),
+		queryPersistState: fmt.Sprintf(
+			`UPDATE %[1]s SET position = $2, state = $3 WHERE aggregate_id = $1`,
+			projectionTableQuoted,
+		),
+		queryPersistFailure: fmt.Sprintf(
+			`UPDATE %[1]s SET failed = TRUE WHERE aggregate_id = $1`,
+			projectionTableQuoted,
+		),
+		// queryAcquireLock uses a `WITH` in order to insert if the projection is unknown other wise the row won't be locked
+		// The reason for using `INSERT SELECT` instead of `INSERT VALUES ON CONFLICT DO NOTHING` is that `ON CONFLICT` will
+		// increase the `no SERIAL` value.
+		queryAcquireLock: fmt.Sprintf(
+			`WITH new_projection AS (
+			  INSERT INTO %[1]s (aggregate_id, state) SELECT $1, 'null' WHERE NOT EXISTS (
+		    	SELECT * FROM %[1]s WHERE aggregate_id = $1
+			  )
+			  RETURNING *
+			)
+			SELECT pg_try_advisory_lock(%[2]s::regclass::oid::int, no), locked, failed, position, state FROM new_projection
+			UNION
+			SELECT pg_try_advisory_lock(%[2]s::regclass::oid::int, no), locked, failed, position, state FROM %[1]s WHERE aggregate_id = $1 AND (position < $2 OR failed)`,
+			projectionTableQuoted,
+			projectionTableStr,
+		),
+		queryReleaseLock: fmt.Sprintf(
+			`SELECT pg_advisory_unlock(%[2]s::regclass::oid::int, no) FROM %[1]s WHERE aggregate_id = $1`,
+			projectionTableQuoted,
+			projectionTableStr,
+		),
+		querySetRowLocked: fmt.Sprintf(
+			`UPDATE ONLY %[1]s SET locked = $2 WHERE aggregate_id = $1`,
+			projectionTableQuoted,
+		),
+	}
+}
 
-	return conn.QueryContext(ctx, dirtyAggregatesQuery)
+func (a *aggregateProjectionStorage) LoadOutOfSync(ctx context.Context, conn *sql.Conn) (*sql.Rows, error) {
+	return conn.QueryContext(ctx, a.queryOutOfSyncProjections)
 }
 
 func (a *aggregateProjectionStorage) PersistState(conn *sql.Conn, notification *projector.Notification, state internal.State) error {
@@ -60,12 +110,7 @@ func (a *aggregateProjectionStorage) PersistState(conn *sql.Conn, notification *
 		return err
 	}
 
-	updateQuery := fmt.Sprintf(
-		`UPDATE %s SET position = $2, state = $3 WHERE aggregate_id = $1`,
-		pq.QuoteIdentifier(a.projectionTable),
-	)
-
-	_, err = conn.ExecContext(context.Background(), updateQuery, notification.AggregateID, state.Position, jsonState)
+	_, err = conn.ExecContext(context.Background(), a.queryPersistState, notification.AggregateID, state.Position, jsonState)
 	if err != nil {
 		return err
 	}
@@ -78,12 +123,7 @@ func (a *aggregateProjectionStorage) PersistState(conn *sql.Conn, notification *
 }
 
 func (a *aggregateProjectionStorage) PersistFailure(ctx context.Context, conn *sql.Conn, notification *projector.Notification) error {
-	updateFailedQuery := fmt.Sprintf(
-		`UPDATE %[1]s SET failed = TRUE WHERE aggregate_id = $1`,
-		pq.QuoteIdentifier(a.projectionTable),
-	)
-
-	if _, err := conn.ExecContext(ctx, updateFailedQuery, notification.AggregateID); err != nil {
+	if _, err := conn.ExecContext(ctx, a.queryPersistFailure, notification.AggregateID); err != nil {
 		return err
 	}
 
@@ -94,23 +134,7 @@ func (a *aggregateProjectionStorage) Acquire(ctx context.Context, conn *sql.Conn
 	logger := a.logger.WithField("notification", notification)
 	aggregateID := notification.AggregateID
 
-	// We use a with in order to insert if the projection is unknown other wise the row won't be locked
-	// The reason for using `INSERT SELECT` instead of `INSERT VALUES ON CONFLICT DO NOTHING` is that `ON CONFLICT` will
-	// increase the `no SERIAL` value.
-	acquireLockQuery := fmt.Sprintf(
-		`WITH new_projection AS (
-		  INSERT INTO %[1]s (aggregate_id, state) SELECT $1, 'null' WHERE NOT EXISTS (
-		    SELECT * FROM %[1]s WHERE aggregate_id = $1
-		  )
-		  RETURNING *
-		)
-		SELECT pg_try_advisory_lock(%[2]s::regclass::oid::int, no), locked, failed, position, state FROM new_projection
-		UNION
-		SELECT pg_try_advisory_lock(%[2]s::regclass::oid::int, no), locked, failed, position, state FROM %[1]s WHERE aggregate_id = $1 AND (position < $2 OR failed)`,
-		pq.QuoteIdentifier(a.projectionTable),
-		quoteString(a.projectionTable),
-	)
-	res := conn.QueryRowContext(ctx, acquireLockQuery, aggregateID, notification.No)
+	res := conn.QueryRowContext(ctx, a.queryAcquireLock, aggregateID, notification.No)
 
 	var (
 		acquiredLock bool
@@ -152,11 +176,7 @@ func (a *aggregateProjectionStorage) Acquire(ctx context.Context, conn *sql.Conn
 	}
 
 	// Set the projection as row locked
-	_, err := conn.ExecContext(
-		ctx,
-		fmt.Sprintf(`UPDATE ONLY %[1]s SET locked = TRUE WHERE aggregate_id = $1`, pq.QuoteIdentifier(a.projectionTable)),
-		aggregateID,
-	)
+	_, err := conn.ExecContext(ctx, a.querySetRowLocked, aggregateID, true)
 	if err != nil {
 		if err := a.releaseProjection(conn, aggregateID); err != nil {
 			logger.WithError(err).Error("failed to release lock while setting projection rows as locked")
@@ -179,14 +199,7 @@ func (a *aggregateProjectionStorage) Acquire(ctx context.Context, conn *sql.Conn
 
 func (a *aggregateProjectionStorage) releaseProjection(conn *sql.Conn, aggregateID string) error {
 	// Set the projection as row unlocked
-	_, err := conn.ExecContext(
-		context.Background(),
-		fmt.Sprintf(
-			`UPDATE ONLY %[1]s SET locked = FALSE WHERE aggregate_id = $1`,
-			pq.QuoteIdentifier(a.projectionTable),
-		),
-		aggregateID,
-	)
+	_, err := conn.ExecContext(context.Background(), a.querySetRowLocked, aggregateID, false)
 	if err != nil {
 		return err
 	}
@@ -195,15 +208,7 @@ func (a *aggregateProjectionStorage) releaseProjection(conn *sql.Conn, aggregate
 }
 
 func (a *aggregateProjectionStorage) releaseProjectionConnectionLock(conn *sql.Conn, aggregateID string) error {
-	res := conn.QueryRowContext(
-		context.Background(),
-		fmt.Sprintf(
-			`SELECT pg_advisory_unlock(%s::regclass::oid::int, no) FROM %s WHERE aggregate_id = $1`,
-			quoteString(a.projectionTable),
-			pq.QuoteIdentifier(a.projectionTable),
-		),
-		aggregateID,
-	)
+	res := conn.QueryRowContext(context.Background(), a.queryReleaseLock, aggregateID)
 
 	var unlocked bool
 	if err := res.Scan(&unlocked); err != nil {
