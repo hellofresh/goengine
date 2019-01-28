@@ -95,11 +95,7 @@ func NewStreamProjector(
 
 	executor, err := internal.NewNotificationProjector(
 		db,
-		&streamProjectionStorage{
-			projectionName:  projection.Name(),
-			projectionTable: projectionTable,
-			logger:          logger,
-		},
+		newStreamProjectionStorage(projection.Name(), projectionTable, logger),
 		projection.ReconstituteState,
 		projection.Handlers(),
 		streamProjectionEventStreamLoader(eventStore, projection.FromStream()),

@@ -24,10 +24,49 @@ func streamProjectionEventStreamLoader(eventStore eventStoreSQL.ReadOnlyEventSto
 var _ internal.Storage = &streamProjectionStorage{}
 
 type streamProjectionStorage struct {
-	projectionTable string
-	projectionName  string
+	projectionName string
 
 	logger logrus.FieldLogger
+
+	queryAcquireLock         string
+	queryAcquirePositionLock string
+	queryReleaseLock         string
+	queryPersistState        string
+	querySetRowLocked        string
+}
+
+func newStreamProjectionStorage(projectionName, projectionTable string, logger logrus.FieldLogger) *streamProjectionStorage {
+	projectionTableQuoted := pq.QuoteIdentifier(projectionTable)
+	projectionTableStr := quoteString(projectionTable)
+
+	return &streamProjectionStorage{
+		projectionName: projectionName,
+		logger:         logger,
+
+		queryAcquireLock: fmt.Sprintf(
+			`SELECT pg_try_advisory_lock(%[2]s::regclass::oid::int, no), locked, position, state FROM %[1]s WHERE name = $1`,
+			projectionTableQuoted,
+			projectionTableStr,
+		),
+		queryAcquirePositionLock: fmt.Sprintf(
+			`SELECT pg_try_advisory_lock(%[2]s::regclass::oid::int, no), locked, position, state FROM %[1]s WHERE name = $1 AND position < $2`,
+			projectionTableQuoted,
+			projectionTableStr,
+		),
+		queryReleaseLock: fmt.Sprintf(
+			`SELECT pg_advisory_unlock(%[2]s::regclass::oid::int, no) FROM %[1]s WHERE name = $1`,
+			projectionTableQuoted,
+			projectionTableStr,
+		),
+		queryPersistState: fmt.Sprintf(
+			`UPDATE %[1]s SET position = $1, state = $2 WHERE name = $3`,
+			projectionTableQuoted,
+		),
+		querySetRowLocked: fmt.Sprintf(
+			`UPDATE ONLY %[1]s SET locked = $2 WHERE name = $1`,
+			projectionTableQuoted,
+		),
+	}
 }
 
 func (s *streamProjectionStorage) PersistState(conn *sql.Conn, notification *projector.Notification, state internal.State) error {
@@ -36,16 +75,7 @@ func (s *streamProjectionStorage) PersistState(conn *sql.Conn, notification *pro
 		return err
 	}
 
-	_, err = conn.ExecContext(
-		context.Background(),
-		fmt.Sprintf(
-			`UPDATE %s SET position = $1, state = $2 WHERE name = $3`,
-			pq.QuoteIdentifier(s.projectionTable),
-		),
-		state.Position,
-		jsonState,
-		s.projectionName,
-	)
+	_, err = conn.ExecContext(context.Background(), s.queryPersistState, state.Position, jsonState, s.projectionName)
 	if err != nil {
 		return err
 	}
@@ -62,26 +92,9 @@ func (s *streamProjectionStorage) Acquire(ctx context.Context, conn *sql.Conn, n
 
 	var res *sql.Row
 	if notification == nil {
-		res = conn.QueryRowContext(
-			ctx,
-			fmt.Sprintf(
-				`SELECT pg_try_advisory_lock(%s::regclass::oid::int, no), locked, position, state FROM %s WHERE name = $1`,
-				quoteString(s.projectionTable),
-				pq.QuoteIdentifier(s.projectionTable),
-			),
-			s.projectionName,
-		)
+		res = conn.QueryRowContext(ctx, s.queryAcquireLock, s.projectionName)
 	} else {
-		res = conn.QueryRowContext(
-			ctx,
-			fmt.Sprintf(
-				`SELECT pg_try_advisory_lock(%s::regclass::oid::int, no), locked, position, state FROM %s WHERE name = $1 AND position < $2`,
-				quoteString(s.projectionTable),
-				pq.QuoteIdentifier(s.projectionTable),
-			),
-			s.projectionName,
-			notification.No,
-		)
+		res = conn.QueryRowContext(ctx, s.queryAcquirePositionLock, s.projectionName, notification.No)
 	}
 
 	var (
@@ -116,11 +129,7 @@ func (s *streamProjectionStorage) Acquire(ctx context.Context, conn *sql.Conn, n
 	}
 
 	// Set the projection as row locked
-	_, err := conn.ExecContext(
-		ctx,
-		fmt.Sprintf(`UPDATE ONLY %[1]s SET locked = TRUE WHERE name = $1`, pq.QuoteIdentifier(s.projectionTable)),
-		s.projectionName,
-	)
+	_, err := conn.ExecContext(ctx, s.querySetRowLocked, s.projectionName, true)
 	if err != nil {
 		if err := s.releaseProjectionLock(conn); err != nil {
 			logger.WithError(err).Error("failed to release lock while setting projection row as locked")
@@ -144,14 +153,7 @@ func (s *streamProjectionStorage) Acquire(ctx context.Context, conn *sql.Conn, n
 
 func (s *streamProjectionStorage) releaseProjectionLock(conn *sql.Conn) error {
 	// Set the projection as row unlocked
-	_, err := conn.ExecContext(
-		context.Background(),
-		fmt.Sprintf(
-			`UPDATE ONLY %[1]s SET locked = FALSE WHERE name = $1`,
-			pq.QuoteIdentifier(s.projectionTable),
-		),
-		s.projectionName,
-	)
+	_, err := conn.ExecContext(context.Background(), s.querySetRowLocked, s.projectionName, false)
 	if err != nil {
 		return err
 	}
@@ -160,15 +162,7 @@ func (s *streamProjectionStorage) releaseProjectionLock(conn *sql.Conn) error {
 }
 
 func (s *streamProjectionStorage) releaseProjectionConnectionLock(conn *sql.Conn) error {
-	res := conn.QueryRowContext(
-		context.Background(),
-		fmt.Sprintf(
-			`SELECT pg_advisory_unlock(%s::regclass::oid::int, no) FROM %s WHERE name = $1`,
-			quoteString(s.projectionTable),
-			pq.QuoteIdentifier(s.projectionTable),
-		),
-		s.projectionName,
-	)
+	res := conn.QueryRowContext(context.Background(), s.queryReleaseLock, s.projectionName)
 
 	var unlocked bool
 	if err := res.Scan(&unlocked); err != nil {
