@@ -5,10 +5,9 @@ import (
 	"database/sql/driver"
 	"math"
 
-	"github.com/pkg/errors"
-
 	"github.com/hellofresh/goengine/eventstore/projector"
-	"github.com/sirupsen/logrus"
+	"github.com/hellofresh/goengine/log"
+	"github.com/pkg/errors"
 )
 
 type errorAction int
@@ -24,7 +23,7 @@ const (
 func WrapTriggerWithErrorHandler(
 	projectionCallback projector.ProjectionErrorCallback,
 	handler Trigger,
-	logger logrus.FieldLogger,
+	logger log.Logger,
 ) Trigger {
 	return func(ctx context.Context, notification *projector.Notification) error {
 		for i := 0; i < math.MaxInt16; i++ {
@@ -60,7 +59,7 @@ func WrapProcessHandlerWithErrorHandler(
 	projectionCallback projector.ProjectionErrorCallback,
 	handler ProcessHandler,
 	markAsFailed func(ctx context.Context, notification *projector.Notification) error,
-	logger logrus.FieldLogger,
+	logger log.Logger,
 ) ProcessHandler {
 	return func(ctx context.Context, notification *projector.Notification, trigger Trigger) error {
 		err := handler(ctx, notification, trigger)

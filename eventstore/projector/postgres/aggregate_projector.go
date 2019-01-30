@@ -11,8 +11,7 @@ import (
 	"github.com/hellofresh/goengine/eventstore/projector"
 	"github.com/hellofresh/goengine/eventstore/projector/internal"
 	eventStoreSQL "github.com/hellofresh/goengine/eventstore/sql"
-	"github.com/hellofresh/goengine/internal/log"
-	"github.com/sirupsen/logrus"
+	"github.com/hellofresh/goengine/log"
 )
 
 var (
@@ -39,7 +38,7 @@ type AggregateProjector struct {
 	dbDSN     string
 	dbChannel string
 
-	logger logrus.FieldLogger
+	logger log.Logger
 }
 
 // NewAggregateProjector creates a new projector for a projection
@@ -53,7 +52,7 @@ func NewAggregateProjector(
 	projection eventstore.Projection,
 	projectionTable string,
 	projectionErrorHandler projector.ProjectionErrorCallback,
-	logger logrus.FieldLogger,
+	logger log.Logger,
 ) (*AggregateProjector, error) {
 	switch {
 	case eventStore == nil:
@@ -82,10 +81,7 @@ func NewAggregateProjector(
 	if logger == nil {
 		logger = log.NilLogger
 	}
-	logger = logger.WithFields(logrus.Fields{
-		"projection":   projection.Name(),
-		"event_stream": projection.FromStream(),
-	})
+	logger = logger.WithField("projection", projection)
 
 	processor, err := internal.NewBackgroundProcessor(10, 32, logger)
 	if err != nil {

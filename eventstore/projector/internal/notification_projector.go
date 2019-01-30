@@ -6,10 +6,9 @@ import (
 
 	"github.com/hellofresh/goengine/eventstore"
 	"github.com/hellofresh/goengine/eventstore/projector"
-	"github.com/hellofresh/goengine/internal/log"
+	"github.com/hellofresh/goengine/log"
 	"github.com/hellofresh/goengine/messaging"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 )
 
 var _ Trigger = (&NotificationProjector{}).Execute
@@ -26,7 +25,7 @@ type NotificationProjector struct {
 	eventLoader EventStreamLoader
 	resolver    eventstore.PayloadResolver
 
-	logger logrus.FieldLogger
+	logger log.Logger
 }
 
 // NewNotificationProjector returns a new NotificationProjector
@@ -37,7 +36,7 @@ func NewNotificationProjector(
 	eventHandlers map[string]eventstore.ProjectionHandler,
 	eventLoader EventStreamLoader,
 	resolver eventstore.PayloadResolver,
-	logger logrus.FieldLogger,
+	logger log.Logger,
 ) (*NotificationProjector, error) {
 	switch {
 	case db == nil:
@@ -162,7 +161,9 @@ func (s *NotificationProjector) projectStream(ctx context.Context, conn *sql.Con
 		// Resolve the payload event name
 		eventName, err := s.resolver.ResolveName(msg.Payload())
 		if err != nil {
-			s.logger.WithField("payload", msg.Payload()).Warn("skipping event: unable to resolve payload name")
+			s.logger.
+				WithField("payload", msg.Payload()).
+				Warn("skipping event: unable to resolve payload name")
 			continue
 		}
 

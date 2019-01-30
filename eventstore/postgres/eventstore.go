@@ -11,10 +11,9 @@ import (
 
 	"github.com/hellofresh/goengine/eventstore"
 	eventstoreSQL "github.com/hellofresh/goengine/eventstore/sql"
-	"github.com/hellofresh/goengine/internal/log"
+	"github.com/hellofresh/goengine/log"
 	"github.com/hellofresh/goengine/messaging"
 	"github.com/hellofresh/goengine/metadata"
-	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -45,7 +44,7 @@ type (
 		messageFactory            eventstoreSQL.MessageFactory
 		preparedInsertPlaceholder map[int]string
 		columns                   string
-		logger                    logrus.FieldLogger
+		logger                    log.Logger
 	}
 
 	// sqlQueryContext an interface used to query a sql.DB or sql.Conn
@@ -59,7 +58,7 @@ func NewEventStore(
 	persistenceStrategy eventstore.PersistenceStrategy,
 	db *sql.DB,
 	messageFactory eventstoreSQL.MessageFactory,
-	logger logrus.FieldLogger,
+	logger log.Logger,
 ) (*EventStore, error) {
 	if persistenceStrategy == nil {
 		return nil, ErrNoAggregateStreamStrategy
@@ -227,21 +226,21 @@ func (e *EventStore) AppendTo(ctx context.Context, streamName eventstore.StreamN
 	)
 	if err != nil {
 		e.logger.
-			WithFields(logrus.Fields{
+			WithError(err).
+			WithFields(log.Fields{
 				"streamName":   streamName,
 				"streamEvents": streamEvents,
 			}).
-			WithError(err).
 			Warn("failed to insert messages into the event stream")
 
 		return err
 	}
 
 	e.logger.
-		WithFields(logrus.Fields{
-			"result":       result,
+		WithFields(log.Fields{
 			"streamName":   streamName,
 			"streamEvents": streamEvents,
+			"result":       result,
 		}).
 		Debug("inserted messages into the event stream")
 
@@ -316,8 +315,8 @@ func (e *EventStore) tableExists(ctx context.Context, tableName string) bool {
 
 	if err != nil {
 		e.logger.
-			WithField("table", tableName).
 			WithError(err).
+			WithField("table", tableName).
 			Warn("error on reading from information_schema")
 
 		return false

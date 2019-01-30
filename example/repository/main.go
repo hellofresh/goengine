@@ -6,11 +6,11 @@ import (
 
 	"github.com/hellofresh/goengine/eventstore"
 	"github.com/hellofresh/goengine/eventstore/inmemory"
-	"github.com/sirupsen/logrus"
+	"github.com/hellofresh/goengine/log/logrus"
 )
 
 func main() {
-	logger := logrus.New()
+	logger := logrus.StandardLogger()
 	ctx := context.Background()
 
 	store := inmemory.NewEventStore(logger)

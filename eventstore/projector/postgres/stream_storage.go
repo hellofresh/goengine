@@ -11,8 +11,8 @@ import (
 	"github.com/hellofresh/goengine/eventstore/projector"
 	"github.com/hellofresh/goengine/eventstore/projector/internal"
 	eventStoreSQL "github.com/hellofresh/goengine/eventstore/sql"
+	"github.com/hellofresh/goengine/log"
 	"github.com/lib/pq"
-	"github.com/sirupsen/logrus"
 )
 
 func streamProjectionEventStreamLoader(eventStore eventStoreSQL.ReadOnlyEventStore, streamName eventstore.StreamName) internal.EventStreamLoader {
@@ -26,7 +26,7 @@ var _ internal.Storage = &streamProjectionStorage{}
 type streamProjectionStorage struct {
 	projectionName string
 
-	logger logrus.FieldLogger
+	logger log.Logger
 
 	queryAcquireLock         string
 	queryAcquirePositionLock string
@@ -35,7 +35,7 @@ type streamProjectionStorage struct {
 	querySetRowLocked        string
 }
 
-func newStreamProjectionStorage(projectionName, projectionTable string, logger logrus.FieldLogger) *streamProjectionStorage {
+func newStreamProjectionStorage(projectionName, projectionTable string, logger log.Logger) *streamProjectionStorage {
 	projectionTableQuoted := pq.QuoteIdentifier(projectionTable)
 	projectionTableStr := quoteString(projectionTable)
 
@@ -79,10 +79,12 @@ func (s *streamProjectionStorage) PersistState(conn *sql.Conn, notification *pro
 	if err != nil {
 		return err
 	}
-	s.logger.WithFields(logrus.Fields{
-		"state":        state,
-		"notification": notification,
-	}).Debug("updated projection state")
+	s.logger.
+		WithFields(log.Fields{
+			"notification": notification,
+			"state":        state,
+		}).
+		Debug("updated projection state")
 
 	return nil
 }

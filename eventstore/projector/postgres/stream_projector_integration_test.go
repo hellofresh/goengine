@@ -80,7 +80,7 @@ func (s *streamProjectorTestSuite) TestRunAndListen() {
 		func(error, *projector.Notification) projector.ErrorAction {
 			return projector.ProjectionFail
 		},
-		s.Logger,
+		s.GetLogger(),
 	)
 	s.Require().NoError(err, "failed to create projector")
 
@@ -148,7 +148,7 @@ func (s *streamProjectorTestSuite) TestRunAndListen() {
 			func(error, *projector.Notification) projector.ErrorAction {
 				return projector.ProjectionFail
 			},
-			s.Logger,
+			s.GetLogger(),
 		)
 		s.Require().NoError(err, "failed to create projector")
 
@@ -196,7 +196,7 @@ func (s *streamProjectorTestSuite) TestRun() {
 		func(error, *projector.Notification) projector.ErrorAction {
 			return projector.ProjectionFail
 		},
-		s.Logger,
+		s.GetLogger(),
 	)
 	s.Require().NoError(err, "failed to create projector")
 

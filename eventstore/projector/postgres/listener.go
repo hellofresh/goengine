@@ -10,9 +10,8 @@ import (
 	"github.com/hellofresh/goengine/eventstore/postgres"
 	"github.com/hellofresh/goengine/eventstore/projector"
 	"github.com/hellofresh/goengine/eventstore/projector/internal"
-	"github.com/hellofresh/goengine/internal/log"
+	"github.com/hellofresh/goengine/log"
 	"github.com/lib/pq"
-	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -27,13 +26,13 @@ type listener struct {
 	minReconnectInterval time.Duration
 	maxReconnectInterval time.Duration
 
-	logger logrus.FieldLogger
+	logger log.Logger
 }
 
 func newListener(
 	dbDSN string,
 	dbChannel string,
-	logger logrus.FieldLogger,
+	logger log.Logger,
 ) (*listener, error) {
 	switch {
 	case strings.TrimSpace(dbDSN) == "":
@@ -129,11 +128,7 @@ func (s *listener) unmarshalNotification(n *pq.Notification) (notification *proj
 		return
 	}
 
-	logger := s.logger.WithFields(logrus.Fields{
-		"notification_channel":    n.Channel,
-		"notification_data":       n.Extra,
-		"notification_process_id": n.BePid,
-	})
+	logger := s.logger.WithField("pq_notification", n)
 	if n.Extra == "" {
 		logger.Error("received notification without extra data")
 		return

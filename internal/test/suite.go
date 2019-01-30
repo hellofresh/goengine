@@ -3,6 +3,8 @@ package test
 import (
 	"testing"
 
+	"github.com/hellofresh/goengine/log"
+	logWrapper "github.com/hellofresh/goengine/log/logrus"
 	"github.com/sirupsen/logrus"
 	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/suite"
@@ -48,6 +50,11 @@ func (s *Suite) Run(name string, f func()) bool {
 
 		f()
 	})
+}
+
+// GetLogger return a log.Logger based o the suites logger
+func (s *Suite) GetLogger() log.Logger {
+	return logWrapper.Wrap(s.Logger)
 }
 
 // AssertNoLogsWithLevelOrHigher check that there are now log entries witch or of the given level or higher

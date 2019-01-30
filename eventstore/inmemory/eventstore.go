@@ -7,9 +7,9 @@ import (
 	"sync"
 
 	"github.com/hellofresh/goengine/eventstore"
+	"github.com/hellofresh/goengine/log"
 	"github.com/hellofresh/goengine/messaging"
 	"github.com/hellofresh/goengine/metadata"
-	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -27,12 +27,12 @@ var (
 type EventStore struct {
 	sync.RWMutex
 
-	logger  logrus.FieldLogger
+	logger  log.Logger
 	streams map[eventstore.StreamName][]messaging.Message
 }
 
 // NewEventStore return a new inmemory.EventStore
-func NewEventStore(logger logrus.FieldLogger) *EventStore {
+func NewEventStore(logger log.Logger) *EventStore {
 	return &EventStore{
 		logger:  logger,
 		streams: map[eventstore.StreamName][]messaging.Message{},

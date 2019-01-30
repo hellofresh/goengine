@@ -13,9 +13,8 @@ import (
 	"github.com/hellofresh/goengine/eventstore/projector"
 	"github.com/hellofresh/goengine/eventstore/projector/internal"
 	eventStoreSQL "github.com/hellofresh/goengine/eventstore/sql"
-	"github.com/hellofresh/goengine/internal/log"
+	"github.com/hellofresh/goengine/log"
 	"github.com/lib/pq"
-	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -34,23 +33,21 @@ var (
 	_ projector.Projector = &StreamProjector{}
 )
 
-type (
-	// StreamProjector is a postgres projector used to execute a projection against an event stream.
-	StreamProjector struct {
-		sync.Mutex
-		executor *internal.NotificationProjector
+// StreamProjector is a postgres projector used to execute a projection against an event stream.
+type StreamProjector struct {
+	sync.Mutex
+	executor *internal.NotificationProjector
 
-		db        *sql.DB
-		dbDSN     string
-		dbChannel string
+	db        *sql.DB
+	dbDSN     string
+	dbChannel string
 
-		projectionName  string
-		projectionTable string
+	projectionName  string
+	projectionTable string
 
-		logger                 logrus.FieldLogger
-		projectionErrorHandler projector.ProjectionErrorCallback
-	}
-)
+	logger                 log.Logger
+	projectionErrorHandler projector.ProjectionErrorCallback
+}
 
 // NewStreamProjector creates a new projector for a projection
 func NewStreamProjector(
@@ -61,7 +58,7 @@ func NewStreamProjector(
 	projection eventstore.Projection,
 	projectionTable string,
 	projectionErrorHandler projector.ProjectionErrorCallback,
-	logger logrus.FieldLogger,
+	logger log.Logger,
 ) (*StreamProjector, error) {
 	switch {
 	case strings.TrimSpace(dbDSN) == "":
@@ -88,10 +85,7 @@ func NewStreamProjector(
 	if logger == nil {
 		logger = log.NilLogger
 	}
-	logger = logger.WithFields(logrus.Fields{
-		"projection":   projection.Name(),
-		"event_stream": projection.FromStream(),
-	})
+	logger = logger.WithField("projection", projection)
 
 	executor, err := internal.NewNotificationProjector(
 		db,
@@ -196,12 +190,18 @@ func (s *StreamProjector) projectionExists(ctx context.Context, conn *sql.Conn) 
 		s.projectionName,
 	)
 	if err != nil {
-		s.logger.WithField("table", s.projectionTable).WithError(err).Error("failed to query projection table")
+		s.logger.
+			WithError(err).
+			WithField("table", s.projectionTable).
+			Error("failed to query projection table")
 		return false
 	}
 	defer func() {
 		if err := rows.Close(); err != nil {
-			s.logger.WithField("table", s.projectionTable).WithError(err).Warn("failed to close rows")
+			s.logger.
+				WithError(err).
+				WithField("table", s.projectionTable).
+				Warn("failed to close rows")
 		}
 	}()
 
@@ -211,7 +211,10 @@ func (s *StreamProjector) projectionExists(ctx context.Context, conn *sql.Conn) 
 
 	var found bool
 	if err := rows.Scan(&found); err != nil {
-		s.logger.WithField("table", s.projectionTable).WithError(err).Error("failed to scan projection table")
+		s.logger.
+			WithError(err).
+			WithField("table", s.projectionTable).
+			Error("failed to scan projection table")
 		return false
 	}
 

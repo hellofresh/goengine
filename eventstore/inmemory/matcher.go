@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/hellofresh/goengine/log"
 	"github.com/hellofresh/goengine/metadata"
-	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -31,7 +31,7 @@ type (
 
 	// MetadataMatcher an in memory metadata matcher implementation
 	MetadataMatcher struct {
-		logger      logrus.FieldLogger
+		logger      log.Logger
 		constraints []metadataConstraint
 	}
 
@@ -45,7 +45,7 @@ type (
 )
 
 // NewMetadataMatcher returns a new metadata matcher based of off the metadata.Matcher
-func NewMetadataMatcher(matcher metadata.Matcher, logger logrus.FieldLogger) (*MetadataMatcher, error) {
+func NewMetadataMatcher(matcher metadata.Matcher, logger log.Logger) (*MetadataMatcher, error) {
 	var constraints []metadataConstraint
 	var constraintErrors IncompatibleMatcherError
 	matcher.Iterate(func(c metadata.Constraint) {
@@ -85,9 +85,9 @@ func (m *MetadataMatcher) Matches(metadata metadata.Metadata) bool {
 		if err != nil {
 			if m.logger != nil {
 				m.logger.
-					WithField("field", c.field).
 					WithError(err).
-					Warningf("metadata constraint failed with error")
+					WithField("field", c.field).
+					Warn("metadata constraint failed with error")
 			}
 			return false
 		}

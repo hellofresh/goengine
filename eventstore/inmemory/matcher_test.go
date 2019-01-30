@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/hellofresh/goengine/eventstore/inmemory"
+	log "github.com/hellofresh/goengine/log/logrus"
 	"github.com/hellofresh/goengine/metadata"
 	"github.com/sirupsen/logrus"
 	"github.com/sirupsen/logrus/hooks/test"
@@ -45,7 +46,7 @@ func TestNewMetadataMatcher(t *testing.T) {
 			t.Run(testCase.title, func(t *testing.T) {
 				logger, loggerHook := test.NewNullLogger()
 
-				matcher, err := inmemory.NewMetadataMatcher(testCase.matcher, logger)
+				matcher, err := inmemory.NewMetadataMatcher(testCase.matcher, log.Wrap(logger))
 
 				asserts := assert.New(t)
 				asserts.Nil(err)
@@ -88,7 +89,7 @@ func TestNewMetadataMatcher(t *testing.T) {
 			t.Run(testCase.title, func(t *testing.T) {
 				logger, loggerHook := test.NewNullLogger()
 
-				matcher, err := inmemory.NewMetadataMatcher(testCase.matcher, logger)
+				matcher, err := inmemory.NewMetadataMatcher(testCase.matcher, log.Wrap(logger))
 
 				asserts := assert.New(t)
 				if !asserts.IsType(inmemory.IncompatibleMatcherError{}, err) {
@@ -163,7 +164,7 @@ func TestMetadataMatcher_Matches(t *testing.T) {
 				asserts := assert.New(t)
 				logger, loggerHook := test.NewNullLogger()
 
-				matcher, err := inmemory.NewMetadataMatcher(testCase.matcher, logger)
+				matcher, err := inmemory.NewMetadataMatcher(testCase.matcher, log.Wrap(logger))
 				if asserts.Nil(err) {
 					asserts.True(matcher.Matches(testCase.data))
 				}
@@ -195,7 +196,7 @@ func TestMetadataMatcher_Matches(t *testing.T) {
 				asserts := assert.New(t)
 				logger, loggerHook := test.NewNullLogger()
 
-				matcher, err := inmemory.NewMetadataMatcher(testCase.matcher, logger)
+				matcher, err := inmemory.NewMetadataMatcher(testCase.matcher, log.Wrap(logger))
 				if asserts.Nil(err) {
 					asserts.False(matcher.Matches(testCase.data))
 				}
@@ -235,7 +236,7 @@ func TestMetadataMatcher_Matches(t *testing.T) {
 				asserts := assert.New(t)
 				logger, loggerHook := test.NewNullLogger()
 
-				matcher, err := inmemory.NewMetadataMatcher(testCase.matcher, logger)
+				matcher, err := inmemory.NewMetadataMatcher(testCase.matcher, log.Wrap(logger))
 				if asserts.Nil(err) {
 					asserts.False(matcher.Matches(testCase.data))
 

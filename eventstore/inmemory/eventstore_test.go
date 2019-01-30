@@ -8,6 +8,7 @@ import (
 
 	"github.com/hellofresh/goengine/eventstore"
 	"github.com/hellofresh/goengine/eventstore/inmemory"
+	"github.com/hellofresh/goengine/log/logrus"
 	"github.com/hellofresh/goengine/messaging"
 	"github.com/hellofresh/goengine/metadata"
 	"github.com/hellofresh/goengine/mocks"
@@ -31,7 +32,7 @@ func TestNewEventStore(t *testing.T) {
 
 func TestEventStore_Create(t *testing.T) {
 	logger, loggerHooks := test.NewNullLogger()
-	store := inmemory.NewEventStore(logger)
+	store := inmemory.NewEventStore(logrus.Wrap(logger))
 
 	ctx := context.Background()
 	err := store.Create(ctx, "event_stream")
@@ -54,7 +55,7 @@ func TestEventStore_HasStream(t *testing.T) {
 	unkownStream := eventstore.StreamName("never_stream")
 
 	logger, loggerHooks := test.NewNullLogger()
-	store := inmemory.NewEventStore(logger)
+	store := inmemory.NewEventStore(logrus.Wrap(logger))
 	ctx := context.Background()
 
 	asserts := assert.New(t)
@@ -150,7 +151,7 @@ func TestEventStore_Load(t *testing.T) {
 			ctx := context.Background()
 
 			logger, loggerHooks := test.NewNullLogger()
-			store := inmemory.NewEventStore(logger)
+			store := inmemory.NewEventStore(logrus.Wrap(logger))
 
 			for stream, events := range testStreams {
 				if err := store.Create(ctx, stream); !assert.Nil(t, err) {
@@ -267,7 +268,7 @@ func TestEventStore_AppendTo(t *testing.T) {
 func createEventStoreWithStream(t *testing.T, name eventstore.StreamName) (*inmemory.EventStore, *test.Hook) {
 	logger, loggerHooks := test.NewNullLogger()
 	ctx := context.Background()
-	store := inmemory.NewEventStore(logger)
+	store := inmemory.NewEventStore(logrus.Wrap(logger))
 
 	err := store.Create(ctx, name)
 	if !assert.Nil(t, err) {
