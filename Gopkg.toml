@@ -26,6 +26,10 @@ required = [
   name = "github.com/lib/pq"
   version = "^1.0.0"
 
+[[constraint]]
+  name = "go.uber.org/zap"
+  version = "^1.9.1"
+
 [prune]
   go-tests = true
   unused-packages = true
