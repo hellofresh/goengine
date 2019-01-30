@@ -3,8 +3,8 @@ package goengine
 import (
 	"fmt"
 
+	"github.com/gofrs/uuid"
 	"github.com/hellofresh/goengine/reflection"
-	"github.com/pborman/uuid"
 )
 
 type AggregateRoot interface {
@@ -24,7 +24,7 @@ type AggregateRootBased struct {
 
 // NewAggregateRootBased constructor
 func NewAggregateRootBased(source interface{}) *AggregateRootBased {
-	return NewEventSourceBasedWithID(source, uuid.New())
+	return NewEventSourceBasedWithID(source, uuid.Must(uuid.NewV4()).String())
 }
 
 // NewEventSourceBasedWithID constructor
