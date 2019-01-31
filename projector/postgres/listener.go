@@ -8,9 +8,9 @@ import (
 	"time"
 
 	"github.com/hellofresh/goengine/eventstore/postgres"
-	"github.com/hellofresh/goengine/eventstore/projector"
-	"github.com/hellofresh/goengine/eventstore/projector/internal"
 	"github.com/hellofresh/goengine/log"
+	"github.com/hellofresh/goengine/projector"
+	"github.com/hellofresh/goengine/projector/internal"
 	"github.com/lib/pq"
 )
 

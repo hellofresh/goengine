@@ -5,8 +5,8 @@ import (
 	"runtime"
 	"sync"
 
-	"github.com/hellofresh/goengine/eventstore/projector"
 	"github.com/hellofresh/goengine/log"
+	"github.com/hellofresh/goengine/projector"
 	"github.com/pkg/errors"
 )
 

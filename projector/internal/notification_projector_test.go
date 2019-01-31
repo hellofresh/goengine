@@ -8,8 +8,8 @@ import (
 
 	"github.com/hellofresh/goengine/aggregate"
 	"github.com/hellofresh/goengine/eventstore"
-	"github.com/hellofresh/goengine/eventstore/projector"
 	"github.com/hellofresh/goengine/messaging"
+	"github.com/hellofresh/goengine/projector"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

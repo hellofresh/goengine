@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"github.com/hellofresh/goengine/aggregate"
-	"github.com/hellofresh/goengine/eventstore/projector"
-	"github.com/hellofresh/goengine/eventstore/projector/postgres"
+	"github.com/hellofresh/goengine/projector"
+	"github.com/hellofresh/goengine/projector/postgres"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"

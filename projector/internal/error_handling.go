@@ -5,8 +5,8 @@ import (
 	"database/sql/driver"
 	"math"
 
-	"github.com/hellofresh/goengine/eventstore/projector"
 	"github.com/hellofresh/goengine/log"
+	"github.com/hellofresh/goengine/projector"
 	"github.com/pkg/errors"
 )
 

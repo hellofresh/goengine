@@ -8,11 +8,11 @@ import (
 
 	"github.com/hellofresh/goengine/aggregate"
 	"github.com/hellofresh/goengine/eventstore"
-	"github.com/hellofresh/goengine/eventstore/projector"
-	"github.com/hellofresh/goengine/eventstore/projector/internal"
 	eventStoreSQL "github.com/hellofresh/goengine/eventstore/sql"
 	"github.com/hellofresh/goengine/log"
 	"github.com/hellofresh/goengine/metadata"
+	"github.com/hellofresh/goengine/projector"
+	"github.com/hellofresh/goengine/projector/internal"
 	"github.com/lib/pq"
 	"github.com/pkg/errors"
 )

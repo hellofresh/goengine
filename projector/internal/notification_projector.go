@@ -5,9 +5,9 @@ import (
 	"database/sql"
 
 	"github.com/hellofresh/goengine/eventstore"
-	"github.com/hellofresh/goengine/eventstore/projector"
 	"github.com/hellofresh/goengine/log"
 	"github.com/hellofresh/goengine/messaging"
+	"github.com/hellofresh/goengine/projector"
 	"github.com/pkg/errors"
 )
 

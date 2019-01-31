@@ -5,7 +5,7 @@ import (
 	"database/sql"
 
 	"github.com/hellofresh/goengine/eventstore"
-	"github.com/hellofresh/goengine/eventstore/projector"
+	"github.com/hellofresh/goengine/projector"
 )
 
 type (
