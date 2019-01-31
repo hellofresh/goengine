@@ -2,6 +2,7 @@ package reflection
 
 import "reflect"
 
+// CallMethod ...
 func CallMethod(i interface{}, methodName string, args ...interface{}) interface{} {
 	// check for method on pointer
 	method := reflect.ValueOf(i).MethodByName(methodName)

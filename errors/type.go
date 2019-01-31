@@ -3,7 +3,10 @@ package errors
 import "errors"
 
 var (
-	ErrorTypeNotRegistred = errors.New("The type is not registereds")
-	ErrorTypeNotStruct    = errors.New("Input param is not a struct")
-	ErrorTypeNotFound     = errors.New("The type was not found")
+	// ErrorTypeNotRegistered ...
+	ErrorTypeNotRegistered = errors.New("the type is not registered")
+	// ErrorTypeNotStruct ...
+	ErrorTypeNotStruct = errors.New("input param is not a struct")
+	// ErrorTypeNotFound ...
+	ErrorTypeNotFound = errors.New("the type was not found")
 )

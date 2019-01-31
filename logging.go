@@ -7,6 +7,7 @@ import (
 	"strings"
 )
 
+// LogHandler ...
 type LogHandler func(msg string, fields map[string]interface{}, err error)
 
 var logHandler LogHandler
@@ -35,10 +36,12 @@ func init() {
 	})
 }
 
+// SetLogHandler ...
 func SetLogHandler(handler LogHandler) {
 	logHandler = handler
 }
 
+// Log ...
 func Log(msg string, fields map[string]interface{}, err error) {
 	logHandler(msg, fields, err)
 }

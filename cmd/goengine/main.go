@@ -73,7 +73,7 @@ func main() {
 	go eventDispatcher.Listen(stopChannel, false)
 
 	goengine.Log("Creating a recipe", nil, nil)
-	aggregateRoot := CreateScenario()
+	aggregateRoot := createScenario()
 
 	repository := goengine.NewPublisherRepository(eventStore, bus)
 	if err := repository.Save(aggregateRoot, streamName); err != nil {
@@ -91,7 +91,7 @@ func main() {
 	stopChannel <- true
 }
 
-func CreateScenario() *Recipe {
+func createScenario() *Recipe {
 	recipe := NewRecipe("Test Recipe")
 	recipe.Rate(4)
 	return recipe

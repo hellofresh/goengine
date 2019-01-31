@@ -10,7 +10,7 @@ import (
 
 var _ = Describe("In Memory Event Store", func() {
 	var events []*DomainMessage
-	var inMemory *InMemoryEventStore = NewEventStore()
+	var inMemory *EventStore = NewEventStore()
 	var aggregateId string
 	var streamName StreamName
 

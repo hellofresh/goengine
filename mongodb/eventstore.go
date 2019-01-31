@@ -22,20 +22,20 @@ type MongoEvent struct {
 	RecordedOn time.Time `bson:"recorded_on"`
 }
 
-// MongoDBEventStore The mongodb event store
-type MongoDBEventStore struct {
+// EventStore The mongodb event store
+type EventStore struct {
 	mongoDB *mongo.Database
 
 	registry goengine.TypeRegistry
 }
 
 // NewEventStore creates new MongoDB based event store
-func NewEventStore(mongoDB *mongo.Database, r goengine.TypeRegistry) *MongoDBEventStore {
-	return &MongoDBEventStore{mongoDB, r}
+func NewEventStore(mongoDB *mongo.Database, r goengine.TypeRegistry) *EventStore {
+	return &EventStore{mongoDB, r}
 }
 
 // Append adds an event to the event store
-func (s *MongoDBEventStore) Append(events *goengine.EventStream) error {
+func (s *EventStore) Append(events *goengine.EventStream) error {
 	streamName := string(events.Name)
 	for _, event := range events.Events {
 		mongoEvent, err := s.toMongoEvent(event)
@@ -62,7 +62,7 @@ func (s *MongoDBEventStore) Append(events *goengine.EventStream) error {
 }
 
 // GetEventsFor gets events for an id on the specified stream
-func (s *MongoDBEventStore) GetEventsFor(streamName goengine.StreamName, id string) (*goengine.EventStream, error) {
+func (s *EventStore) GetEventsFor(streamName goengine.StreamName, id string) (*goengine.EventStream, error) {
 	var mongoEvents []MongoEvent
 	coll := s.mongoDB.Collection(string(streamName))
 
@@ -102,7 +102,7 @@ func (s *MongoDBEventStore) GetEventsFor(streamName goengine.StreamName, id stri
 }
 
 // FromVersion gets events for an id and version on the specified stream
-func (s *MongoDBEventStore) FromVersion(streamName goengine.StreamName, id string, version int) (*goengine.EventStream, error) {
+func (s *EventStore) FromVersion(streamName goengine.StreamName, id string, version int) (*goengine.EventStream, error) {
 	var mongoEvents []MongoEvent
 	coll := s.mongoDB.Collection(string(streamName))
 
@@ -149,14 +149,14 @@ func (s *MongoDBEventStore) FromVersion(streamName goengine.StreamName, id strin
 }
 
 // CountEventsFor counts events for an id on the specified stream
-func (s *MongoDBEventStore) CountEventsFor(streamName goengine.StreamName, id string) (int64, error) {
+func (s *EventStore) CountEventsFor(streamName goengine.StreamName, id string) (int64, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	return s.mongoDB.Collection(string(streamName)).Count(ctx, bson.M{"aggregate_id": string(streamName)})
 }
 
-func (s *MongoDBEventStore) createIndexes(c *mongo.Collection) error {
+func (s *EventStore) createIndexes(c *mongo.Collection) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
@@ -170,7 +170,7 @@ func (s *MongoDBEventStore) createIndexes(c *mongo.Collection) error {
 	return err
 }
 
-func (s *MongoDBEventStore) toMongoEvent(event *goengine.DomainMessage) (*MongoEvent, error) {
+func (s *EventStore) toMongoEvent(event *goengine.DomainMessage) (*MongoEvent, error) {
 	serializedPayload, err := json.Marshal(event.Payload)
 	if nil != err {
 		return nil, err
@@ -186,7 +186,7 @@ func (s *MongoDBEventStore) toMongoEvent(event *goengine.DomainMessage) (*MongoE
 	}, nil
 }
 
-func (s *MongoDBEventStore) fromMongoEvent(mongoEvent MongoEvent) (*goengine.DomainMessage, error) {
+func (s *EventStore) fromMongoEvent(mongoEvent MongoEvent) (*goengine.DomainMessage, error) {
 	event, err := s.registry.Get(mongoEvent.Type)
 	if nil != err {
 		return nil, err

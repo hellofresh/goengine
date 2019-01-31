@@ -2,15 +2,18 @@ package inmemory
 
 import "github.com/hellofresh/goengine"
 
-type InMemoryEventStore struct {
+// EventStore ...
+type EventStore struct {
 	events map[goengine.StreamName]map[string][]*goengine.DomainMessage
 }
 
-func NewEventStore() *InMemoryEventStore {
-	return &InMemoryEventStore{make(map[goengine.StreamName]map[string][]*goengine.DomainMessage)}
+// NewEventStore ...
+func NewEventStore() *EventStore {
+	return &EventStore{make(map[goengine.StreamName]map[string][]*goengine.DomainMessage)}
 }
 
-func (s *InMemoryEventStore) Append(events *goengine.EventStream) error {
+// Append ...
+func (s *EventStore) Append(events *goengine.EventStream) error {
 	name := events.Name
 	for _, event := range events.Events {
 		err := s.save(name, event)
@@ -22,11 +25,13 @@ func (s *InMemoryEventStore) Append(events *goengine.EventStream) error {
 	return nil
 }
 
-func (s *InMemoryEventStore) GetEventsFor(streamName goengine.StreamName, id string) (*goengine.EventStream, error) {
+// GetEventsFor ...
+func (s *EventStore) GetEventsFor(streamName goengine.StreamName, id string) (*goengine.EventStream, error) {
 	return goengine.NewEventStream(streamName, s.events[streamName][id]), nil
 }
 
-func (s *InMemoryEventStore) FromVersion(streamName goengine.StreamName, id string, version int) (*goengine.EventStream, error) {
+// FromVersion ...
+func (s *EventStore) FromVersion(streamName goengine.StreamName, id string, version int) (*goengine.EventStream, error) {
 	events, _ := s.GetEventsFor(streamName, id)
 	var filtered []*goengine.DomainMessage
 
@@ -39,12 +44,13 @@ func (s *InMemoryEventStore) FromVersion(streamName goengine.StreamName, id stri
 	return goengine.NewEventStream(streamName, filtered), nil
 }
 
-func (s *InMemoryEventStore) CountEventsFor(streamName goengine.StreamName, id string) (int64, error) {
+// CountEventsFor ...
+func (s *EventStore) CountEventsFor(streamName goengine.StreamName, id string) (int64, error) {
 	stream, _ := s.GetEventsFor(streamName, id)
 	return int64(len(stream.Events)), nil
 }
 
-func (s *InMemoryEventStore) save(streamName goengine.StreamName, event *goengine.DomainMessage) error {
+func (s *EventStore) save(streamName goengine.StreamName, event *goengine.DomainMessage) error {
 	id := event.ID
 	events, exists := s.events[streamName][id]
 

@@ -1,5 +1,6 @@
 package goengine
 
+// EventStore ...
 type EventStore interface {
 	Append(events *EventStream) error
 	GetEventsFor(streamName StreamName, id string) (*EventStream, error)

@@ -37,6 +37,7 @@ func (r *InMemoryTypeRegistry) RegisterType(i interface{}) {
 	Log("Type was registered", map[string]interface{}{"type": rawType.String()}, nil)
 }
 
+// RegisterAggregate ...
 func (r *InMemoryTypeRegistry) RegisterAggregate(aggregate AggregateRoot, events ...interface{}) {
 	r.RegisterType(aggregate)
 
@@ -48,12 +49,14 @@ func (r *InMemoryTypeRegistry) RegisterAggregate(aggregate AggregateRoot, events
 	Log("Events were registered for aggregate", fields, nil)
 }
 
+// RegisterEvents ...
 func (r *InMemoryTypeRegistry) RegisterEvents(events ...interface{}) {
 	for _, event := range events {
 		r.RegisterType(event)
 	}
 }
 
+// GetTypeByName ...
 func (r *InMemoryTypeRegistry) GetTypeByName(typeName string) (reflect.Type, bool) {
 	if typeValue, ok := r.types[typeName]; ok {
 		return typeValue, ok
