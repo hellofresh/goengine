@@ -46,7 +46,7 @@ var _ = Describe("A Event Store", func() {
 		})
 
 		It("should count the events that happened", func() {
-			Expect(store.CountEventsFor(streamName, aggregateId)).Should(Equal(3))
+			Expect(store.CountEventsFor(streamName, aggregateId)).Should(Equal(int64(3)))
 		})
 
 		It("should retrieve events for version bigger then 1", func() {

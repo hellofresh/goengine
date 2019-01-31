@@ -39,9 +39,9 @@ func (s *InMemoryEventStore) FromVersion(streamName goengine.StreamName, id stri
 	return goengine.NewEventStream(streamName, filtered), nil
 }
 
-func (s *InMemoryEventStore) CountEventsFor(streamName goengine.StreamName, id string) (int, error) {
+func (s *InMemoryEventStore) CountEventsFor(streamName goengine.StreamName, id string) (int64, error) {
 	stream, _ := s.GetEventsFor(streamName, id)
-	return len(stream.Events), nil
+	return int64(len(stream.Events)), nil
 }
 
 func (s *InMemoryEventStore) save(streamName goengine.StreamName, event *goengine.DomainMessage) error {

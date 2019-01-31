@@ -1,28 +1,55 @@
 package main
 
 import (
+	"context"
 	"os"
+	"time"
 
 	"github.com/hellofresh/goengine"
 	"github.com/hellofresh/goengine/mongodb"
 	"github.com/hellofresh/goengine/rabbit"
-	"gopkg.in/mgo.v2"
+	"github.com/mongodb/mongo-go-driver/mongo"
+	"github.com/mongodb/mongo-go-driver/mongo/options"
+	"github.com/mongodb/mongo-go-driver/mongo/readconcern"
+	"github.com/mongodb/mongo-go-driver/mongo/readpref"
+	"github.com/mongodb/mongo-go-driver/mongo/writeconcern"
 )
 
 func main() {
 	var streamName goengine.StreamName = "test"
 
 	mongoDSN := os.Getenv("STORAGE_DSN")
+
 	goengine.Log("Connecting to the database", map[string]interface{}{"dsn": mongoDSN}, nil)
-	session, err := mgo.Dial(mongoDSN)
+	mongoClient, err := mongo.NewClientWithOptions(
+		mongoDSN,
+		options.Client().
+			SetAppName("goengine").
+			SetReadConcern(readconcern.Linearizable()).
+			SetReadPreference(readpref.Nearest()).
+			SetWriteConcern(writeconcern.New(writeconcern.WMajority())),
+	)
+	if err != nil {
+		goengine.Log("Failed to create new Mongo mongoClient", nil, err)
+		panic(err)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	err = mongoClient.Connect(ctx)
 	if err != nil {
 		goengine.Log("Failed to connect to Mongo", nil, err)
 		panic(err)
 	}
-	defer session.Close()
 
-	// Optional. Switch the session to a monotonic behavior.
-	session.SetMode(mgo.Monotonic, true)
+	defer func() {
+		ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := mongoClient.Disconnect(ctx); err != nil {
+			goengine.Log("Failed to close connection to Mongo", nil, err)
+			panic(err)
+		}
+	}()
 
 	goengine.Log("Setting up the registry", nil, nil)
 	registry := goengine.NewInMemoryTypeRegistry()
@@ -35,7 +62,7 @@ func main() {
 	bus := rabbit.NewEventBus(brokerDSN, "events", "events")
 
 	goengine.Log("Setting up the event store", nil, nil)
-	es := mongodb.NewEventStore(session, registry)
+	es := mongodb.NewEventStore(mongoClient.Database("event_store"), registry)
 
 	eventDispatcher := goengine.NewVersionedEventDispatchManager(bus, registry)
 	eventDispatcher.RegisterEventHandler(&RecipeCreated{}, func(event *goengine.DomainMessage) error {
@@ -47,7 +74,7 @@ func main() {
 	go eventDispatcher.Listen(stopChannel, false)
 
 	goengine.Log("Creating a recipe", nil, nil)
-	aggregateRoot := CreateScenario(streamName)
+	aggregateRoot := CreateScenario()
 
 	repository := goengine.NewPublisherRepository(es, bus)
 	repository.Save(aggregateRoot, streamName)
@@ -62,7 +89,7 @@ func main() {
 	stopChannel <- true
 }
 
-func CreateScenario(streamName goengine.StreamName) *Recipe {
+func CreateScenario() *Recipe {
 	recipe := NewRecipe("Test Recipe")
 	recipe.Rate(4)
 	return recipe
