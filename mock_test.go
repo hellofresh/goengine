@@ -28,7 +28,7 @@ func (e RecipeCreated) OccurredOn() time.Time {
 
 type RecipeRated struct {
 	occurredOn time.Time
-	Rating    int
+	Rating     int
 }
 
 func (e RecipeRated) OccurredOn() time.Time {
