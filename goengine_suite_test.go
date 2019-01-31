@@ -1,10 +1,10 @@
-package goengine_test
+package goengine
 
 import (
+	"testing"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
-	"testing"
 )
 
 func TestGoengine(t *testing.T) {

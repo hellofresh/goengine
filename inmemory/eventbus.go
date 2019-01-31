@@ -38,7 +38,10 @@ func (bus *EventBus) ReceiveEvents(options goengine.VersionedEventReceiverOption
 				ch <- nil
 			case versionedEvent := <-bus.publishedEventsChannel:
 				ackCh := make(chan bool)
-				options.ReceiveEvent <- goengine.VersionedEventTransactedAccept{versionedEvent, ackCh}
+				options.ReceiveEvent <- goengine.VersionedEventTransactedAccept{
+					Event:                 versionedEvent,
+					ProcessedSuccessfully: ackCh,
+				}
 				<-ackCh
 			}
 		}

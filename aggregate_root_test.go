@@ -1,4 +1,4 @@
-package goengine_test
+package goengine
 
 import (
 	. "github.com/onsi/ginkgo"
