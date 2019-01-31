@@ -41,7 +41,7 @@ var _ = Describe("In Memory Event Store", func() {
 		})
 
 		It("should count the events that happened", func() {
-			Expect(inMemory.CountEventsFor(streamName, aggregateId)).Should(Equal(4))
+			Expect(inMemory.CountEventsFor(streamName, aggregateId)).Should(Equal(int64(4)))
 		})
 
 		It("should retrieve events for version bigger then 1", func() {

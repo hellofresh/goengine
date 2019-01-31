@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"os"
 	"time"
 
@@ -19,6 +20,13 @@ func main() {
 	var streamName goengine.StreamName = "test"
 
 	mongoDSN := os.Getenv("STORAGE_DSN")
+	if len(mongoDSN) == 0 {
+		panic(errors.New("missing STORAGE_DSN environment variable"))
+	}
+	brokerDSN := os.Getenv("BROKER_DSN")
+	if len(mongoDSN) == 0 {
+		panic(errors.New("missing BROKER_DSN environment variable"))
+	}
 
 	goengine.Log("Connecting to the database", map[string]interface{}{"dsn": mongoDSN}, nil)
 	mongoClient, err := mongo.NewClientWithOptions(
@@ -56,8 +64,6 @@ func main() {
 	registry.RegisterType(&RecipeCreated{})
 	registry.RegisterType(&RecipeRated{})
 
-	// bus := inmemory.NewInMemoryEventBus()
-	brokerDSN := os.Getenv("BROKER_DSN")
 	goengine.Log("Setting up the event bus", map[string]interface{}{"dsn": brokerDSN}, nil)
 	bus := rabbit.NewEventBus(brokerDSN, "events", "events")
 
