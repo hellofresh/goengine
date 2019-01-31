@@ -1,6 +1,8 @@
 NO_COLOR=\033[0m
 OK_COLOR=\033[32;01m
 
+PKG_SRC := github.com/hellofresh/goengine
+
 vet:
 	@echo "$(OK_COLOR)==> checking code correctness with 'go vet' tool$(NO_COLOR)"
 	@go vet ./...
@@ -11,7 +13,7 @@ lint: tools.golint
 
 test-integration: lint vet
 	@echo "$(OK_COLOR)==> Running integration tests$(NO_COLOR)"
-	@STORAGE_DSN=mongodb://localhost:27017/ BROKER_DSN=amqp://guest:guest@localhost:5672/ go run ./cmd/goengine/...
+	@STORAGE_DSN=mongodb://localhost:27017/ BROKER_DSN=amqp://guest:guest@localhost:5672/ go run $(PKG_SRC)/cmd/goengine/...
 
 test-unit: lint vet
 	@echo "$(OK_COLOR)==> Running unit tests$(NO_COLOR)"
