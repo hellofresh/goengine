@@ -17,9 +17,7 @@ before_install:
   - docker-compose up -d
 
 install:
-  - go get -v -d
-  - go get -u github.com/onsi/ginkgo/ginkgo
-  - go get -u github.com/onsi/gomega
+  - make deps
 
 script:
   - make $MAKE_TASK
