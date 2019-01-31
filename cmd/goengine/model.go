@@ -7,21 +7,21 @@ import (
 )
 
 type RecipeCreated struct {
-	ocurredOn time.Time
-	Name      string
+	occurredOn time.Time
+	Name       string
 }
 
-func (e RecipeCreated) OcurredOn() time.Time {
-	return e.ocurredOn
+func (e RecipeCreated) OccurredOn() time.Time {
+	return e.occurredOn
 }
 
 type RecipeRated struct {
-	ocurredOn time.Time
-	Rating    int
+	occurredOn time.Time
+	Rating     int
 }
 
-func (e RecipeRated) OcurredOn() time.Time {
-	return e.ocurredOn
+func (e RecipeRated) OccurredOn() time.Time {
+	return e.occurredOn
 }
 
 type Recipe struct {
@@ -38,7 +38,7 @@ func NewRecipe(name string) *Recipe {
 	return recipe
 }
 
-func NewRecipeFromHisotry(id string, streamName goengine.StreamName, repo goengine.AggregateRepository) (*Recipe, error) {
+func NewRecipeFromHistory(id string, streamName goengine.StreamName, repo goengine.AggregateRepository) (*Recipe, error) {
 	recipe := new(Recipe)
 	recipe.AggregateRootBased = goengine.NewEventSourceBasedWithID(recipe, id)
 	err := repo.Reconstitute(id, recipe, streamName)

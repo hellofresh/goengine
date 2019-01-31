@@ -11,9 +11,6 @@ import (
 	"github.com/hellofresh/goengine/rabbit"
 	"github.com/mongodb/mongo-go-driver/mongo"
 	"github.com/mongodb/mongo-go-driver/mongo/options"
-	"github.com/mongodb/mongo-go-driver/mongo/readconcern"
-	"github.com/mongodb/mongo-go-driver/mongo/readpref"
-	"github.com/mongodb/mongo-go-driver/mongo/writeconcern"
 )
 
 func main() {
@@ -31,11 +28,7 @@ func main() {
 	goengine.Log("Connecting to the database", map[string]interface{}{"dsn": mongoDSN}, nil)
 	mongoClient, err := mongo.NewClientWithOptions(
 		mongoDSN,
-		options.Client().
-			SetAppName("goengine").
-			SetReadConcern(readconcern.Linearizable()).
-			SetReadPreference(readpref.Nearest()).
-			SetWriteConcern(writeconcern.New(writeconcern.WMajority())),
+		options.Client().SetAppName("goengine"),
 	)
 	if err != nil {
 		goengine.Log("Failed to create new Mongo mongoClient", nil, err)
@@ -68,11 +61,11 @@ func main() {
 	bus := rabbit.NewEventBus(brokerDSN, "events", "events")
 
 	goengine.Log("Setting up the event store", nil, nil)
-	es := mongodb.NewEventStore(mongoClient.Database("event_store"), registry)
+	eventStore := mongodb.NewEventStore(mongoClient.Database("event_store"), registry)
 
 	eventDispatcher := goengine.NewVersionedEventDispatchManager(bus, registry)
 	eventDispatcher.RegisterEventHandler(&RecipeCreated{}, func(event *goengine.DomainMessage) error {
-		goengine.Log("Event received", nil, nil)
+		goengine.Log("Event received", map[string]interface{}{"event": event}, nil)
 		return nil
 	})
 
@@ -82,12 +75,15 @@ func main() {
 	goengine.Log("Creating a recipe", nil, nil)
 	aggregateRoot := CreateScenario()
 
-	repository := goengine.NewPublisherRepository(es, bus)
-	repository.Save(aggregateRoot, streamName)
+	repository := goengine.NewPublisherRepository(eventStore, bus)
+	if err := repository.Save(aggregateRoot, streamName); err != nil {
+		goengine.Log("Failed to save aggregate to stream", nil, err)
+		panic(err)
+	}
 
-	_, err = NewRecipeFromHisotry(aggregateRoot.ID, streamName, repository)
+	_, err = NewRecipeFromHistory(aggregateRoot.ID, streamName, repository)
 	if err != nil {
-		goengine.Log("Failed to connect to Mongo", nil, err)
+		goengine.Log("Failed get a recipe from history", nil, err)
 		panic(err)
 	}
 
