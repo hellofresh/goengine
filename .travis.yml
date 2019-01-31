@@ -9,9 +9,20 @@ go:
   - "1.11"
   - "stable"
 
+env:
+  - MAKE_TASK=test-unit
+  - MAKE_TASK=test-integration
+
+before_install:
+  - docker-compose up -d
+
 install:
   - go get -v -d
   - go get -u github.com/onsi/ginkgo/ginkgo
   - go get -u github.com/onsi/gomega
 
-script: ginkgo -r
+script:
+  - make $MAKE_TASK
+
+after_script:
+  - docker-compose down -v
