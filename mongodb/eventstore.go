@@ -1,7 +1,6 @@
 package mongodb
 
 import (
-	"context"
 	"encoding/json"
 	"time"
 
@@ -24,14 +23,25 @@ type MongoEvent struct {
 
 // EventStore The mongodb event store
 type EventStore struct {
-	mongoDB *mongo.Database
-
+	mongoDB  *mongo.Database
 	registry goengine.TypeRegistry
+
+	cs ContextStrategy
 }
 
 // NewEventStore creates new MongoDB based event store
-func NewEventStore(mongoDB *mongo.Database, r goengine.TypeRegistry) *EventStore {
-	return &EventStore{mongoDB, r}
+func NewEventStore(mongoDB *mongo.Database, registry goengine.TypeRegistry, options ...Option) *EventStore {
+	es := &EventStore{
+		mongoDB:  mongoDB,
+		registry: registry,
+		cs:       NewBackgroundContextStrategy(),
+	}
+
+	for _, o := range options {
+		o(es)
+	}
+
+	return es
 }
 
 // Append adds an event to the event store
@@ -44,12 +54,12 @@ func (s *EventStore) Append(events *goengine.EventStream) error {
 		}
 
 		coll := s.mongoDB.Collection(streamName)
-		err = s.createIndexes(coll)
+		err = s.createIndices(coll)
 		if nil != err {
 			return err
 		}
 
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		ctx, cancel := s.cs.Append()
 		_, err = coll.InsertOne(ctx, mongoEvent)
 		cancel()
 
@@ -66,7 +76,7 @@ func (s *EventStore) GetEventsFor(streamName goengine.StreamName, id string) (*g
 	var mongoEvents []MongoEvent
 	coll := s.mongoDB.Collection(string(streamName))
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := s.cs.GetEventsFor()
 	defer cancel()
 
 	cur, err := coll.Find(ctx, bson.M{"aggregate_id": id})
@@ -106,7 +116,7 @@ func (s *EventStore) FromVersion(streamName goengine.StreamName, id string, vers
 	var mongoEvents []MongoEvent
 	coll := s.mongoDB.Collection(string(streamName))
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := s.cs.FromVersion()
 	defer cancel()
 
 	cur, err := coll.Find(
@@ -150,14 +160,14 @@ func (s *EventStore) FromVersion(streamName goengine.StreamName, id string, vers
 
 // CountEventsFor counts events for an id on the specified stream
 func (s *EventStore) CountEventsFor(streamName goengine.StreamName, id string) (int64, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := s.cs.CountEventsFor()
 	defer cancel()
 
 	return s.mongoDB.Collection(string(streamName)).Count(ctx, bson.M{"aggregate_id": string(streamName)})
 }
 
-func (s *EventStore) createIndexes(c *mongo.Collection) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+func (s *EventStore) createIndices(c *mongo.Collection) error {
+	ctx, cancel := s.cs.CreateIndices()
 	defer cancel()
 
 	_, err := c.Indexes().CreateOne(

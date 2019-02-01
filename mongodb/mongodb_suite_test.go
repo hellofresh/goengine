@@ -1,4 +1,4 @@
-package goengine
+package mongodb
 
 import (
 	"testing"
@@ -8,8 +8,6 @@ import (
 )
 
 func TestGoengine(t *testing.T) {
-	SetLogHandler(func(msg string, fields map[string]interface{}, err error) {})
-
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "GO Engine Suite")
+	RunSpecs(t, "MongoDB EventStore Suite")
 }
