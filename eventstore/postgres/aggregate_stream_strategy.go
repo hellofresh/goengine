@@ -23,11 +23,11 @@ var (
 
 // SingleStreamStrategy struct represents eventstore with single stream
 type SingleStreamStrategy struct {
-	converter eventstore.MessagePayloadConverter
+	converter goengine_dev.MessagePayloadConverter
 }
 
 // NewPostgresStrategy is the constructor postgres for PersistenceStrategy interface
-func NewPostgresStrategy(converter eventstore.MessagePayloadConverter) (eventstore.PersistenceStrategy, error) {
+func NewPostgresStrategy(converter goengine_dev.MessagePayloadConverter) (eventstore.PersistenceStrategy, error) {
 	if converter == nil {
 		return nil, ErrNoPayloadConverter
 	}

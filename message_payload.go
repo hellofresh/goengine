@@ -1,4 +1,4 @@
-package eventstore
+package goengine_dev
 
 type (
 	// MessagePayloadConverter an interface describing converting payload data

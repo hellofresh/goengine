@@ -4,7 +4,6 @@ import (
 	"database/sql"
 
 	goengine_dev "github.com/hellofresh/goengine-dev"
-	"github.com/hellofresh/goengine/eventstore"
 )
 
 // Ensure that AggregateChangedFactory satisfies the MessageFactory interface
@@ -12,11 +11,11 @@ var _ MessageFactory = &AggregateChangedFactory{}
 
 // AggregateChangedFactory reconstructs aggregate.Changed messages
 type AggregateChangedFactory struct {
-	payloadFactory eventstore.MessagePayloadFactory
+	payloadFactory goengine_dev.MessagePayloadFactory
 }
 
 // NewAggregateChangedFactory returns a new instance of an AggregateChangedFactory
-func NewAggregateChangedFactory(factory eventstore.MessagePayloadFactory) (*AggregateChangedFactory, error) {
+func NewAggregateChangedFactory(factory goengine_dev.MessagePayloadFactory) (*AggregateChangedFactory, error) {
 	if factory == nil {
 		return nil, ErrPayloadFactoryRequired
 	}

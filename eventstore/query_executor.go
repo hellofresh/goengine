@@ -24,7 +24,7 @@ var (
 type QueryExecutor struct {
 	store          goengine_dev.EventStore
 	streamName     goengine_dev.StreamName
-	resolver       MessagePayloadResolver
+	resolver       goengine_dev.MessagePayloadResolver
 	query          Query
 	queryBatchSize uint
 
@@ -33,7 +33,7 @@ type QueryExecutor struct {
 }
 
 // NewQueryExecutor returns a new QueryExecutor instance
-func NewQueryExecutor(store goengine_dev.EventStore, streamName goengine_dev.StreamName, resolver MessagePayloadResolver, query Query, queryBatchSize uint) (*QueryExecutor, error) {
+func NewQueryExecutor(store goengine_dev.EventStore, streamName goengine_dev.StreamName, resolver goengine_dev.MessagePayloadResolver, query Query, queryBatchSize uint) (*QueryExecutor, error) {
 	if store == nil {
 		return nil, ErrEventStoreRequired
 	}

@@ -6,7 +6,8 @@ import (
 	"errors"
 	"reflect"
 
-	"github.com/hellofresh/goengine/eventstore"
+	goengine_dev "github.com/hellofresh/goengine-dev"
+
 	reflectUtil "github.com/hellofresh/goengine/internal/reflect"
 )
 
@@ -25,11 +26,11 @@ var (
 	ErrDuplicatePayloadType = errors.New("payload type is already registered")
 
 	// Ensure that PayloadTransformer satisfies the MessagePayloadFactory interface
-	_ eventstore.MessagePayloadFactory = &PayloadTransformer{}
+	_ goengine_dev.MessagePayloadFactory = &PayloadTransformer{}
 	// Ensure that PayloadTransformer satisfies the MessagePayloadConverter interface
-	_ eventstore.MessagePayloadConverter = &PayloadTransformer{}
+	_ goengine_dev.MessagePayloadConverter = &PayloadTransformer{}
 	// Ensure that PayloadTransformer satisfies the MessagePayloadResolver interface
-	_ eventstore.MessagePayloadResolver = &PayloadTransformer{}
+	_ goengine_dev.MessagePayloadResolver = &PayloadTransformer{}
 )
 
 type (

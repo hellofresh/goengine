@@ -3,7 +3,8 @@ package inmemory
 import (
 	"errors"
 
-	"github.com/hellofresh/goengine/eventstore"
+	goengine_dev "github.com/hellofresh/goengine-dev"
+
 	"github.com/hellofresh/goengine/internal/reflect"
 )
 
@@ -13,7 +14,7 @@ var (
 	// ErrDuplicatePayloadType occurs when a payload type is already registered
 	ErrDuplicatePayloadType = errors.New("payload type is already registered")
 	// Ensure that we satisfy the eventstore.MessagePayloadResolver interface
-	_ eventstore.MessagePayloadResolver = &PayloadRegistry{}
+	_ goengine_dev.MessagePayloadResolver = &PayloadRegistry{}
 )
 
 // PayloadRegistry is a registry containing the mapping of an payload type to a event name

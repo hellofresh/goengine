@@ -8,7 +8,6 @@ import (
 
 	goengine_dev "github.com/hellofresh/goengine-dev"
 	"github.com/hellofresh/goengine/aggregate"
-	"github.com/hellofresh/goengine/eventstore"
 	"github.com/hellofresh/goengine/metadata"
 )
 
@@ -16,11 +15,11 @@ import (
 var _ goengine_dev.EventStream = &aggregateChangedEventStream{}
 
 type aggregateChangedEventStream struct {
-	payloadFactory eventstore.MessagePayloadFactory
+	payloadFactory goengine_dev.MessagePayloadFactory
 	rows           *sql.Rows
 }
 
-func newAggregateChangedEventStream(factory eventstore.MessagePayloadFactory, rows *sql.Rows) (*aggregateChangedEventStream, error) {
+func newAggregateChangedEventStream(factory goengine_dev.MessagePayloadFactory, rows *sql.Rows) (*aggregateChangedEventStream, error) {
 	if factory == nil {
 		return nil, ErrPayloadFactoryRequired
 	}

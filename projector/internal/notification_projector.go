@@ -5,7 +5,6 @@ import (
 	"database/sql"
 
 	goengine_dev "github.com/hellofresh/goengine-dev"
-	"github.com/hellofresh/goengine/eventstore"
 	"github.com/hellofresh/goengine/log"
 	"github.com/hellofresh/goengine/projector"
 	"github.com/pkg/errors"
@@ -23,7 +22,7 @@ type NotificationProjector struct {
 	handlers              map[string]goengine_dev.ProjectionHandler
 
 	eventLoader EventStreamLoader
-	resolver    eventstore.MessagePayloadResolver
+	resolver    goengine_dev.MessagePayloadResolver
 
 	logger log.Logger
 }
@@ -35,7 +34,7 @@ func NewNotificationProjector(
 	acquireUnmarshalState UnmarshalAcquiredState,
 	eventHandlers map[string]goengine_dev.ProjectionHandler,
 	eventLoader EventStreamLoader,
-	resolver eventstore.MessagePayloadResolver,
+	resolver goengine_dev.MessagePayloadResolver,
 	logger log.Logger,
 ) (*NotificationProjector, error) {
 	switch {

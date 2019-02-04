@@ -32,7 +32,7 @@ func TestNewQueryExecutor(t *testing.T) {
 		type invalidTestCase struct {
 			title         string
 			eventStore    goengine_dev.EventStore
-			registry      eventstore.MessagePayloadResolver
+			registry      goengine_dev.MessagePayloadResolver
 			streamName    goengine_dev.StreamName
 			query         eventstore.Query
 			expectedError error
