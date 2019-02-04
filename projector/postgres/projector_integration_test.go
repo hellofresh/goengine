@@ -11,9 +11,9 @@ import (
 
 	goengine_dev "github.com/hellofresh/goengine-dev"
 	"github.com/hellofresh/goengine/aggregate"
-	eventStoreJSON "github.com/hellofresh/goengine/eventstore/json"
 	"github.com/hellofresh/goengine/eventstore/postgres"
 	eventStoreSQL "github.com/hellofresh/goengine/eventstore/sql"
+	eventStoreJSON "github.com/hellofresh/goengine/extension/json"
 	"github.com/hellofresh/goengine/internal/test"
 	"github.com/hellofresh/goengine/metadata"
 )

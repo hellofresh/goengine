@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	eventstorejson "github.com/hellofresh/goengine/eventstore/json"
+	eventstorejson "github.com/hellofresh/goengine/extension/jso"
 	anotherpayload "github.com/hellofresh/goengine/internal/mocks/another/payload"
 	"github.com/hellofresh/goengine/internal/mocks/payload"
 	"github.com/stretchr/testify/assert"

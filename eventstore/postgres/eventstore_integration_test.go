@@ -10,9 +10,9 @@ import (
 
 	goengine_dev "github.com/hellofresh/goengine-dev"
 
-	eventstorejson "github.com/hellofresh/goengine/eventstore/json"
 	"github.com/hellofresh/goengine/eventstore/postgres"
 	eventstoresql "github.com/hellofresh/goengine/eventstore/sql"
+	eventstorejson "github.com/hellofresh/goengine/extension/json"
 	"github.com/hellofresh/goengine/internal/test"
 	"github.com/hellofresh/goengine/metadata"
 	"github.com/hellofresh/goengine/mocks"
