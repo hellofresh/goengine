@@ -7,6 +7,8 @@ import (
 	"strings"
 	"sync"
 
+	goengine_dev "github.com/hellofresh/goengine-dev"
+
 	"github.com/hellofresh/goengine/eventstore"
 	eventStoreSQL "github.com/hellofresh/goengine/eventstore/sql"
 	"github.com/hellofresh/goengine/log"
@@ -49,7 +51,7 @@ func NewAggregateProjector(
 	eventStoreTable string,
 	resolver eventstore.PayloadResolver,
 	aggregateTypeName string,
-	projection eventstore.Projection,
+	projection goengine_dev.Projection,
 	projectionTable string,
 	projectionErrorHandler projector.ProjectionErrorCallback,
 	logger log.Logger,

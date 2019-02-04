@@ -8,7 +8,6 @@ import (
 
 	goengine_dev "github.com/hellofresh/goengine-dev"
 	"github.com/hellofresh/goengine/aggregate"
-	"github.com/hellofresh/goengine/eventstore"
 	"github.com/hellofresh/goengine/projector"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
@@ -18,7 +17,7 @@ import (
 func TestWrapProjectionHandlerToTrapError(t *testing.T) {
 	errorCases := []struct {
 		title         string
-		handler       eventstore.ProjectionHandler
+		handler       goengine_dev.ProjectionHandler
 		expectedCause string
 	}{
 		{

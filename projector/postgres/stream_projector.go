@@ -8,6 +8,7 @@ import (
 	"strings"
 	"sync"
 
+	goengine_dev "github.com/hellofresh/goengine-dev"
 	"github.com/hellofresh/goengine/eventstore"
 	"github.com/hellofresh/goengine/eventstore/postgres"
 	eventStoreSQL "github.com/hellofresh/goengine/eventstore/sql"
@@ -55,7 +56,7 @@ func NewStreamProjector(
 	db *sql.DB,
 	eventStore eventStoreSQL.ReadOnlyEventStore,
 	resolver eventstore.PayloadResolver,
-	projection eventstore.Projection,
+	projection goengine_dev.Projection,
 	projectionTable string,
 	projectionErrorHandler projector.ProjectionErrorCallback,
 	logger log.Logger,

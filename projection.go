@@ -1,14 +1,10 @@
-package eventstore
+package goengine_dev
 
-import (
-	"context"
-
-	goengine_dev "github.com/hellofresh/goengine-dev"
-)
+import "context"
 
 type (
 	// ProjectionHandler is a func that can do state changes based on a message
-	ProjectionHandler func(ctx context.Context, state interface{}, message goengine_dev.Message) (interface{}, error)
+	ProjectionHandler func(ctx context.Context, state interface{}, message Message) (interface{}, error)
 
 	// Projection contains the information of a projection
 	Projection interface {
@@ -16,7 +12,7 @@ type (
 		Name() string
 
 		// FromStream returns the stream this projection is based on
-		FromStream() goengine_dev.StreamName
+		FromStream() StreamName
 
 		// Init initializes the projections state
 		Init(ctx context.Context) (interface{}, error)

@@ -11,7 +11,6 @@ import (
 
 	goengine_dev "github.com/hellofresh/goengine-dev"
 	"github.com/hellofresh/goengine/aggregate"
-	"github.com/hellofresh/goengine/eventstore"
 	eventStoreJSON "github.com/hellofresh/goengine/eventstore/json"
 	"github.com/hellofresh/goengine/eventstore/postgres"
 	eventStoreSQL "github.com/hellofresh/goengine/eventstore/sql"
@@ -21,7 +20,7 @@ import (
 
 const accountAggregateTypeName = "account"
 
-var _ eventstore.Projection = &DepositedProjection{}
+var _ goengine_dev.Projection = &DepositedProjection{}
 
 type (
 	AccountCredited struct {
@@ -53,8 +52,8 @@ func (p *DepositedProjection) FromStream() goengine_dev.StreamName {
 	return "event_stream"
 }
 
-func (p *DepositedProjection) Handlers() map[string]eventstore.ProjectionHandler {
-	return map[string]eventstore.ProjectionHandler{
+func (p *DepositedProjection) Handlers() map[string]goengine_dev.ProjectionHandler {
+	return map[string]goengine_dev.ProjectionHandler{
 		"account_debited": func(ctx context.Context, state interface{}, message goengine_dev.Message) (interface{}, error) {
 			projectionState := state.(depositedProjectionState)
 
