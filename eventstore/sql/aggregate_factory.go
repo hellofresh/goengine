@@ -12,11 +12,11 @@ var _ MessageFactory = &AggregateChangedFactory{}
 
 // AggregateChangedFactory reconstructs aggregate.Changed messages
 type AggregateChangedFactory struct {
-	payloadFactory eventstore.PayloadFactory
+	payloadFactory eventstore.MessagePayloadFactory
 }
 
 // NewAggregateChangedFactory returns a new instance of an AggregateChangedFactory
-func NewAggregateChangedFactory(factory eventstore.PayloadFactory) (*AggregateChangedFactory, error) {
+func NewAggregateChangedFactory(factory eventstore.MessagePayloadFactory) (*AggregateChangedFactory, error) {
 	if factory == nil {
 		return nil, ErrPayloadFactoryRequired
 	}

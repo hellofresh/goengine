@@ -10,9 +10,9 @@ package goengine_dev
 // In order to make sure that we have the same mocks we can regenerate them using `go generate`
 //go:generate go run vendor/github.com/vektra/mockery/cmd/mockery/mockery.go -dir ./ -name=EventStore -outpkg mocks -output ./mocks -case underscore
 //go:generate go run vendor/github.com/vektra/mockery/cmd/mockery/mockery.go -dir ./ -name=EventStream -outpkg mocks -output ./mocks -case underscore
-//go:generate go run vendor/github.com/vektra/mockery/cmd/mockery/mockery.go -dir eventstore/ -name=PayloadFactory -outpkg mocks -output ./mocks -case underscore
-//go:generate go run vendor/github.com/vektra/mockery/cmd/mockery/mockery.go -dir eventstore/ -name=PayloadConverter -outpkg mocks -output ./mocks -case underscore
-//go:generate go run vendor/github.com/vektra/mockery/cmd/mockery/mockery.go -dir eventstore/ -name=PayloadResolver -outpkg mocks -output ./mocks -case underscore
+//go:generate go run vendor/github.com/vektra/mockery/cmd/mockery/mockery.go -dir eventstore/ -name=MessagePayloadFactory -outpkg mocks -output ./mocks -case underscore
+//go:generate go run vendor/github.com/vektra/mockery/cmd/mockery/mockery.go -dir eventstore/ -name=MessagePayloadConverter -outpkg mocks -output ./mocks -case underscore
+//go:generate go run vendor/github.com/vektra/mockery/cmd/mockery/mockery.go -dir eventstore/ -name=MessagePayloadResolver -outpkg mocks -output ./mocks -case underscore
 //go:generate go run vendor/github.com/vektra/mockery/cmd/mockery/mockery.go -dir eventstore/ -name=PersistenceStrategy -outpkg mocks -output ./mocks -case underscore
 //go:generate go run vendor/github.com/vektra/mockery/cmd/mockery/mockery.go -dir eventstore/ -name=Query -outpkg mocks -output ./mocks -case underscore
 //go:generate go run vendor/github.com/vektra/mockery/cmd/mockery/mockery.go -dir eventstore/sql/ -name=MessageFactory -outpkg mocks -output ./mocks -case underscore

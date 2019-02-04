@@ -24,12 +24,12 @@ var (
 	// ErrDuplicatePayloadType occurs when a payload type is already registered
 	ErrDuplicatePayloadType = errors.New("payload type is already registered")
 
-	// Ensure that PayloadTransformer satisfies the PayloadFactory interface
-	_ eventstore.PayloadFactory = &PayloadTransformer{}
-	// Ensure that PayloadTransformer satisfies the PayloadConverter interface
-	_ eventstore.PayloadConverter = &PayloadTransformer{}
-	// Ensure that PayloadTransformer satisfies the PayloadResolver interface
-	_ eventstore.PayloadResolver = &PayloadTransformer{}
+	// Ensure that PayloadTransformer satisfies the MessagePayloadFactory interface
+	_ eventstore.MessagePayloadFactory = &PayloadTransformer{}
+	// Ensure that PayloadTransformer satisfies the MessagePayloadConverter interface
+	_ eventstore.MessagePayloadConverter = &PayloadTransformer{}
+	// Ensure that PayloadTransformer satisfies the MessagePayloadResolver interface
+	_ eventstore.MessagePayloadResolver = &PayloadTransformer{}
 )
 
 type (

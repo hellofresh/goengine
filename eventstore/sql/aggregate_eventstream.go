@@ -16,11 +16,11 @@ import (
 var _ goengine_dev.EventStream = &aggregateChangedEventStream{}
 
 type aggregateChangedEventStream struct {
-	payloadFactory eventstore.PayloadFactory
+	payloadFactory eventstore.MessagePayloadFactory
 	rows           *sql.Rows
 }
 
-func newAggregateChangedEventStream(factory eventstore.PayloadFactory, rows *sql.Rows) (*aggregateChangedEventStream, error) {
+func newAggregateChangedEventStream(factory eventstore.MessagePayloadFactory, rows *sql.Rows) (*aggregateChangedEventStream, error) {
 	if factory == nil {
 		return nil, ErrPayloadFactoryRequired
 	}

@@ -13,7 +13,7 @@ var (
 	// ErrEventStoreRequired occurs when a nil event store is provided
 	ErrEventStoreRequired = errors.New("an EventStore may not be nil")
 	// ErrPayloadResolverRequired occurs when a nil resolver is provided
-	ErrPayloadResolverRequired = errors.New("an PayloadResolver may not be nil")
+	ErrPayloadResolverRequired = errors.New("an MessagePayloadResolver may not be nil")
 	// ErrQueryRequired occurs when a nil query is provided
 	ErrQueryRequired = errors.New("a Query may not be nil")
 	// ErrQueryHasNoHandlers occurs when a query is being run without any handlers
@@ -24,7 +24,7 @@ var (
 type QueryExecutor struct {
 	store          goengine_dev.EventStore
 	streamName     goengine_dev.StreamName
-	resolver       PayloadResolver
+	resolver       MessagePayloadResolver
 	query          Query
 	queryBatchSize uint
 
@@ -33,7 +33,7 @@ type QueryExecutor struct {
 }
 
 // NewQueryExecutor returns a new QueryExecutor instance
-func NewQueryExecutor(store goengine_dev.EventStore, streamName goengine_dev.StreamName, resolver PayloadResolver, query Query, queryBatchSize uint) (*QueryExecutor, error) {
+func NewQueryExecutor(store goengine_dev.EventStore, streamName goengine_dev.StreamName, resolver MessagePayloadResolver, query Query, queryBatchSize uint) (*QueryExecutor, error) {
 	if store == nil {
 		return nil, ErrEventStoreRequired
 	}

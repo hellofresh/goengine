@@ -23,7 +23,7 @@ type NotificationProjector struct {
 	handlers              map[string]goengine_dev.ProjectionHandler
 
 	eventLoader EventStreamLoader
-	resolver    eventstore.PayloadResolver
+	resolver    eventstore.MessagePayloadResolver
 
 	logger log.Logger
 }
@@ -35,7 +35,7 @@ func NewNotificationProjector(
 	acquireUnmarshalState UnmarshalAcquiredState,
 	eventHandlers map[string]goengine_dev.ProjectionHandler,
 	eventLoader EventStreamLoader,
-	resolver eventstore.PayloadResolver,
+	resolver eventstore.MessagePayloadResolver,
 	logger log.Logger,
 ) (*NotificationProjector, error) {
 	switch {

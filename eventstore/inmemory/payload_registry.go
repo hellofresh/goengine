@@ -12,8 +12,8 @@ var (
 	ErrUnknownPayloadType = errors.New("unknown payload type was provided")
 	// ErrDuplicatePayloadType occurs when a payload type is already registered
 	ErrDuplicatePayloadType = errors.New("payload type is already registered")
-	// Ensure that we satisfy the eventstore.PayloadResolver interface
-	_ eventstore.PayloadResolver = &PayloadRegistry{}
+	// Ensure that we satisfy the eventstore.MessagePayloadResolver interface
+	_ eventstore.MessagePayloadResolver = &PayloadRegistry{}
 )
 
 // PayloadRegistry is a registry containing the mapping of an payload type to a event name

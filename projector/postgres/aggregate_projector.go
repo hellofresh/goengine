@@ -49,7 +49,7 @@ func NewAggregateProjector(
 	db *sql.DB,
 	eventStore eventStoreSQL.ReadOnlyEventStore,
 	eventStoreTable string,
-	resolver eventstore.PayloadResolver,
+	resolver eventstore.MessagePayloadResolver,
 	aggregateTypeName string,
 	projection goengine_dev.Projection,
 	projectionTable string,

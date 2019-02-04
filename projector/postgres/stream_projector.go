@@ -55,7 +55,7 @@ func NewStreamProjector(
 	dbDSN string,
 	db *sql.DB,
 	eventStore eventStoreSQL.ReadOnlyEventStore,
-	resolver eventstore.PayloadResolver,
+	resolver eventstore.MessagePayloadResolver,
 	projection goengine_dev.Projection,
 	projectionTable string,
 	projectionErrorHandler projector.ProjectionErrorCallback,
