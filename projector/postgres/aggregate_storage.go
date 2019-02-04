@@ -6,8 +6,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	goengine_dev "github.com/hellofresh/goengine-dev"
 	"github.com/hellofresh/goengine/aggregate"
-	"github.com/hellofresh/goengine/eventstore"
 	eventStoreSQL "github.com/hellofresh/goengine/eventstore/sql"
 	"github.com/hellofresh/goengine/log"
 	"github.com/hellofresh/goengine/metadata"
@@ -17,8 +17,8 @@ import (
 	"github.com/pkg/errors"
 )
 
-func aggregateProjectionEventStreamLoader(eventStore eventStoreSQL.ReadOnlyEventStore, streamName eventstore.StreamName, aggregateTypeName string) internal.EventStreamLoader {
-	return func(ctx context.Context, conn *sql.Conn, notification *projector.Notification, state internal.State) (eventstore.EventStream, error) {
+func aggregateProjectionEventStreamLoader(eventStore eventStoreSQL.ReadOnlyEventStore, streamName goengine_dev.StreamName, aggregateTypeName string) internal.EventStreamLoader {
+	return func(ctx context.Context, conn *sql.Conn, notification *projector.Notification, state internal.State) (goengine_dev.EventStream, error) {
 		matcher := metadata.NewMatcher()
 		matcher = metadata.WithConstraint(matcher, aggregate.IDKey, metadata.Equals, notification.AggregateID)
 		matcher = metadata.WithConstraint(matcher, aggregate.TypeKey, metadata.Equals, aggregateTypeName)

@@ -8,9 +8,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hellofresh/goengine/eventstore"
+	goengine_dev "github.com/hellofresh/goengine-dev"
+
 	eventstorejson "github.com/hellofresh/goengine/eventstore/json"
-	postgres "github.com/hellofresh/goengine/eventstore/postgres"
+	"github.com/hellofresh/goengine/eventstore/postgres"
 	eventstoresql "github.com/hellofresh/goengine/eventstore/sql"
 	"github.com/hellofresh/goengine/internal/test"
 	"github.com/hellofresh/goengine/metadata"
@@ -22,7 +23,7 @@ type (
 	eventStoreTestSuite struct {
 		test.PostgresSuite
 
-		eventStore eventstore.EventStore
+		eventStore goengine_dev.EventStore
 	}
 
 	payloadData struct {
@@ -66,8 +67,8 @@ func (s *eventStoreTestSuite) TestCreate() {
 func (s *eventStoreTestSuite) TestHasStream() {
 	ctx := context.Background()
 
-	streamName := eventstore.StreamName("orders")
-	anotherStreamName := eventstore.StreamName("orders2")
+	streamName := goengine_dev.StreamName("orders")
+	anotherStreamName := goengine_dev.StreamName("orders2")
 
 	exists := s.eventStore.HasStream(ctx, streamName)
 	s.Assert().False(exists)
@@ -85,7 +86,7 @@ func (s *eventStoreTestSuite) TestHasStream() {
 func (s *eventStoreTestSuite) TestAppendTo() {
 	agregateID := goengine_dev.GenerateUUID()
 	ctx := context.Background()
-	streamName := eventstore.StreamName("orders_my")
+	streamName := goengine_dev.StreamName("orders_my")
 
 	err := s.eventStore.Create(ctx, streamName)
 	s.Require().NoError(err)
@@ -119,7 +120,7 @@ func (s *eventStoreTestSuite) TestLoad() {
 	messages := s.generateAppendMessages([]goengine_dev.UUID{aggregateIDFirst, aggregateIDSecond})
 	countPrepared := int64(len(messages))
 	ctx := context.Background()
-	streamName := eventstore.StreamName("orders_load")
+	streamName := goengine_dev.StreamName("orders_load")
 
 	testCases := []struct {
 		title          string
@@ -313,7 +314,7 @@ func (s *eventStoreTestSuite) TestLoad() {
 	}
 }
 
-func (s *eventStoreTestSuite) createEventStore() eventstore.EventStore {
+func (s *eventStoreTestSuite) createEventStore() goengine_dev.EventStore {
 	transformer := eventstorejson.NewPayloadTransformer()
 	s.Require().NoError(
 		transformer.RegisterPayload("tests", func() interface{} { return &payloadData{} }),

@@ -3,6 +3,7 @@ package sql
 import (
 	"database/sql"
 
+	goengine_dev "github.com/hellofresh/goengine-dev"
 	"github.com/hellofresh/goengine/eventstore"
 )
 
@@ -26,7 +27,7 @@ func NewAggregateChangedFactory(factory eventstore.PayloadFactory) (*AggregateCh
 }
 
 // CreateEventStream reconstruct the aggregate.Changed messages from the sql.Rows
-func (f *AggregateChangedFactory) CreateEventStream(rows *sql.Rows) (eventstore.EventStream, error) {
+func (f *AggregateChangedFactory) CreateEventStream(rows *sql.Rows) (goengine_dev.EventStream, error) {
 	if rows == nil {
 		return nil, ErrRowsRequired
 	}

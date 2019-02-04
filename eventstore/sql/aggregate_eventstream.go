@@ -13,7 +13,7 @@ import (
 )
 
 // Ensure that aggregateChangedEventStream satisfies the eventstore.EventStream interface
-var _ eventstore.EventStream = &aggregateChangedEventStream{}
+var _ goengine_dev.EventStream = &aggregateChangedEventStream{}
 
 type aggregateChangedEventStream struct {
 	payloadFactory eventstore.PayloadFactory

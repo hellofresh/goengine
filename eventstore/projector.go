@@ -16,7 +16,7 @@ type (
 		Name() string
 
 		// FromStream returns the stream this projection is based on
-		FromStream() StreamName
+		FromStream() goengine_dev.StreamName
 
 		// Init initializes the projections state
 		Init(ctx context.Context) (interface{}, error)

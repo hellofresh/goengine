@@ -7,7 +7,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/hellofresh/goengine/eventstore"
+	goengine_dev "github.com/hellofresh/goengine-dev"
+
 	eventStoreSQL "github.com/hellofresh/goengine/eventstore/sql"
 	"github.com/hellofresh/goengine/log"
 	"github.com/hellofresh/goengine/projector"
@@ -15,8 +16,8 @@ import (
 	"github.com/lib/pq"
 )
 
-func streamProjectionEventStreamLoader(eventStore eventStoreSQL.ReadOnlyEventStore, streamName eventstore.StreamName) internal.EventStreamLoader {
-	return func(ctx context.Context, conn *sql.Conn, notification *projector.Notification, state internal.State) (eventstore.EventStream, error) {
+func streamProjectionEventStreamLoader(eventStore eventStoreSQL.ReadOnlyEventStore, streamName goengine_dev.StreamName) internal.EventStreamLoader {
+	return func(ctx context.Context, conn *sql.Conn, notification *projector.Notification, state internal.State) (goengine_dev.EventStream, error) {
 		return eventStore.LoadWithConnection(ctx, conn, streamName, state.Position+1, nil, nil)
 	}
 }

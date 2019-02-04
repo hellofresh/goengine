@@ -7,7 +7,6 @@ import (
 	"sync"
 
 	goengine_dev "github.com/hellofresh/goengine-dev"
-	"github.com/hellofresh/goengine/eventstore"
 	"github.com/hellofresh/goengine/log"
 	"github.com/hellofresh/goengine/metadata"
 )
@@ -20,7 +19,7 @@ var (
 	// ErrNilMessage occurs when a goengine_dev.Message that is being appended to a stream is nil or a reference to nil
 	ErrNilMessage = errors.New("nil is not a valid message")
 	// Ensure that we satisfy the eventstore.EventStore interface
-	_ eventstore.EventStore = &EventStore{}
+	_ goengine_dev.EventStore = &EventStore{}
 )
 
 // EventStore a in memory event store implementation
@@ -28,19 +27,19 @@ type EventStore struct {
 	sync.RWMutex
 
 	logger  log.Logger
-	streams map[eventstore.StreamName][]goengine_dev.Message
+	streams map[goengine_dev.StreamName][]goengine_dev.Message
 }
 
 // NewEventStore return a new inmemory.EventStore
 func NewEventStore(logger log.Logger) *EventStore {
 	return &EventStore{
 		logger:  logger,
-		streams: map[eventstore.StreamName][]goengine_dev.Message{},
+		streams: map[goengine_dev.StreamName][]goengine_dev.Message{},
 	}
 }
 
 // Create creates a event stream
-func (i *EventStore) Create(ctx context.Context, streamName eventstore.StreamName) error {
+func (i *EventStore) Create(ctx context.Context, streamName goengine_dev.StreamName) error {
 	if _, found := i.streams[streamName]; found {
 		return ErrStreamExistsAlready
 	}
@@ -51,7 +50,7 @@ func (i *EventStore) Create(ctx context.Context, streamName eventstore.StreamNam
 }
 
 // HasStream returns true if the stream exists
-func (i *EventStore) HasStream(ctx context.Context, streamName eventstore.StreamName) bool {
+func (i *EventStore) HasStream(ctx context.Context, streamName goengine_dev.StreamName) bool {
 	_, found := i.streams[streamName]
 
 	return found
@@ -60,11 +59,11 @@ func (i *EventStore) HasStream(ctx context.Context, streamName eventstore.Stream
 // Load returns a list of events based on the provided conditions
 func (i *EventStore) Load(
 	ctx context.Context,
-	streamName eventstore.StreamName,
+	streamName goengine_dev.StreamName,
 	fromNumber int64,
 	count *uint,
 	matcher metadata.Matcher,
-) (eventstore.EventStream, error) {
+) (goengine_dev.EventStream, error) {
 	i.RLock()
 	defer i.RUnlock()
 
@@ -98,7 +97,7 @@ func (i *EventStore) Load(
 }
 
 // AppendTo appends the provided messages to the stream
-func (i *EventStore) AppendTo(ctx context.Context, streamName eventstore.StreamName, streamEvents []goengine_dev.Message) error {
+func (i *EventStore) AppendTo(ctx context.Context, streamName goengine_dev.StreamName, streamEvents []goengine_dev.Message) error {
 	i.Lock()
 	defer i.Unlock()
 

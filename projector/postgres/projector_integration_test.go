@@ -49,7 +49,7 @@ func (p *DepositedProjection) Name() string {
 	return "deposited_report"
 }
 
-func (p *DepositedProjection) FromStream() eventstore.StreamName {
+func (p *DepositedProjection) FromStream() goengine_dev.StreamName {
 	return "event_stream"
 }
 
@@ -83,7 +83,7 @@ func (p *DepositedProjection) ReconstituteState(data []byte) (interface{}, error
 type projectorSuite struct {
 	test.PostgresSuite
 
-	eventStream        eventstore.StreamName
+	eventStream        goengine_dev.StreamName
 	eventStore         *postgres.EventStore
 	eventStoreTable    string
 	payloadTransformer *eventStoreJSON.PayloadTransformer
@@ -93,7 +93,7 @@ func (s *projectorSuite) SetupTest() {
 	s.PostgresSuite.SetupTest()
 	db := s.DB()
 
-	s.eventStream = eventstore.StreamName("event_stream")
+	s.eventStream = goengine_dev.StreamName("event_stream")
 
 	// Create payload transformer
 	s.payloadTransformer = eventStoreJSON.NewPayloadTransformer()

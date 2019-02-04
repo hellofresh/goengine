@@ -4,7 +4,8 @@ import (
 	"context"
 	"database/sql"
 
-	"github.com/hellofresh/goengine/eventstore"
+	goengine_dev "github.com/hellofresh/goengine-dev"
+
 	"github.com/hellofresh/goengine/projector"
 )
 
@@ -28,7 +29,7 @@ type (
 	}
 
 	// EventStreamLoader loads a event stream based on the provided notification and state
-	EventStreamLoader func(ctx context.Context, conn *sql.Conn, notification *projector.Notification, state State) (eventstore.EventStream, error)
+	EventStreamLoader func(ctx context.Context, conn *sql.Conn, notification *projector.Notification, state State) (goengine_dev.EventStream, error)
 
 	// Storage is an interface for handling the projection storage
 	Storage interface {

@@ -3,7 +3,7 @@ package postgres
 import (
 	"fmt"
 
-	"github.com/hellofresh/goengine/eventstore"
+	goengine_dev "github.com/hellofresh/goengine-dev"
 	"github.com/lib/pq"
 )
 
@@ -25,7 +25,7 @@ END;
 $$;`
 
 // sqlTriggerEventStreamNotify a helper to create the sql on a event store table
-func sqlTriggerEventStreamNotifyTemplate(eventStreamName eventstore.StreamName, eventStreamTable string) string {
+func sqlTriggerEventStreamNotifyTemplate(eventStreamName goengine_dev.StreamName, eventStreamTable string) string {
 	triggerName := fmt.Sprintf("%s_notify", eventStreamTable)
 	return fmt.Sprintf(
 		`DO LANGUAGE plpgsql $$
@@ -56,7 +56,7 @@ func sqlTriggerEventStreamNotifyTemplate(eventStreamName eventstore.StreamName, 
 }
 
 // StreamProjectorCreateSchema return the sql statement needed for the postgres database in order to use the StreamProjector
-func StreamProjectorCreateSchema(projectionTable string, streamName eventstore.StreamName, streamTable string) []string {
+func StreamProjectorCreateSchema(projectionTable string, streamName goengine_dev.StreamName, streamTable string) []string {
 	return []string{
 		sqlFuncEventStreamNotify,
 		sqlTriggerEventStreamNotifyTemplate(streamName, streamTable),
@@ -76,7 +76,7 @@ func StreamProjectorCreateSchema(projectionTable string, streamName eventstore.S
 }
 
 // AggregateProjectorCreateSchema return the sql statement needed for the postgres database in order to use the AggregateProjector
-func AggregateProjectorCreateSchema(projectionTable string, streamName eventstore.StreamName, streamTable string) []string {
+func AggregateProjectorCreateSchema(projectionTable string, streamName goengine_dev.StreamName, streamTable string) []string {
 	return []string{
 		sqlFuncEventStreamNotify,
 		sqlTriggerEventStreamNotifyTemplate(streamName, streamTable),

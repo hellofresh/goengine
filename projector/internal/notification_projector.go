@@ -142,7 +142,7 @@ func (s *NotificationProjector) project(ctx context.Context, conn *sql.Conn, str
 }
 
 // projectStream will project the events in the event stream and persist the state after the projection
-func (s *NotificationProjector) projectStream(ctx context.Context, conn *sql.Conn, notification *projector.Notification, state State, stream eventstore.EventStream) error {
+func (s *NotificationProjector) projectStream(ctx context.Context, conn *sql.Conn, notification *projector.Notification, state State, stream goengine_dev.EventStream) error {
 	for stream.Next() {
 		// Check if the context is expired
 		select {

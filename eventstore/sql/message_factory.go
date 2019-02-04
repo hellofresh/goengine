@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"errors"
 
-	"github.com/hellofresh/goengine/eventstore"
+	goengine_dev "github.com/hellofresh/goengine-dev"
 )
 
 var (
@@ -17,5 +17,5 @@ var (
 // MessageFactory reconstruct messages from the database
 type MessageFactory interface {
 	// CreateEventStream reconstructs the message from the provided rows
-	CreateEventStream(rows *sql.Rows) (eventstore.EventStream, error)
+	CreateEventStream(rows *sql.Rows) (goengine_dev.EventStream, error)
 }

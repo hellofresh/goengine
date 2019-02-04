@@ -10,8 +10,7 @@ import (
 	"time"
 
 	goengine_dev "github.com/hellofresh/goengine-dev"
-	"github.com/hellofresh/goengine/eventstore"
-	postgres "github.com/hellofresh/goengine/eventstore/postgres"
+	"github.com/hellofresh/goengine/eventstore/postgres"
 	"github.com/hellofresh/goengine/metadata"
 	"github.com/hellofresh/goengine/mocks"
 	"github.com/stretchr/testify/assert"
@@ -42,7 +41,7 @@ func TestGenerateTableName(t *testing.T) {
 	t.Run("name conversions", func(t *testing.T) {
 		type validTestCase struct {
 			title  string
-			input  eventstore.StreamName
+			input  goengine_dev.StreamName
 			output string
 		}
 

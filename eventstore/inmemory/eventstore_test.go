@@ -51,8 +51,8 @@ func TestEventStore_Create(t *testing.T) {
 }
 
 func TestEventStore_HasStream(t *testing.T) {
-	createThisStream := eventstore.StreamName("my_stream")
-	unkownStream := eventstore.StreamName("never_stream")
+	createThisStream := goengine_dev.StreamName("my_stream")
+	unkownStream := goengine_dev.StreamName("never_stream")
 
 	logger, loggerHooks := test.NewNullLogger()
 	store := inmemory.NewEventStore(logrus.Wrap(logger))
@@ -72,14 +72,14 @@ func TestEventStore_HasStream(t *testing.T) {
 func TestEventStore_Load(t *testing.T) {
 	type validTestCase struct {
 		title           string
-		loadFrom        eventstore.StreamName
+		loadFrom        goengine_dev.StreamName
 		loadCount       *uint
 		matcher         metadata.Matcher
 		expectedEvents  []goengine_dev.Message
 		expectedNumbers []int64
 	}
 
-	testStreams := map[eventstore.StreamName][]goengine_dev.Message{
+	testStreams := map[goengine_dev.StreamName][]goengine_dev.Message{
 		"test": {
 			mockMessage(map[string]interface{}{"type": "a", "version": 1}),
 			mockMessage(map[string]interface{}{"type": "a", "version": 2}),
@@ -184,7 +184,7 @@ func TestEventStore_Load(t *testing.T) {
 	t.Run("invalid loads", func(t *testing.T) {
 		t.Run("Unknown event stream", func(t *testing.T) {
 			ctx := context.Background()
-			stream := eventstore.StreamName("unknown")
+			stream := goengine_dev.StreamName("unknown")
 
 			store, loggerHooks := createEventStoreWithStream(t, "test")
 
@@ -198,7 +198,7 @@ func TestEventStore_Load(t *testing.T) {
 
 		t.Run("incompatible metadata.Matcher", func(t *testing.T) {
 			ctx := context.Background()
-			stream := eventstore.StreamName("test")
+			stream := goengine_dev.StreamName("test")
 			matcher := metadata.WithConstraint(
 				metadata.NewMatcher(),
 				"test",
@@ -224,7 +224,7 @@ func TestEventStore_AppendTo(t *testing.T) {
 	t.Run("invalid appends", func(t *testing.T) {
 		t.Run("Unknown event stream", func(t *testing.T) {
 			ctx := context.Background()
-			stream := eventstore.StreamName("unknown")
+			stream := goengine_dev.StreamName("unknown")
 
 			store, loggerHooks := createEventStoreWithStream(t, "command")
 
@@ -237,7 +237,7 @@ func TestEventStore_AppendTo(t *testing.T) {
 
 		t.Run("Nil message", func(t *testing.T) {
 			ctx := context.Background()
-			stream := eventstore.StreamName("test")
+			stream := goengine_dev.StreamName("test")
 
 			store, loggerHooks := createEventStoreWithStream(t, "test")
 
@@ -250,7 +250,7 @@ func TestEventStore_AppendTo(t *testing.T) {
 
 		t.Run("Nil message reference", func(t *testing.T) {
 			ctx := context.Background()
-			stream := eventstore.StreamName("test")
+			stream := goengine_dev.StreamName("test")
 
 			store, loggerHooks := createEventStoreWithStream(t, "test")
 
@@ -265,7 +265,7 @@ func TestEventStore_AppendTo(t *testing.T) {
 	})
 }
 
-func createEventStoreWithStream(t *testing.T, name eventstore.StreamName) (*inmemory.EventStore, *test.Hook) {
+func createEventStoreWithStream(t *testing.T, name goengine_dev.StreamName) (*inmemory.EventStore, *test.Hook) {
 	logger, loggerHooks := test.NewNullLogger()
 	ctx := context.Background()
 	store := inmemory.NewEventStore(logrus.Wrap(logger))

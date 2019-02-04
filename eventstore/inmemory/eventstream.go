@@ -4,7 +4,6 @@ import (
 	"errors"
 
 	goengine_dev "github.com/hellofresh/goengine-dev"
-	"github.com/hellofresh/goengine/eventstore"
 )
 
 var (
@@ -15,7 +14,7 @@ var (
 	// ErrEventStreamNotStarted occurs when an eventstream Message or MessageNumber is called before Next
 	ErrEventStreamNotStarted = errors.New("eventStream Message called without calling Next")
 	// Ensure that EventStream satisfies the eventstore.EventStream interface
-	_ eventstore.EventStream = &EventStream{}
+	_ goengine_dev.EventStream = &EventStream{}
 )
 
 // EventStream an inmemory eventstore.EventStream implementation

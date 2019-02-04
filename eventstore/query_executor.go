@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 
+	goengine_dev "github.com/hellofresh/goengine-dev"
+
 	"github.com/hellofresh/goengine/metadata"
 )
 
@@ -20,8 +22,8 @@ var (
 
 // QueryExecutor is used to run a query against a inmemory event store
 type QueryExecutor struct {
-	store          EventStore
-	streamName     StreamName
+	store          goengine_dev.EventStore
+	streamName     goengine_dev.StreamName
 	resolver       PayloadResolver
 	query          Query
 	queryBatchSize uint
@@ -31,7 +33,7 @@ type QueryExecutor struct {
 }
 
 // NewQueryExecutor returns a new QueryExecutor instance
-func NewQueryExecutor(store EventStore, streamName StreamName, resolver PayloadResolver, query Query, queryBatchSize uint) (*QueryExecutor, error) {
+func NewQueryExecutor(store goengine_dev.EventStore, streamName goengine_dev.StreamName, resolver PayloadResolver, query Query, queryBatchSize uint) (*QueryExecutor, error) {
 	if store == nil {
 		return nil, ErrEventStoreRequired
 	}

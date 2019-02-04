@@ -3,8 +3,9 @@ package main
 import (
 	"context"
 
+	goengine_dev "github.com/hellofresh/goengine-dev"
+
 	"github.com/hellofresh/goengine/aggregate"
-	"github.com/hellofresh/goengine/eventstore"
 )
 
 // BankAccountRepository is a repository for bank accounts
@@ -13,7 +14,7 @@ type BankAccountRepository struct {
 }
 
 // NewBankAccountRepository create a new BankAccountRepository
-func NewBankAccountRepository(store eventstore.EventStore, name eventstore.StreamName) (*BankAccountRepository, error) {
+func NewBankAccountRepository(store goengine_dev.EventStore, name goengine_dev.StreamName) (*BankAccountRepository, error) {
 	bankAccountType, err := aggregate.NewType("bank_account", func() aggregate.Root {
 		return &BankAccount{}
 	})

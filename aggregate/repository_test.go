@@ -10,7 +10,6 @@ import (
 
 	goengine_dev "github.com/hellofresh/goengine-dev"
 	"github.com/hellofresh/goengine/aggregate"
-	"github.com/hellofresh/goengine/eventstore"
 	"github.com/hellofresh/goengine/eventstore/inmemory"
 	"github.com/hellofresh/goengine/metadata"
 	"github.com/hellofresh/goengine/mocks"
@@ -39,8 +38,8 @@ func TestNewRepository(t *testing.T) {
 	t.Run("invalid arguments", func(t *testing.T) {
 		type invalidTestCase struct {
 			title         string
-			eventStore    eventstore.EventStore
-			streamName    eventstore.StreamName
+			eventStore    goengine_dev.EventStore
+			streamName    goengine_dev.StreamName
 			aggregateType *aggregate.Type
 			expectedError error
 		}
@@ -198,7 +197,7 @@ func TestRepository_GetAggregateRoot(t *testing.T) {
 			On(
 				"Load",
 				ctx,
-				eventstore.StreamName("event_stream"),
+				goengine_dev.StreamName("event_stream"),
 				int64(1),
 				(*uint)(nil),
 				mock.MatchedBy(func(m metadata.Matcher) bool {
@@ -291,7 +290,7 @@ func TestRepository_GetAggregateRoot(t *testing.T) {
 					On(
 						"Load",
 						ctx,
-						eventstore.StreamName("event_stream"),
+						goengine_dev.StreamName("event_stream"),
 						int64(1),
 						(*uint)(nil),
 						mock.Anything,

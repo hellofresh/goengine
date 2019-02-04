@@ -5,7 +5,6 @@ import (
 	"errors"
 
 	goengine_dev "github.com/hellofresh/goengine-dev"
-	"github.com/hellofresh/goengine/eventstore"
 	"github.com/hellofresh/goengine/metadata"
 )
 
@@ -37,15 +36,15 @@ type (
 	// Repository a repository to save and load aggregate.Root's of a specific type
 	Repository struct {
 		aggregateType *Type
-		eventStore    eventstore.EventStore
-		streamName    eventstore.StreamName
+		eventStore    goengine_dev.EventStore
+		streamName    goengine_dev.StreamName
 	}
 )
 
 // NewRepository instantiates a new AggregateRepository
 func NewRepository(
-	eventStore eventstore.EventStore,
-	streamName eventstore.StreamName,
+	eventStore goengine_dev.EventStore,
+	streamName goengine_dev.StreamName,
 	aggregateType *Type,
 ) (*Repository, error) {
 	if eventStore == nil {

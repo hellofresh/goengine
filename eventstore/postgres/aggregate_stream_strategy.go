@@ -100,7 +100,7 @@ func (s *SingleStreamStrategy) PrepareData(messages []goengine_dev.Message) ([]i
 }
 
 // GenerateTableName returns a valid table name for postgres
-func (s *SingleStreamStrategy) GenerateTableName(streamName eventstore.StreamName) (string, error) {
+func (s *SingleStreamStrategy) GenerateTableName(streamName goengine_dev.StreamName) (string, error) {
 	if len(streamName) == 0 {
 		return "", ErrEmptyStreamName
 	}

@@ -31,7 +31,7 @@ var (
 	ErrTableNameEmpty = errors.New("table name could not be empty")
 
 	// Ensure that we satisfy the eventstore.EventStore interface
-	_ eventstore.EventStore = &EventStore{}
+	_ goengine_dev.EventStore = &EventStore{}
 	// Ensure that we satisfy the ReadOnlyEventStore interface
 	_ eventstoreSQL.ReadOnlyEventStore = &EventStore{}
 )
@@ -86,7 +86,7 @@ func NewEventStore(
 }
 
 // Create creates the database table, index etc needed for the event stream
-func (e *EventStore) Create(ctx context.Context, streamName eventstore.StreamName) error {
+func (e *EventStore) Create(ctx context.Context, streamName goengine_dev.StreamName) error {
 	tableName, err := e.tableName(streamName)
 	if err != nil {
 		return err
@@ -125,7 +125,7 @@ func (e *EventStore) Create(ctx context.Context, streamName eventstore.StreamNam
 }
 
 // HasStream returns true if the table for the eventstream already exists
-func (e *EventStore) HasStream(ctx context.Context, streamName eventstore.StreamName) bool {
+func (e *EventStore) HasStream(ctx context.Context, streamName goengine_dev.StreamName) bool {
 	tableName, err := e.tableName(streamName)
 	if err != nil {
 		return false
@@ -137,11 +137,11 @@ func (e *EventStore) HasStream(ctx context.Context, streamName eventstore.Stream
 // Load returns an eventstream based on the provided constraints
 func (e *EventStore) Load(
 	ctx context.Context,
-	streamName eventstore.StreamName,
+	streamName goengine_dev.StreamName,
 	fromNumber int64,
 	count *uint,
 	matcher metadata.Matcher,
-) (eventstore.EventStream, error) {
+) (goengine_dev.EventStream, error) {
 	return e.loadQuery(ctx, e.db, streamName, fromNumber, count, matcher)
 }
 
@@ -149,11 +149,11 @@ func (e *EventStore) Load(
 func (e *EventStore) LoadWithConnection(
 	ctx context.Context,
 	conn *sql.Conn,
-	streamName eventstore.StreamName,
+	streamName goengine_dev.StreamName,
 	fromNumber int64,
 	count *uint,
 	matcher metadata.Matcher,
-) (eventstore.EventStream, error) {
+) (goengine_dev.EventStream, error) {
 	return e.loadQuery(ctx, conn, streamName, fromNumber, count, matcher)
 }
 
@@ -162,11 +162,11 @@ func (e *EventStore) LoadWithConnection(
 func (e *EventStore) loadQuery(
 	ctx context.Context,
 	db sqlQueryContext,
-	streamName eventstore.StreamName,
+	streamName goengine_dev.StreamName,
 	fromNumber int64,
 	count *uint,
 	matcher metadata.Matcher,
-) (eventstore.EventStream, error) {
+) (goengine_dev.EventStream, error) {
 	tableName, err := e.tableName(streamName)
 	if err != nil {
 		return nil, err
@@ -200,7 +200,7 @@ func (e *EventStore) loadQuery(
 }
 
 // AppendTo batch inserts Messages into the event stream table
-func (e *EventStore) AppendTo(ctx context.Context, streamName eventstore.StreamName, streamEvents []goengine_dev.Message) error {
+func (e *EventStore) AppendTo(ctx context.Context, streamName goengine_dev.StreamName, streamEvents []goengine_dev.Message) error {
 	tableName, err := e.tableName(streamName)
 	if err != nil {
 		return err
@@ -278,7 +278,7 @@ func (e *EventStore) prepareInsertValues(streamEvents []goengine_dev.Message, le
 	return e.preparedInsertPlaceholder[messageCount]
 }
 
-func (e *EventStore) tableName(s eventstore.StreamName) (string, error) {
+func (e *EventStore) tableName(s goengine_dev.StreamName) (string, error) {
 	tableName, err := e.persistenceStrategy.GenerateTableName(s)
 	if err != nil {
 		return "", err

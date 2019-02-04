@@ -31,9 +31,9 @@ func TestNewQueryExecutor(t *testing.T) {
 	t.Run("invalid arguments", func(t *testing.T) {
 		type invalidTestCase struct {
 			title         string
-			eventStore    eventstore.EventStore
+			eventStore    goengine_dev.EventStore
 			registry      eventstore.PayloadResolver
-			streamName    eventstore.StreamName
+			streamName    goengine_dev.StreamName
 			query         eventstore.Query
 			expectedError error
 		}
@@ -125,7 +125,7 @@ func TestQueryExecutor_Run(t *testing.T) {
 			return
 		}
 
-		var streamName eventstore.StreamName = "event_stream"
+		var streamName goengine_dev.StreamName = "event_stream"
 
 		ctx := context.Background()
 

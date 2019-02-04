@@ -7,5 +7,5 @@ type PersistenceStrategy interface {
 	CreateSchema(tableName string) []string
 	ColumnNames() []string
 	PrepareData([]goengine_dev.Message) ([]interface{}, error)
-	GenerateTableName(streamName StreamName) (string, error)
+	GenerateTableName(streamName goengine_dev.StreamName) (string, error)
 }
