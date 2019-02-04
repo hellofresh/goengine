@@ -17,7 +17,7 @@ import (
 func TestWrapProjectionHandlerToTrapError(t *testing.T) {
 	errorCases := []struct {
 		title         string
-		handler       goengine_dev.ProjectionHandler
+		handler       goengine_dev.MessageHandler
 		expectedCause string
 	}{
 		{

@@ -19,7 +19,7 @@ type NotificationProjector struct {
 	storage Storage
 
 	acquireUnmarshalState UnmarshalAcquiredState
-	handlers              map[string]goengine_dev.ProjectionHandler
+	handlers              map[string]goengine_dev.MessageHandler
 
 	eventLoader EventStreamLoader
 	resolver    goengine_dev.MessagePayloadResolver
@@ -32,7 +32,7 @@ func NewNotificationProjector(
 	db *sql.DB,
 	storage Storage,
 	acquireUnmarshalState UnmarshalAcquiredState,
-	eventHandlers map[string]goengine_dev.ProjectionHandler,
+	eventHandlers map[string]goengine_dev.MessageHandler,
 	eventLoader EventStreamLoader,
 	resolver goengine_dev.MessagePayloadResolver,
 	logger goengine_dev.Logger,
@@ -188,8 +188,8 @@ func (s *NotificationProjector) projectStream(ctx context.Context, conn *sql.Con
 }
 
 // wrapProjectionHandlers wraps the projection handlers so that any error or panic is caught and returned
-func wrapProjectionHandlers(handlers map[string]goengine_dev.ProjectionHandler) map[string]goengine_dev.ProjectionHandler {
-	res := make(map[string]goengine_dev.ProjectionHandler, len(handlers))
+func wrapProjectionHandlers(handlers map[string]goengine_dev.MessageHandler) map[string]goengine_dev.MessageHandler {
+	res := make(map[string]goengine_dev.MessageHandler, len(handlers))
 	for k, h := range handlers {
 		res[k] = wrapProjectionHandlerToTrapError(h)
 	}
@@ -199,7 +199,7 @@ func wrapProjectionHandlers(handlers map[string]goengine_dev.ProjectionHandler) 
 
 // wrapProjectionHandlerToTrapError wraps a projection handler with error catching code.
 // This ensures a projection handler can return a error or panic without destroying the executor
-func wrapProjectionHandlerToTrapError(handler goengine_dev.ProjectionHandler) goengine_dev.ProjectionHandler {
+func wrapProjectionHandlerToTrapError(handler goengine_dev.MessageHandler) goengine_dev.MessageHandler {
 	return func(ctx context.Context, state interface{}, message goengine_dev.Message) (returnState interface{}, handlerErr error) {
 		defer func() {
 			r := recover()

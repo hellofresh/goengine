@@ -52,8 +52,8 @@ func (p *DepositedProjection) FromStream() goengine_dev.StreamName {
 	return "event_stream"
 }
 
-func (p *DepositedProjection) Handlers() map[string]goengine_dev.ProjectionHandler {
-	return map[string]goengine_dev.ProjectionHandler{
+func (p *DepositedProjection) Handlers() map[string]goengine_dev.MessageHandler {
+	return map[string]goengine_dev.MessageHandler{
 		"account_debited": func(ctx context.Context, state interface{}, message goengine_dev.Message) (interface{}, error) {
 			projectionState := state.(depositedProjectionState)
 

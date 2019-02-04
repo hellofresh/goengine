@@ -143,8 +143,8 @@ func TestQueryExecutor_Run(t *testing.T) {
 		registry.On("ResolveName", mock.AnythingOfType("mySecondEvent")).Return("second_event", nil)
 
 		query := &mocks.Query{}
-		query.On("Init").Once().Return(myState{})
-		query.On("Handlers").Times(2).Return(map[string]goengine_dev.QueryMessageHandler{
+		query.On("Init", ctx).Once().Return(myState{}, nil)
+		query.On("Handlers").Times(2).Return(map[string]goengine_dev.MessageHandler{
 			"my_event": func(ctx context.Context, rawState interface{}, message goengine_dev.Message) (interface{}, error) {
 				state := rawState.(myState)
 				state.count++

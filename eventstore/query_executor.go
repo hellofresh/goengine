@@ -5,7 +5,6 @@ import (
 	"errors"
 
 	goengine_dev "github.com/hellofresh/goengine-dev"
-
 	"github.com/hellofresh/goengine/metadata"
 )
 
@@ -34,13 +33,12 @@ type QueryExecutor struct {
 
 // NewQueryExecutor returns a new QueryExecutor instance
 func NewQueryExecutor(store goengine_dev.EventStore, streamName goengine_dev.StreamName, resolver goengine_dev.MessagePayloadResolver, query goengine_dev.Query, queryBatchSize uint) (*QueryExecutor, error) {
-	if store == nil {
+	switch {
+	case store == nil:
 		return nil, ErrEventStoreRequired
-	}
-	if resolver == nil {
+	case resolver == nil:
 		return nil, ErrPayloadResolverRequired
-	}
-	if query == nil {
+	case query == nil:
 		return nil, ErrQueryRequired
 	}
 
@@ -70,7 +68,12 @@ func (e *QueryExecutor) Run(ctx context.Context) (interface{}, error) {
 	}
 
 	if e.offset == 0 {
-		e.state = e.query.Init()
+		initialState, err := e.query.Init(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		e.state = initialState
 		e.offset = 1
 	}
 
