@@ -34,7 +34,7 @@ func TestNewQueryExecutor(t *testing.T) {
 			eventStore    goengine_dev.EventStore
 			registry      goengine_dev.MessagePayloadResolver
 			streamName    goengine_dev.StreamName
-			query         eventstore.Query
+			query         goengine_dev.Query
 			expectedError error
 		}
 
@@ -144,7 +144,7 @@ func TestQueryExecutor_Run(t *testing.T) {
 
 		query := &mocks.Query{}
 		query.On("Init").Once().Return(myState{})
-		query.On("Handlers").Times(2).Return(map[string]eventstore.QueryMessageHandler{
+		query.On("Handlers").Times(2).Return(map[string]goengine_dev.QueryMessageHandler{
 			"my_event": func(ctx context.Context, rawState interface{}, message goengine_dev.Message) (interface{}, error) {
 				state := rawState.(myState)
 				state.count++

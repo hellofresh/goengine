@@ -1,14 +1,10 @@
-package eventstore
+package goengine_dev
 
-import (
-	"context"
-
-	goengine_dev "github.com/hellofresh/goengine-dev"
-)
+import "context"
 
 type (
 	// QueryMessageHandler is a func that can do state changes based on a message
-	QueryMessageHandler func(ctx context.Context, state interface{}, message goengine_dev.Message) (interface{}, error)
+	QueryMessageHandler func(ctx context.Context, state interface{}, message Message) (interface{}, error)
 
 	// Query contains the information of a query
 	//
