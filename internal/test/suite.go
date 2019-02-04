@@ -5,7 +5,7 @@ import (
 
 	goengine_dev "github.com/hellofresh/goengine-dev"
 
-	logWrapper "github.com/hellofresh/goengine/log/logrus"
+	logWrapper "github.com/hellofresh/goengine/extension/logrus"
 	"github.com/sirupsen/logrus"
 	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/suite"

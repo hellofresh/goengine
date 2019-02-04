@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/hellofresh/goengine/eventstore/inmemory"
-	log "github.com/hellofresh/goengine/log/logrus"
+	log "github.com/hellofresh/goengine/extension/logrus"
 	"github.com/hellofresh/goengine/metadata"
 	"github.com/sirupsen/logrus"
 	"github.com/sirupsen/logrus/hooks/test"

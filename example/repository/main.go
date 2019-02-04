@@ -6,7 +6,7 @@ import (
 
 	goengine_dev "github.com/hellofresh/goengine-dev"
 	"github.com/hellofresh/goengine/eventstore/inmemory"
-	"github.com/hellofresh/goengine/log/logrus"
+	"github.com/hellofresh/goengine/extension/logrus"
 )
 
 func main() {

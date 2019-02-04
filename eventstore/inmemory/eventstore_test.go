@@ -9,7 +9,7 @@ import (
 	goengine_dev "github.com/hellofresh/goengine-dev"
 	"github.com/hellofresh/goengine/eventstore"
 	"github.com/hellofresh/goengine/eventstore/inmemory"
-	"github.com/hellofresh/goengine/log/logrus"
+	"github.com/hellofresh/goengine/extension/logrus"
 	"github.com/hellofresh/goengine/metadata"
 	"github.com/hellofresh/goengine/mocks"
 	"github.com/sirupsen/logrus/hooks/test"
