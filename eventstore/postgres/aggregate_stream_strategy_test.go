@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
+	goengine_dev "github.com/hellofresh/goengine-dev"
 	"github.com/hellofresh/goengine/eventstore"
 	postgres "github.com/hellofresh/goengine/eventstore/postgres"
-	"github.com/hellofresh/goengine/messaging"
 	"github.com/hellofresh/goengine/metadata"
 	"github.com/hellofresh/goengine/mocks"
 	"github.com/stretchr/testify/assert"
@@ -172,10 +172,10 @@ func TestPrepareData(t *testing.T) {
 		asserts := assert.New(t)
 
 		pc := &mocks.PayloadConverter{}
-		messages := make([]messaging.Message, 3)
+		messages := make([]goengine_dev.Message, 3)
 		expectedColumns := make([]interface{}, 3*5)
 		for i := range messages {
-			id := messaging.GenerateUUID()
+			id := goengine_dev.GenerateUUID()
 			payload := []byte(fmt.Sprintf(`{"Name":"%d","Balance":0}`, i))
 			payloadType := fmt.Sprintf("Payload%d", i)
 			meta := metadata.FromMap(map[string]interface{}{"type": "m", "version": i})
@@ -218,9 +218,9 @@ func TestPrepareData(t *testing.T) {
 
 		payload := []byte(`{"Name":"alice","Balance":0}`)
 
-		messages := []messaging.Message{
+		messages := []goengine_dev.Message{
 			mockMessage(
-				messaging.GenerateUUID(),
+				goengine_dev.GenerateUUID(),
 				payload,
 				metadata.FromMap(map[string]interface{}{"type": "m1", "version": 1}),
 				time.Now(),
@@ -242,7 +242,7 @@ func TestPrepareData(t *testing.T) {
 	})
 }
 
-func mockMessage(id messaging.UUID, payload []byte, meta interface{}, time time.Time) *mocks.Message {
+func mockMessage(id goengine_dev.UUID, payload []byte, meta interface{}, time time.Time) *mocks.Message {
 	m := &mocks.Message{}
 	m.On("UUID").Return(id)
 	m.On("Payload").Return(payload)

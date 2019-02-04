@@ -13,7 +13,6 @@ import (
 	postgres "github.com/hellofresh/goengine/eventstore/postgres"
 	eventstoresql "github.com/hellofresh/goengine/eventstore/sql"
 	"github.com/hellofresh/goengine/internal/test"
-	"github.com/hellofresh/goengine/messaging"
 	"github.com/hellofresh/goengine/metadata"
 	"github.com/hellofresh/goengine/mocks"
 	"github.com/stretchr/testify/suite"
@@ -84,14 +83,14 @@ func (s *eventStoreTestSuite) TestHasStream() {
 }
 
 func (s *eventStoreTestSuite) TestAppendTo() {
-	agregateID := messaging.GenerateUUID()
+	agregateID := goengine_dev.GenerateUUID()
 	ctx := context.Background()
 	streamName := eventstore.StreamName("orders_my")
 
 	err := s.eventStore.Create(ctx, streamName)
 	s.Require().NoError(err)
 
-	messages := s.generateAppendMessages([]messaging.UUID{agregateID})
+	messages := s.generateAppendMessages([]goengine_dev.UUID{agregateID})
 	err = s.eventStore.AppendTo(ctx, streamName, messages)
 	s.Require().NoError(err)
 
@@ -104,7 +103,7 @@ func (s *eventStoreTestSuite) TestAppendTo() {
 
 	count = 0
 	for rows.Next() {
-		var eventID messaging.UUID
+		var eventID goengine_dev.UUID
 		err := rows.Scan(&eventID)
 		if s.NoError(err) {
 			s.Equal(messages[count].UUID(), eventID)
@@ -115,9 +114,9 @@ func (s *eventStoreTestSuite) TestAppendTo() {
 }
 
 func (s *eventStoreTestSuite) TestLoad() {
-	aggregateIDFirst := messaging.GenerateUUID()
-	aggregateIDSecond := messaging.GenerateUUID()
-	messages := s.generateAppendMessages([]messaging.UUID{aggregateIDFirst, aggregateIDSecond})
+	aggregateIDFirst := goengine_dev.GenerateUUID()
+	aggregateIDSecond := goengine_dev.GenerateUUID()
+	messages := s.generateAppendMessages([]goengine_dev.UUID{aggregateIDFirst, aggregateIDSecond})
 	countPrepared := int64(len(messages))
 	ctx := context.Background()
 	streamName := eventstore.StreamName("orders_load")
@@ -127,7 +126,7 @@ func (s *eventStoreTestSuite) TestLoad() {
 		fromNumber     int64
 		count          *uint
 		matcher        func() metadata.Matcher
-		messages       []messaging.Message
+		messages       []goengine_dev.Message
 		messageNumbers []int64
 	}{
 		{
@@ -185,7 +184,7 @@ func (s *eventStoreTestSuite) TestLoad() {
 				matcher := metadata.NewMatcher()
 				return metadata.WithConstraint(matcher, "_aggregate_version", metadata.Equals, 1)
 			},
-			[]messaging.Message{messages[0], messages[5]},
+			[]goengine_dev.Message{messages[0], messages[5]},
 			[]int64{1, 6},
 		},
 		{
@@ -231,7 +230,7 @@ func (s *eventStoreTestSuite) TestLoad() {
 			nil,
 			func() metadata.Matcher {
 				matcher := metadata.NewMatcher()
-				return metadata.WithConstraint(matcher, "_aggregate_id", metadata.Equals, messaging.GenerateUUID())
+				return metadata.WithConstraint(matcher, "_aggregate_id", metadata.Equals, goengine_dev.GenerateUUID())
 			},
 			nil,
 			nil,
@@ -332,11 +331,11 @@ func (s *eventStoreTestSuite) createEventStore() eventstore.EventStore {
 	return eventStore
 }
 
-func (s *eventStoreTestSuite) generateAppendMessages(aggregateIDs []messaging.UUID) []messaging.Message {
-	var messages []messaging.Message
+func (s *eventStoreTestSuite) generateAppendMessages(aggregateIDs []goengine_dev.UUID) []goengine_dev.Message {
+	var messages []goengine_dev.Message
 	for _, aggregateID := range aggregateIDs {
 		for i := 0; i < 5; i++ {
-			id := messaging.GenerateUUID()
+			id := goengine_dev.GenerateUUID()
 			createdAt := time.Now()
 			boolVal := true
 			if i > 2 {
@@ -370,7 +369,7 @@ func (s *eventStoreTestSuite) appendMeta(metadataInfo map[string]interface{}) me
 	return meta
 }
 
-func (s *eventStoreTestSuite) mockAppendMessage(id messaging.UUID, payload interface{}, meta interface{}, time time.Time) *mocks.Message {
+func (s *eventStoreTestSuite) mockAppendMessage(id goengine_dev.UUID, payload interface{}, meta interface{}, time time.Time) *mocks.Message {
 	m := &mocks.Message{}
 	m.On("UUID").Return(id)
 	m.On("Payload").Return(payload)

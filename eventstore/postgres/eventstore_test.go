@@ -11,11 +11,11 @@ import (
 	"time"
 
 	sqlmock "github.com/DATA-DOG/go-sqlmock"
+	goengine_dev "github.com/hellofresh/goengine-dev"
 	"github.com/hellofresh/goengine/eventstore"
 	postgres "github.com/hellofresh/goengine/eventstore/postgres"
 	eventstoreSQL "github.com/hellofresh/goengine/eventstore/sql"
 	"github.com/hellofresh/goengine/internal/test"
-	"github.com/hellofresh/goengine/messaging"
 	"github.com/hellofresh/goengine/metadata"
 	"github.com/hellofresh/goengine/mocks"
 	"github.com/stretchr/testify/assert"
@@ -192,9 +192,9 @@ func TestEventStore_AppendTo(t *testing.T) {
 	})
 
 	test.RunWithMockDB(t, "Empty stream name", func(t *testing.T, db *sql.DB, _ sqlmock.Sqlmock) {
-		messages := []messaging.Message{
+		messages := []goengine_dev.Message{
 			mockMessage(
-				messaging.GenerateUUID(),
+				goengine_dev.GenerateUUID(),
 				[]byte(`{"Name":"alice","Balance":0}`),
 				metadata.FromMap(map[string]interface{}{"type": "m1", "version": 1}),
 				time.Now(),
@@ -212,9 +212,9 @@ func TestEventStore_AppendTo(t *testing.T) {
 	test.RunWithMockDB(t, "Prepare data error", func(t *testing.T, db *sql.DB, _ sqlmock.Sqlmock) {
 		expectedError := errors.New("prepare data expected error")
 
-		messages := []messaging.Message{
+		messages := []goengine_dev.Message{
 			mockMessage(
-				messaging.GenerateUUID(),
+				goengine_dev.GenerateUUID(),
 				[]byte(`{"Name":"alice","Balance":0}`),
 				metadata.FromMap(map[string]interface{}{"type": "m1", "version": 1}),
 				time.Now(),
@@ -368,14 +368,14 @@ func mockHasStreamQuery(result bool, mock sqlmock.Sqlmock) {
 	mock.ExpectQuery(`SELECT EXISTS\((.+)`).WithArgs("events_orders").WillReturnRows(mockRows)
 }
 
-func mockMessages() (*mocks.PayloadConverter, []messaging.Message) {
+func mockMessages() (*mocks.PayloadConverter, []goengine_dev.Message) {
 	pc := &mocks.PayloadConverter{}
-	messages := make([]messaging.Message, 3)
+	messages := make([]goengine_dev.Message, 3)
 
 	for i := 0; i < len(messages); i++ {
 		payload := []byte(fmt.Sprintf(`{"Name":"alice_%d","Balance":0}`, i))
 		messages[i] = mockMessage(
-			messaging.GenerateUUID(),
+			goengine_dev.GenerateUUID(),
 			payload,
 			metadata.FromMap(map[string]interface{}{
 				"type":    fmt.Sprintf("m%d", i),

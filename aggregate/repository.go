@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 
+	goengine_dev "github.com/hellofresh/goengine-dev"
 	"github.com/hellofresh/goengine/eventstore"
-	"github.com/hellofresh/goengine/messaging"
 	"github.com/hellofresh/goengine/metadata"
 )
 
@@ -84,7 +84,7 @@ func (r *Repository) SaveAggregateRoot(ctx context.Context, aggregateRoot Root) 
 
 	aggregateID := aggregateRoot.AggregateID()
 
-	streamEvents := make([]messaging.Message, len(domainEvents))
+	streamEvents := make([]goengine_dev.Message, len(domainEvents))
 	for i, domainEvent := range domainEvents {
 		streamEvents[i] = r.enrichMetadata(domainEvent, aggregateID)
 	}

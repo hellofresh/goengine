@@ -4,9 +4,9 @@ import (
 	"context"
 	"database/sql"
 
+	goengine_dev "github.com/hellofresh/goengine-dev"
 	"github.com/hellofresh/goengine/eventstore"
 	"github.com/hellofresh/goengine/log"
-	"github.com/hellofresh/goengine/messaging"
 	"github.com/hellofresh/goengine/projector"
 	"github.com/pkg/errors"
 )
@@ -201,7 +201,7 @@ func wrapProjectionHandlers(handlers map[string]eventstore.ProjectionHandler) ma
 // wrapProjectionHandlerToTrapError wraps a projection handler with error catching code.
 // This ensures a projection handler can return a error or panic without destroying the executor
 func wrapProjectionHandlerToTrapError(handler eventstore.ProjectionHandler) eventstore.ProjectionHandler {
-	return func(ctx context.Context, state interface{}, message messaging.Message) (returnState interface{}, handlerErr error) {
+	return func(ctx context.Context, state interface{}, message goengine_dev.Message) (returnState interface{}, handlerErr error) {
 		defer func() {
 			r := recover()
 			if r == nil {

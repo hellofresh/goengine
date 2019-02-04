@@ -5,10 +5,9 @@ package inmemory_test
 import (
 	"testing"
 
+	goengine_dev "github.com/hellofresh/goengine-dev"
 	"github.com/hellofresh/goengine/eventstore"
-
 	"github.com/hellofresh/goengine/eventstore/inmemory"
-	"github.com/hellofresh/goengine/messaging"
 	"github.com/hellofresh/goengine/mocks"
 	"github.com/stretchr/testify/assert"
 )
@@ -16,14 +15,14 @@ import (
 func TestEventStream(t *testing.T) {
 	type streamTestCases struct {
 		title          string
-		messages       []messaging.Message
+		messages       []goengine_dev.Message
 		messageNumbers []int64
 	}
 
 	testCases := []streamTestCases{
 		{
 			"Stream with messages",
-			[]messaging.Message{
+			[]goengine_dev.Message{
 				&mocks.Message{},
 				&mocks.Message{},
 			},
@@ -31,7 +30,7 @@ func TestEventStream(t *testing.T) {
 		},
 		{
 			"Stream with nil message",
-			[]messaging.Message{nil},
+			[]goengine_dev.Message{nil},
 			[]int64{1},
 		},
 		{
@@ -83,7 +82,7 @@ func TestEventStream(t *testing.T) {
 	t.Run("iteration must start before a message can be fetched", func(t *testing.T) {
 		asserts := assert.New(t)
 
-		stream, err := inmemory.NewEventStream([]messaging.Message{}, []int64{})
+		stream, err := inmemory.NewEventStream([]goengine_dev.Message{}, []int64{})
 		if !asserts.NoError(err) {
 			return
 		}

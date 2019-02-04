@@ -6,11 +6,10 @@ import (
 	"fmt"
 	"time"
 
+	goengine_dev "github.com/hellofresh/goengine-dev"
 	"github.com/hellofresh/goengine/aggregate"
-	"github.com/hellofresh/goengine/metadata"
-
 	"github.com/hellofresh/goengine/eventstore"
-	"github.com/hellofresh/goengine/messaging"
+	"github.com/hellofresh/goengine/metadata"
 )
 
 // Ensure that aggregateChangedEventStream satisfies the eventstore.EventStream interface
@@ -44,10 +43,10 @@ func (a *aggregateChangedEventStream) Close() error {
 	return a.rows.Close()
 }
 
-func (a *aggregateChangedEventStream) Message() (messaging.Message, int64, error) {
+func (a *aggregateChangedEventStream) Message() (goengine_dev.Message, int64, error) {
 	var (
 		eventNumber  int64
-		eventID      messaging.UUID
+		eventID      goengine_dev.UUID
 		eventName    string
 		jsonPayload  []byte
 		jsonMetadata []byte

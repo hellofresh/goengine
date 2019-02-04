@@ -1,4 +1,4 @@
-package messaging
+package goengine_dev
 
 import (
 	"time"
@@ -33,10 +33,11 @@ type (
 
 // GenerateUUID creates a new random UUID or panics
 func GenerateUUID() UUID {
+
 	return UUID(uuid.New())
 }
 
 // IsUUIDEmpty returns true if the UUID is empty
-func IsUUIDEmpty(uuid UUID) bool {
-	return uuid == UUID{}
+func IsUUIDEmpty(id UUID) bool {
+	return id == uuid.Nil
 }

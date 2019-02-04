@@ -3,8 +3,8 @@ package inmemory
 import (
 	"errors"
 
+	goengine_dev "github.com/hellofresh/goengine-dev"
 	"github.com/hellofresh/goengine/eventstore"
-	"github.com/hellofresh/goengine/messaging"
 )
 
 var (
@@ -20,7 +20,7 @@ var (
 
 // EventStream an inmemory eventstore.EventStream implementation
 type EventStream struct {
-	messages       []messaging.Message
+	messages       []goengine_dev.Message
 	messageNumbers []int64
 
 	index        int
@@ -29,7 +29,7 @@ type EventStream struct {
 }
 
 // NewEventStream return a new EventStream containing the given messages
-func NewEventStream(messages []messaging.Message, messageNumbers []int64) (*EventStream, error) {
+func NewEventStream(messages []goengine_dev.Message, messageNumbers []int64) (*EventStream, error) {
 	messageCount := len(messages)
 	if len(messageNumbers) != messageCount {
 		return nil, ErrMessageNumberCountMismatch
@@ -78,7 +78,7 @@ func (e *EventStream) Close() error {
 }
 
 // Message returns the current message in the EventStream.
-func (e *EventStream) Message() (messaging.Message, int64, error) {
+func (e *EventStream) Message() (goengine_dev.Message, int64, error) {
 	if e.closed {
 		return nil, 0, ErrEventStreamClosed
 	}

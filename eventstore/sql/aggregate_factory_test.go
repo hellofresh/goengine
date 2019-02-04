@@ -8,12 +8,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hellofresh/goengine/eventstore"
-
-	"github.com/DATA-DOG/go-sqlmock"
+	sqlmock "github.com/DATA-DOG/go-sqlmock"
+	goengine_dev "github.com/hellofresh/goengine-dev"
 	"github.com/hellofresh/goengine/aggregate"
+	"github.com/hellofresh/goengine/eventstore"
 	"github.com/hellofresh/goengine/eventstore/sql"
-	"github.com/hellofresh/goengine/messaging"
 	"github.com/hellofresh/goengine/metadata"
 	"github.com/hellofresh/goengine/mocks"
 	"github.com/stretchr/testify/assert"
@@ -170,7 +169,7 @@ func TestAggregateChangedFactory_CreateFromRows(t *testing.T) {
 			{
 				"bad metadata json",
 				func(t *testing.T) (*sqlmock.Rows, *mocks.PayloadFactory) {
-					uuid, _ := messaging.GenerateUUID().MarshalBinary()
+					uuid, _ := goengine_dev.GenerateUUID().MarshalBinary()
 					mockRows := sqlmock.NewRows(rowColumns)
 					mockRows.AddRow(1, uuid, "some", []byte("{}"), []byte(`[ "missing array end" `), time.Now().UTC())
 
@@ -181,7 +180,7 @@ func TestAggregateChangedFactory_CreateFromRows(t *testing.T) {
 			{
 				"bad payload",
 				func(t *testing.T) (*sqlmock.Rows, *mocks.PayloadFactory) {
-					uuid, _ := messaging.GenerateUUID().MarshalBinary()
+					uuid, _ := goengine_dev.GenerateUUID().MarshalBinary()
 					mockRows := sqlmock.NewRows(rowColumns)
 					mockRows.AddRow(
 						1,
@@ -202,7 +201,7 @@ func TestAggregateChangedFactory_CreateFromRows(t *testing.T) {
 			{
 				"missing aggregate id",
 				func(t *testing.T) (*sqlmock.Rows, *mocks.PayloadFactory) {
-					uuid, _ := messaging.GenerateUUID().MarshalBinary()
+					uuid, _ := goengine_dev.GenerateUUID().MarshalBinary()
 					mockRows := sqlmock.NewRows(rowColumns)
 					mockRows.AddRow(
 						1,
@@ -223,7 +222,7 @@ func TestAggregateChangedFactory_CreateFromRows(t *testing.T) {
 			{
 				"missing aggregate version",
 				func(t *testing.T) (*sqlmock.Rows, *mocks.PayloadFactory) {
-					uuid, _ := messaging.GenerateUUID().MarshalBinary()
+					uuid, _ := goengine_dev.GenerateUUID().MarshalBinary()
 					mockRows := sqlmock.NewRows(rowColumns)
 					mockRows.AddRow(
 						1,
@@ -244,7 +243,7 @@ func TestAggregateChangedFactory_CreateFromRows(t *testing.T) {
 			{
 				"invalid aggregate version type",
 				func(t *testing.T) (*sqlmock.Rows, *mocks.PayloadFactory) {
-					uuid, _ := messaging.GenerateUUID().MarshalBinary()
+					uuid, _ := goengine_dev.GenerateUUID().MarshalBinary()
 					mockRows := sqlmock.NewRows(rowColumns)
 					mockRows.AddRow(
 						1,
@@ -268,7 +267,7 @@ func TestAggregateChangedFactory_CreateFromRows(t *testing.T) {
 			{
 				"invalid aggregate version",
 				func(t *testing.T) (*sqlmock.Rows, *mocks.PayloadFactory) {
-					uuid, _ := messaging.GenerateUUID().MarshalBinary()
+					uuid, _ := goengine_dev.GenerateUUID().MarshalBinary()
 					mockRows := sqlmock.NewRows(rowColumns)
 					mockRows.AddRow(
 						1,
@@ -343,7 +342,7 @@ func createAggregateChangedMessage(payload interface{}, version uint) (*aggregat
 	id := aggregate.GenerateID()
 	msg, err := aggregate.ReconstituteChange(
 		id,
-		messaging.GenerateUUID(),
+		goengine_dev.GenerateUUID(),
 		payload,
 		metadata.WithValue(
 			metadata.WithValue(
@@ -361,7 +360,7 @@ func createAggregateChangedMessage(payload interface{}, version uint) (*aggregat
 	return msg, err
 }
 
-func assertEqualMessages(t *testing.T, expected []*aggregate.Changed, msgs []messaging.Message) {
+func assertEqualMessages(t *testing.T, expected []*aggregate.Changed, msgs []goengine_dev.Message) {
 	asserts := assert.New(t)
 	if asserts.Len(msgs, len(expected)) {
 		return

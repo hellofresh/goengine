@@ -3,7 +3,7 @@ package mocks
 
 import context "context"
 import eventstore "github.com/hellofresh/goengine/eventstore"
-import messaging "github.com/hellofresh/goengine/messaging"
+import goengine_dev "github.com/hellofresh/goengine-dev"
 import metadata "github.com/hellofresh/goengine/metadata"
 import mock "github.com/stretchr/testify/mock"
 
@@ -13,11 +13,11 @@ type EventStore struct {
 }
 
 // AppendTo provides a mock function with given fields: ctx, streamName, streamEvents
-func (_m *EventStore) AppendTo(ctx context.Context, streamName eventstore.StreamName, streamEvents []messaging.Message) error {
+func (_m *EventStore) AppendTo(ctx context.Context, streamName eventstore.StreamName, streamEvents []goengine_dev.Message) error {
 	ret := _m.Called(ctx, streamName, streamEvents)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, eventstore.StreamName, []messaging.Message) error); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, eventstore.StreamName, []goengine_dev.Message) error); ok {
 		r0 = rf(ctx, streamName, streamEvents)
 	} else {
 		r0 = ret.Error(0)

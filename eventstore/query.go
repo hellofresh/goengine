@@ -3,12 +3,12 @@ package eventstore
 import (
 	"context"
 
-	"github.com/hellofresh/goengine/messaging"
+	goengine_dev "github.com/hellofresh/goengine-dev"
 )
 
 type (
 	// QueryMessageHandler is a func that can do state changes based on a message
-	QueryMessageHandler func(ctx context.Context, state interface{}, message messaging.Message) (interface{}, error)
+	QueryMessageHandler func(ctx context.Context, state interface{}, message goengine_dev.Message) (interface{}, error)
 
 	// Query contains the information of a query
 	//
@@ -24,7 +24,7 @@ type (
 	//  }
 	//  func (q *TotalDepositQuery) Handlers() interface{} {
 	//  	return map[string]QueryMessageHandler{
-	//  		"deposited": func(ctx context.Context, state interface{}, message messaging.Message) (interface{}, error) {
+	//  		"deposited": func(ctx context.Context, state interface{}, message goengine_dev.Message) (interface{}, error) {
 	//  			depositState := state.(TotalDepositState)
 	//
 	//  			switch event := message.Payload().(type) {

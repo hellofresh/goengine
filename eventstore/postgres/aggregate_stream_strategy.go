@@ -7,10 +7,9 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/lib/pq"
-
+	goengine_dev "github.com/hellofresh/goengine-dev"
 	"github.com/hellofresh/goengine/eventstore"
-	"github.com/hellofresh/goengine/messaging"
+	"github.com/lib/pq"
 )
 
 var (
@@ -76,7 +75,7 @@ func (s *SingleStreamStrategy) ColumnNames() []string {
 }
 
 // PrepareData transforms a slice of messaging into a flat interface slice with the correct column order
-func (s *SingleStreamStrategy) PrepareData(messages []messaging.Message) ([]interface{}, error) {
+func (s *SingleStreamStrategy) PrepareData(messages []goengine_dev.Message) ([]interface{}, error) {
 	var out = make([]interface{}, 0, len(messages)*5) // optimization for the number of columns
 	for _, msg := range messages {
 		payloadType, payloadData, err := s.converter.ConvertPayload(msg.Payload())

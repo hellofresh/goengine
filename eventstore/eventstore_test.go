@@ -6,14 +6,14 @@ import (
 	"errors"
 	"testing"
 
+	goengine_dev "github.com/hellofresh/goengine-dev"
 	"github.com/hellofresh/goengine/eventstore"
-	"github.com/hellofresh/goengine/messaging"
 	"github.com/hellofresh/goengine/mocks"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestReadEventStream(t *testing.T) {
-	mockedMessages := make([]messaging.Message, 4)
+	mockedMessages := make([]goengine_dev.Message, 4)
 	for i := range mockedMessages {
 		m := &mocks.Message{}
 		m.On("Payload").Return(i)
@@ -28,7 +28,7 @@ func TestReadEventStream(t *testing.T) {
 			return streamIndex < 4
 		})
 		stream.On("Message").Return(
-			func() messaging.Message {
+			func() goengine_dev.Message {
 				return mockedMessages[streamIndex]
 			},
 			func() int64 {
@@ -75,7 +75,7 @@ func TestReadEventStream(t *testing.T) {
 			return streamIndex < 4
 		})
 		stream.On("Message").Return(
-			func() messaging.Message {
+			func() goengine_dev.Message {
 				return mockedMessages[streamIndex]
 			},
 			func() int64 {

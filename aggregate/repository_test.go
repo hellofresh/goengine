@@ -8,10 +8,10 @@ import (
 	"testing"
 	"time"
 
+	goengine_dev "github.com/hellofresh/goengine-dev"
 	"github.com/hellofresh/goengine/aggregate"
 	"github.com/hellofresh/goengine/eventstore"
 	"github.com/hellofresh/goengine/eventstore/inmemory"
-	"github.com/hellofresh/goengine/messaging"
 	"github.com/hellofresh/goengine/metadata"
 	"github.com/hellofresh/goengine/mocks"
 	"github.com/stretchr/testify/assert"
@@ -119,14 +119,14 @@ func TestRepository_SaveAggregateRoot(t *testing.T) {
 
 		call := calls[0]
 		if !asserts.IsType(
-			([]messaging.Message)(nil),
+			([]goengine_dev.Message)(nil),
 			call.Arguments[2],
 			"Expected AppendTo to be called with the pending Changes",
 		) {
 			return
 		}
 
-		messages := call.Arguments[2].([]messaging.Message)
+		messages := call.Arguments[2].([]goengine_dev.Message)
 		for i, msg := range messages {
 			msgMeta := msg.Metadata()
 
@@ -166,7 +166,7 @@ func TestRepository_GetAggregateRoot(t *testing.T) {
 
 		firstEvent, _ := aggregate.ReconstituteChange(
 			rootID,
-			messaging.GenerateUUID(),
+			goengine_dev.GenerateUUID(),
 			struct{ order int }{order: 1},
 			nil,
 			time.Now().UTC(),
@@ -174,14 +174,14 @@ func TestRepository_GetAggregateRoot(t *testing.T) {
 		)
 		secondEvent, _ := aggregate.ReconstituteChange(
 			rootID,
-			messaging.GenerateUUID(),
+			goengine_dev.GenerateUUID(),
 			struct{ order int }{order: 2},
 			nil,
 			time.Now().UTC(),
 			2,
 		)
 		eventStream := []*aggregate.Changed{firstEvent, secondEvent}
-		messageStream, err := inmemory.NewEventStream([]messaging.Message{firstEvent, secondEvent}, []int64{1, 2})
+		messageStream, err := inmemory.NewEventStream([]goengine_dev.Message{firstEvent, secondEvent}, []int64{1, 2})
 		if !asserts.NoError(err) {
 			return
 		}
@@ -249,7 +249,7 @@ func TestRepository_GetAggregateRoot(t *testing.T) {
 	t.Run("load failures", func(t *testing.T) {
 		type badEventStore struct {
 			title         string
-			storeMessages []messaging.Message
+			storeMessages []goengine_dev.Message
 			storeError    error
 			expectedError error
 		}
@@ -263,13 +263,13 @@ func TestRepository_GetAggregateRoot(t *testing.T) {
 			},
 			{
 				"fail to load when the eventstore returns unexpected message types",
-				[]messaging.Message{nil},
+				[]goengine_dev.Message{nil},
 				nil,
 				aggregate.ErrUnexpectedMessageType,
 			},
 			{
 				"fail to load when the eventstore returns empty events",
-				[]messaging.Message{},
+				[]goengine_dev.Message{},
 				nil,
 				aggregate.ErrEmptyEventStream,
 			},

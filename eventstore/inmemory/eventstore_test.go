@@ -6,10 +6,10 @@ import (
 	"context"
 	"testing"
 
+	goengine_dev "github.com/hellofresh/goengine-dev"
 	"github.com/hellofresh/goengine/eventstore"
 	"github.com/hellofresh/goengine/eventstore/inmemory"
 	"github.com/hellofresh/goengine/log/logrus"
-	"github.com/hellofresh/goengine/messaging"
 	"github.com/hellofresh/goengine/metadata"
 	"github.com/hellofresh/goengine/mocks"
 	"github.com/sirupsen/logrus/hooks/test"
@@ -75,11 +75,11 @@ func TestEventStore_Load(t *testing.T) {
 		loadFrom        eventstore.StreamName
 		loadCount       *uint
 		matcher         metadata.Matcher
-		expectedEvents  []messaging.Message
+		expectedEvents  []goengine_dev.Message
 		expectedNumbers []int64
 	}
 
-	testStreams := map[eventstore.StreamName][]messaging.Message{
+	testStreams := map[eventstore.StreamName][]goengine_dev.Message{
 		"test": {
 			mockMessage(map[string]interface{}{"type": "a", "version": 1}),
 			mockMessage(map[string]interface{}{"type": "a", "version": 2}),
@@ -131,7 +131,7 @@ func TestEventStore_Load(t *testing.T) {
 			"test",
 			nil,
 			metadata.WithConstraint(metadata.NewMatcher(), "type", metadata.Equals, "b"),
-			[]messaging.Message{
+			[]goengine_dev.Message{
 				testStreams["test"][4],
 			},
 			[]int64{5},
@@ -241,7 +241,7 @@ func TestEventStore_AppendTo(t *testing.T) {
 
 			store, loggerHooks := createEventStoreWithStream(t, "test")
 
-			err := store.AppendTo(ctx, stream, []messaging.Message{nil})
+			err := store.AppendTo(ctx, stream, []goengine_dev.Message{nil})
 
 			asserts := assert.New(t)
 			asserts.Equal(inmemory.ErrNilMessage, err)
@@ -254,7 +254,7 @@ func TestEventStore_AppendTo(t *testing.T) {
 
 			store, loggerHooks := createEventStoreWithStream(t, "test")
 
-			err := store.AppendTo(ctx, stream, []messaging.Message{
+			err := store.AppendTo(ctx, stream, []goengine_dev.Message{
 				(*mocks.Message)(nil),
 			})
 

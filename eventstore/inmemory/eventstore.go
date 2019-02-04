@@ -6,9 +6,9 @@ import (
 	"reflect"
 	"sync"
 
+	goengine_dev "github.com/hellofresh/goengine-dev"
 	"github.com/hellofresh/goengine/eventstore"
 	"github.com/hellofresh/goengine/log"
-	"github.com/hellofresh/goengine/messaging"
 	"github.com/hellofresh/goengine/metadata"
 )
 
@@ -17,7 +17,7 @@ var (
 	ErrStreamExistsAlready = errors.New("stream already exists")
 	// ErrStreamNotFound occurs when an unknown streamName is provided
 	ErrStreamNotFound = errors.New("unknown stream")
-	// ErrNilMessage occurs when a messaging.Message that is being appended to a stream is nil or a reference to nil
+	// ErrNilMessage occurs when a goengine_dev.Message that is being appended to a stream is nil or a reference to nil
 	ErrNilMessage = errors.New("nil is not a valid message")
 	// Ensure that we satisfy the eventstore.EventStore interface
 	_ eventstore.EventStore = &EventStore{}
@@ -28,14 +28,14 @@ type EventStore struct {
 	sync.RWMutex
 
 	logger  log.Logger
-	streams map[eventstore.StreamName][]messaging.Message
+	streams map[eventstore.StreamName][]goengine_dev.Message
 }
 
 // NewEventStore return a new inmemory.EventStore
 func NewEventStore(logger log.Logger) *EventStore {
 	return &EventStore{
 		logger:  logger,
-		streams: map[eventstore.StreamName][]messaging.Message{},
+		streams: map[eventstore.StreamName][]goengine_dev.Message{},
 	}
 }
 
@@ -45,7 +45,7 @@ func (i *EventStore) Create(ctx context.Context, streamName eventstore.StreamNam
 		return ErrStreamExistsAlready
 	}
 
-	i.streams[streamName] = []messaging.Message{}
+	i.streams[streamName] = []goengine_dev.Message{}
 
 	return nil
 }
@@ -78,7 +78,7 @@ func (i *EventStore) Load(
 		return nil, err
 	}
 
-	var messages []messaging.Message
+	var messages []goengine_dev.Message
 	var messageNumbers []int64
 	var found uint
 
@@ -98,7 +98,7 @@ func (i *EventStore) Load(
 }
 
 // AppendTo appends the provided messages to the stream
-func (i *EventStore) AppendTo(ctx context.Context, streamName eventstore.StreamName, streamEvents []messaging.Message) error {
+func (i *EventStore) AppendTo(ctx context.Context, streamName eventstore.StreamName, streamEvents []goengine_dev.Message) error {
 	i.Lock()
 	defer i.Unlock()
 
@@ -115,7 +115,7 @@ func (i *EventStore) AppendTo(ctx context.Context, streamName eventstore.StreamN
 
 	storedEventCount := len(storedEvents)
 
-	eventsToStore := make([]messaging.Message, storedEventCount, storedEventCount+len(streamEvents))
+	eventsToStore := make([]goengine_dev.Message, storedEventCount, storedEventCount+len(streamEvents))
 	copy(eventsToStore, storedEvents)
 	i.streams[streamName] = append(eventsToStore, streamEvents...)
 

@@ -6,9 +6,9 @@ import (
 	"context"
 	"testing"
 
+	goengine_dev "github.com/hellofresh/goengine-dev"
 	"github.com/hellofresh/goengine/aggregate"
 	"github.com/hellofresh/goengine/eventstore"
-	"github.com/hellofresh/goengine/messaging"
 	"github.com/hellofresh/goengine/projector"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
@@ -23,17 +23,19 @@ func TestWrapProjectionHandlerToTrapError(t *testing.T) {
 	}{
 		{
 			"panic with error",
-			func(context.Context, interface{}, messaging.Message) (interface{}, error) { panic(errors.New("crazy")) },
+			func(context.Context, interface{}, goengine_dev.Message) (interface{}, error) {
+				panic(errors.New("crazy"))
+			},
 			"crazy",
 		},
 		{
 			"panic with string",
-			func(context.Context, interface{}, messaging.Message) (interface{}, error) { panic("evil") },
+			func(context.Context, interface{}, goengine_dev.Message) (interface{}, error) { panic("evil") },
 			"evil",
 		},
 		{
 			"panic with struct",
-			func(context.Context, interface{}, messaging.Message) (interface{}, error) {
+			func(context.Context, interface{}, goengine_dev.Message) (interface{}, error) {
 				panic(struct {
 					test string
 				}{"manic"})
@@ -42,7 +44,7 @@ func TestWrapProjectionHandlerToTrapError(t *testing.T) {
 		},
 		{
 			"error return",
-			func(context.Context, interface{}, messaging.Message) (interface{}, error) {
+			func(context.Context, interface{}, goengine_dev.Message) (interface{}, error) {
 				return nil, errors.New("world")
 			},
 			"world",
@@ -71,7 +73,7 @@ func TestWrapProjectionHandlerToTrapError(t *testing.T) {
 			initialMsg               = &aggregate.Changed{}
 		)
 
-		wrapped := wrapProjectionHandlerToTrapError(func(ctx context.Context, state interface{}, message messaging.Message) (interface{}, error) {
+		wrapped := wrapProjectionHandlerToTrapError(func(ctx context.Context, state interface{}, message goengine_dev.Message) (interface{}, error) {
 			assert.True(t, initialCtx == ctx)
 			assert.True(t, initialState == state)
 			assert.True(t, initialMsg == message)

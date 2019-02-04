@@ -9,13 +9,13 @@ import (
 	"sync"
 	"time"
 
+	goengine_dev "github.com/hellofresh/goengine-dev"
 	"github.com/hellofresh/goengine/aggregate"
 	"github.com/hellofresh/goengine/eventstore"
 	eventStoreJSON "github.com/hellofresh/goengine/eventstore/json"
 	"github.com/hellofresh/goengine/eventstore/postgres"
 	eventStoreSQL "github.com/hellofresh/goengine/eventstore/sql"
 	"github.com/hellofresh/goengine/internal/test"
-	"github.com/hellofresh/goengine/messaging"
 	"github.com/hellofresh/goengine/metadata"
 )
 
@@ -55,7 +55,7 @@ func (p *DepositedProjection) FromStream() eventstore.StreamName {
 
 func (p *DepositedProjection) Handlers() map[string]eventstore.ProjectionHandler {
 	return map[string]eventstore.ProjectionHandler{
-		"account_debited": func(ctx context.Context, state interface{}, message messaging.Message) (interface{}, error) {
+		"account_debited": func(ctx context.Context, state interface{}, message goengine_dev.Message) (interface{}, error) {
 			projectionState := state.(depositedProjectionState)
 
 			switch event := message.Payload().(type) {
@@ -157,7 +157,7 @@ func (s *projectorSuite) appendEvents(aggregateID aggregate.ID, events []interfa
 	s.Require().NoError(stream.Err())
 
 	// Transform the events into messages
-	messages := make([]messaging.Message, len(events))
+	messages := make([]goengine_dev.Message, len(events))
 	for i, event := range events {
 		m := metadata.WithValue(
 			metadata.WithValue(
@@ -171,7 +171,7 @@ func (s *projectorSuite) appendEvents(aggregateID aggregate.ID, events []interfa
 
 		message, err := aggregate.ReconstituteChange(
 			aggregateID,
-			messaging.GenerateUUID(),
+			goengine_dev.GenerateUUID(),
 			event,
 			m,
 			time.Now().UTC(),

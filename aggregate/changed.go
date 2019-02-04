@@ -4,7 +4,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/hellofresh/goengine/messaging"
+	goengine_dev "github.com/hellofresh/goengine-dev"
 	"github.com/hellofresh/goengine/metadata"
 )
 
@@ -21,7 +21,7 @@ var (
 
 // Changed is a message indicating that a aggregate was changed
 type Changed struct {
-	uuid        messaging.UUID
+	uuid        goengine_dev.UUID
 	aggregateID ID
 	payload     interface{}
 	metadata    metadata.Metadata
@@ -32,7 +32,7 @@ type Changed struct {
 // ReconstituteChange recreates a previous aggregate Changed message based on the provided data
 func ReconstituteChange(
 	aggregateID ID,
-	uuid messaging.UUID,
+	uuid goengine_dev.UUID,
 	payload interface{},
 	metadata metadata.Metadata,
 	createdAt time.Time,
@@ -41,7 +41,7 @@ func ReconstituteChange(
 	if aggregateID == "" {
 		return nil, ErrMissingAggregateID
 	}
-	if messaging.IsUUIDEmpty(uuid) {
+	if goengine_dev.IsUUIDEmpty(uuid) {
 		return nil, ErrMissingChangeUUID
 	}
 	if payload == nil {
@@ -62,7 +62,7 @@ func ReconstituteChange(
 }
 
 // UUID returns the unique message identifier
-func (a *Changed) UUID() messaging.UUID {
+func (a *Changed) UUID() goengine_dev.UUID {
 	return a.uuid
 }
 
@@ -93,7 +93,7 @@ func (a *Changed) Metadata() metadata.Metadata {
 }
 
 // WithMetadata Returns new instance of the change with key and value added to metadata
-func (a *Changed) WithMetadata(key string, value interface{}) messaging.Message {
+func (a *Changed) WithMetadata(key string, value interface{}) goengine_dev.Message {
 	newAggregateChanged := *a
 	newAggregateChanged.metadata = metadata.WithValue(a.metadata, key, value)
 

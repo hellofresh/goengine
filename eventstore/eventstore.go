@@ -3,7 +3,7 @@ package eventstore
 import (
 	"context"
 
-	"github.com/hellofresh/goengine/messaging"
+	goengine_dev "github.com/hellofresh/goengine-dev"
 	"github.com/hellofresh/goengine/metadata"
 )
 
@@ -28,7 +28,7 @@ type (
 		Close() error
 
 		// Message returns the current message and it's number within the EventStream.
-		Message() (messaging.Message, int64, error)
+		Message() (goengine_dev.Message, int64, error)
 	}
 
 	// EventStore an interface describing an event store
@@ -39,7 +39,7 @@ type (
 		Create(ctx context.Context, streamName StreamName) error
 
 		// AppendTo appends the provided messages to the stream
-		AppendTo(ctx context.Context, streamName StreamName, streamEvents []messaging.Message) error
+		AppendTo(ctx context.Context, streamName StreamName, streamEvents []goengine_dev.Message) error
 	}
 
 	// ReadOnlyEventStore an interface describing a readonly event store
@@ -54,8 +54,8 @@ type (
 
 // ReadEventStream reads the entire event stream and returns it's content as a slice.
 // The main purpose of the function is for testing and debugging.
-func ReadEventStream(stream EventStream) ([]messaging.Message, []int64, error) {
-	var messages []messaging.Message
+func ReadEventStream(stream EventStream) ([]goengine_dev.Message, []int64, error) {
+	var messages []goengine_dev.Message
 	var messageNumbers []int64
 	for stream.Next() {
 		msg, msgNumber, err := stream.Message()

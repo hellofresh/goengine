@@ -6,9 +6,9 @@ import (
 	"context"
 	"testing"
 
+	goengine_dev "github.com/hellofresh/goengine-dev"
 	"github.com/hellofresh/goengine/eventstore"
 	"github.com/hellofresh/goengine/eventstore/inmemory"
-	"github.com/hellofresh/goengine/messaging"
 	"github.com/hellofresh/goengine/metadata"
 	"github.com/hellofresh/goengine/mocks"
 	"github.com/stretchr/testify/assert"
@@ -105,7 +105,7 @@ func TestQueryExecutor_Run(t *testing.T) {
 
 		asserts := assert.New(t)
 		eventBatch1, err := inmemory.NewEventStream(
-			[]messaging.Message{
+			[]goengine_dev.Message{
 				mockMessageWithPayload(myEvent{1}, map[string]interface{}{}),
 				mockMessageWithPayload(mySecondEvent{2}, map[string]interface{}{}),
 			},
@@ -116,7 +116,7 @@ func TestQueryExecutor_Run(t *testing.T) {
 		}
 
 		eventBatch2, err := inmemory.NewEventStream(
-			[]messaging.Message{
+			[]goengine_dev.Message{
 				mockMessageWithPayload(myEvent{3}, map[string]interface{}{}),
 			},
 			[]int64{3},
@@ -145,7 +145,7 @@ func TestQueryExecutor_Run(t *testing.T) {
 		query := &mocks.Query{}
 		query.On("Init").Once().Return(myState{})
 		query.On("Handlers").Times(2).Return(map[string]eventstore.QueryMessageHandler{
-			"my_event": func(ctx context.Context, rawState interface{}, message messaging.Message) (interface{}, error) {
+			"my_event": func(ctx context.Context, rawState interface{}, message goengine_dev.Message) (interface{}, error) {
 				state := rawState.(myState)
 				state.count++
 				state.numbers = append(
@@ -155,7 +155,7 @@ func TestQueryExecutor_Run(t *testing.T) {
 
 				return state, nil
 			},
-			"second_event": func(ctx context.Context, rawState interface{}, message messaging.Message) (interface{}, error) {
+			"second_event": func(ctx context.Context, rawState interface{}, message goengine_dev.Message) (interface{}, error) {
 				state := rawState.(myState)
 				state.count++
 				state.numbers = append(

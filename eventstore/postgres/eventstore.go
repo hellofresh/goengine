@@ -9,10 +9,10 @@ import (
 	"strconv"
 	"strings"
 
+	goengine_dev "github.com/hellofresh/goengine-dev"
 	"github.com/hellofresh/goengine/eventstore"
 	eventstoreSQL "github.com/hellofresh/goengine/eventstore/sql"
 	"github.com/hellofresh/goengine/log"
-	"github.com/hellofresh/goengine/messaging"
 	"github.com/hellofresh/goengine/metadata"
 )
 
@@ -200,7 +200,7 @@ func (e *EventStore) loadQuery(
 }
 
 // AppendTo batch inserts Messages into the event stream table
-func (e *EventStore) AppendTo(ctx context.Context, streamName eventstore.StreamName, streamEvents []messaging.Message) error {
+func (e *EventStore) AppendTo(ctx context.Context, streamName eventstore.StreamName, streamEvents []goengine_dev.Message) error {
 	tableName, err := e.tableName(streamName)
 	if err != nil {
 		return err
@@ -247,7 +247,7 @@ func (e *EventStore) AppendTo(ctx context.Context, streamName eventstore.StreamN
 	return nil
 }
 
-func (e *EventStore) prepareInsertValues(streamEvents []messaging.Message, lenCols int) string {
+func (e *EventStore) prepareInsertValues(streamEvents []goengine_dev.Message, lenCols int) string {
 	messageCount := len(streamEvents)
 	if messageCount == 0 {
 		return ""
