@@ -9,7 +9,6 @@ import (
 	goengine_dev "github.com/hellofresh/goengine-dev"
 	"github.com/hellofresh/goengine/aggregate"
 	eventStoreSQL "github.com/hellofresh/goengine/eventstore/sql"
-	"github.com/hellofresh/goengine/log"
 	"github.com/hellofresh/goengine/metadata"
 	"github.com/hellofresh/goengine/projector"
 	"github.com/hellofresh/goengine/projector/internal"
@@ -30,7 +29,7 @@ func aggregateProjectionEventStreamLoader(eventStore eventStoreSQL.ReadOnlyEvent
 var _ internal.Storage = &aggregateProjectionStorage{}
 
 type aggregateProjectionStorage struct {
-	logger log.Logger
+	logger goengine_dev.Logger
 
 	queryOutOfSyncProjections string
 	queryPersistState         string
@@ -43,7 +42,7 @@ type aggregateProjectionStorage struct {
 func newAggregateProjectionStorage(
 	projectionTable,
 	eventStoreTable string,
-	logger log.Logger,
+	logger goengine_dev.Logger,
 ) *aggregateProjectionStorage {
 	projectionTableQuoted := pq.QuoteIdentifier(projectionTable)
 	projectionTableStr := quoteString(projectionTable)
@@ -115,7 +114,7 @@ func (a *aggregateProjectionStorage) PersistState(conn *sql.Conn, notification *
 		return err
 	}
 
-	a.logger.WithFields(log.Fields{
+	a.logger.WithFields(goengine_dev.Fields{
 		"notification": notification,
 		"state":        state,
 	}).Debug("updated projection state")

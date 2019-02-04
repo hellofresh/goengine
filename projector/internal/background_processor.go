@@ -5,6 +5,7 @@ import (
 	"runtime"
 	"sync"
 
+	goengine_dev "github.com/hellofresh/goengine-dev"
 	"github.com/hellofresh/goengine/log"
 	"github.com/hellofresh/goengine/projector"
 	"github.com/pkg/errors"
@@ -25,7 +26,7 @@ type (
 		queueProcessors int
 		queueBuffer     int
 
-		logger log.Logger
+		logger goengine_dev.Logger
 	}
 
 	// ProcessHandler is a func used to trigger a notification but with the addition of providing a Trigger func so
@@ -34,7 +35,7 @@ type (
 )
 
 // NewBackgroundProcessor create a new BackgroundProcessor
-func NewBackgroundProcessor(queueProcessors, queueBuffer int, logger log.Logger) (*BackgroundProcessor, error) {
+func NewBackgroundProcessor(queueProcessors, queueBuffer int, logger goengine_dev.Logger) (*BackgroundProcessor, error) {
 	if queueProcessors <= 0 {
 		return nil, errors.New("queueProcessors must be greater then zero")
 	}

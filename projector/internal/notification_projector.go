@@ -24,7 +24,7 @@ type NotificationProjector struct {
 	eventLoader EventStreamLoader
 	resolver    goengine_dev.MessagePayloadResolver
 
-	logger log.Logger
+	logger goengine_dev.Logger
 }
 
 // NewNotificationProjector returns a new NotificationProjector
@@ -35,7 +35,7 @@ func NewNotificationProjector(
 	eventHandlers map[string]goengine_dev.ProjectionHandler,
 	eventLoader EventStreamLoader,
 	resolver goengine_dev.MessagePayloadResolver,
-	logger log.Logger,
+	logger goengine_dev.Logger,
 ) (*NotificationProjector, error) {
 	switch {
 	case db == nil:

@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	goengine_dev "github.com/hellofresh/goengine-dev"
 	"github.com/hellofresh/goengine/eventstore/postgres"
 	"github.com/hellofresh/goengine/log"
 	"github.com/hellofresh/goengine/projector"
@@ -26,13 +27,13 @@ type listener struct {
 	minReconnectInterval time.Duration
 	maxReconnectInterval time.Duration
 
-	logger log.Logger
+	logger goengine_dev.Logger
 }
 
 func newListener(
 	dbDSN string,
 	dbChannel string,
-	logger log.Logger,
+	logger goengine_dev.Logger,
 ) (*listener, error) {
 	switch {
 	case strings.TrimSpace(dbDSN) == "":

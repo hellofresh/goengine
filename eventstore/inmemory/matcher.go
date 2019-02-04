@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/hellofresh/goengine/log"
+	goengine_dev "github.com/hellofresh/goengine-dev"
 	"github.com/hellofresh/goengine/metadata"
 )
 
@@ -31,7 +31,7 @@ type (
 
 	// MetadataMatcher an in memory metadata matcher implementation
 	MetadataMatcher struct {
-		logger      log.Logger
+		logger      goengine_dev.Logger
 		constraints []metadataConstraint
 	}
 
@@ -45,7 +45,7 @@ type (
 )
 
 // NewMetadataMatcher returns a new metadata matcher based of off the metadata.Matcher
-func NewMetadataMatcher(matcher metadata.Matcher, logger log.Logger) (*MetadataMatcher, error) {
+func NewMetadataMatcher(matcher metadata.Matcher, logger goengine_dev.Logger) (*MetadataMatcher, error) {
 	var constraints []metadataConstraint
 	var constraintErrors IncompatibleMatcherError
 	matcher.Iterate(func(c metadata.Constraint) {

@@ -3,7 +3,8 @@ package test
 import (
 	"testing"
 
-	"github.com/hellofresh/goengine/log"
+	goengine_dev "github.com/hellofresh/goengine-dev"
+
 	logWrapper "github.com/hellofresh/goengine/log/logrus"
 	"github.com/sirupsen/logrus"
 	"github.com/sirupsen/logrus/hooks/test"
@@ -53,7 +54,7 @@ func (s *Suite) Run(name string, f func()) bool {
 }
 
 // GetLogger return a log.Logger based o the suites logger
-func (s *Suite) GetLogger() log.Logger {
+func (s *Suite) GetLogger() goengine_dev.Logger {
 	return logWrapper.Wrap(s.Logger)
 }
 

@@ -38,7 +38,7 @@ type AggregateProjector struct {
 	dbDSN     string
 	dbChannel string
 
-	logger log.Logger
+	logger goengine_dev.Logger
 }
 
 // NewAggregateProjector creates a new projector for a projection
@@ -52,7 +52,7 @@ func NewAggregateProjector(
 	projection goengine_dev.Projection,
 	projectionTable string,
 	projectionErrorHandler projector.ProjectionErrorCallback,
-	logger log.Logger,
+	logger goengine_dev.Logger,
 ) (*AggregateProjector, error) {
 	switch {
 	case eventStore == nil:

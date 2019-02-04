@@ -44,7 +44,7 @@ type (
 		messageFactory            eventstoreSQL.MessageFactory
 		preparedInsertPlaceholder map[int]string
 		columns                   string
-		logger                    log.Logger
+		logger                    goengine_dev.Logger
 	}
 
 	// sqlQueryContext an interface used to query a sql.DB or sql.Conn
@@ -58,7 +58,7 @@ func NewEventStore(
 	persistenceStrategy eventstore.PersistenceStrategy,
 	db *sql.DB,
 	messageFactory eventstoreSQL.MessageFactory,
-	logger log.Logger,
+	logger goengine_dev.Logger,
 ) (*EventStore, error) {
 	if persistenceStrategy == nil {
 		return nil, ErrNoAggregateStreamStrategy
@@ -227,7 +227,7 @@ func (e *EventStore) AppendTo(ctx context.Context, streamName goengine_dev.Strea
 	if err != nil {
 		e.logger.
 			WithError(err).
-			WithFields(log.Fields{
+			WithFields(goengine_dev.Fields{
 				"streamName":   streamName,
 				"streamEvents": streamEvents,
 			}).
@@ -237,7 +237,7 @@ func (e *EventStore) AppendTo(ctx context.Context, streamName goengine_dev.Strea
 	}
 
 	e.logger.
-		WithFields(log.Fields{
+		WithFields(goengine_dev.Fields{
 			"streamName":   streamName,
 			"streamEvents": streamEvents,
 			"result":       result,

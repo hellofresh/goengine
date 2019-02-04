@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"database/sql/driver"
 
-	"github.com/hellofresh/goengine/log"
+	goengine_dev "github.com/hellofresh/goengine-dev"
 )
 
 // AcquireConn will return a new connection.
@@ -31,7 +31,7 @@ func AcquireConn(ctx context.Context, db *sql.DB) (*sql.Conn, error) {
 func ExecOnConn(
 	ctx context.Context,
 	db *sql.DB,
-	logger log.Logger,
+	logger goengine_dev.Logger,
 	callback func(ctx context.Context, conn *sql.Conn) error,
 ) error {
 	conn, err := AcquireConn(ctx, db)

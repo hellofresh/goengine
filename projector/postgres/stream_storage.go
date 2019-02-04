@@ -10,7 +10,6 @@ import (
 	goengine_dev "github.com/hellofresh/goengine-dev"
 
 	eventStoreSQL "github.com/hellofresh/goengine/eventstore/sql"
-	"github.com/hellofresh/goengine/log"
 	"github.com/hellofresh/goengine/projector"
 	"github.com/hellofresh/goengine/projector/internal"
 	"github.com/lib/pq"
@@ -27,7 +26,7 @@ var _ internal.Storage = &streamProjectionStorage{}
 type streamProjectionStorage struct {
 	projectionName string
 
-	logger log.Logger
+	logger goengine_dev.Logger
 
 	queryAcquireLock         string
 	queryAcquirePositionLock string
@@ -36,7 +35,7 @@ type streamProjectionStorage struct {
 	querySetRowLocked        string
 }
 
-func newStreamProjectionStorage(projectionName, projectionTable string, logger log.Logger) *streamProjectionStorage {
+func newStreamProjectionStorage(projectionName, projectionTable string, logger goengine_dev.Logger) *streamProjectionStorage {
 	projectionTableQuoted := pq.QuoteIdentifier(projectionTable)
 	projectionTableStr := quoteString(projectionTable)
 
@@ -81,7 +80,7 @@ func (s *streamProjectionStorage) PersistState(conn *sql.Conn, notification *pro
 		return err
 	}
 	s.logger.
-		WithFields(log.Fields{
+		WithFields(goengine_dev.Fields{
 			"notification": notification,
 			"state":        state,
 		}).

@@ -45,7 +45,7 @@ type StreamProjector struct {
 	projectionName  string
 	projectionTable string
 
-	logger                 log.Logger
+	logger                 goengine_dev.Logger
 	projectionErrorHandler projector.ProjectionErrorCallback
 }
 
@@ -58,7 +58,7 @@ func NewStreamProjector(
 	projection goengine_dev.Projection,
 	projectionTable string,
 	projectionErrorHandler projector.ProjectionErrorCallback,
-	logger log.Logger,
+	logger goengine_dev.Logger,
 ) (*StreamProjector, error) {
 	switch {
 	case strings.TrimSpace(dbDSN) == "":

@@ -7,7 +7,6 @@ import (
 	"sync"
 
 	goengine_dev "github.com/hellofresh/goengine-dev"
-	"github.com/hellofresh/goengine/log"
 	"github.com/hellofresh/goengine/metadata"
 )
 
@@ -26,12 +25,12 @@ var (
 type EventStore struct {
 	sync.RWMutex
 
-	logger  log.Logger
+	logger  goengine_dev.Logger
 	streams map[goengine_dev.StreamName][]goengine_dev.Message
 }
 
 // NewEventStore return a new inmemory.EventStore
-func NewEventStore(logger log.Logger) *EventStore {
+func NewEventStore(logger goengine_dev.Logger) *EventStore {
 	return &EventStore{
 		logger:  logger,
 		streams: map[goengine_dev.StreamName][]goengine_dev.Message{},
