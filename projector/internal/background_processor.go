@@ -6,7 +6,6 @@ import (
 	"sync"
 
 	goengine_dev "github.com/hellofresh/goengine-dev"
-	"github.com/hellofresh/goengine/log"
 	"github.com/hellofresh/goengine/projector"
 	"github.com/pkg/errors"
 )
@@ -43,7 +42,7 @@ func NewBackgroundProcessor(queueProcessors, queueBuffer int, logger goengine_de
 		return nil, errors.New("queueBuffer must be greater or equal to zero")
 	}
 	if logger == nil {
-		logger = log.NilLogger
+		logger = goengine_dev.NopLogger
 	}
 
 	return &BackgroundProcessor{

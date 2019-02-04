@@ -9,7 +9,6 @@ import (
 
 	goengine_dev "github.com/hellofresh/goengine-dev"
 	"github.com/hellofresh/goengine/eventstore/postgres"
-	"github.com/hellofresh/goengine/log"
 	"github.com/hellofresh/goengine/projector"
 	"github.com/hellofresh/goengine/projector/internal"
 	"github.com/lib/pq"
@@ -43,7 +42,7 @@ func newListener(
 	}
 
 	if logger == nil {
-		logger = log.NilLogger
+		logger = goengine_dev.NopLogger
 	}
 
 	return &listener{

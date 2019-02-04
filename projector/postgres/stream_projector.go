@@ -11,7 +11,6 @@ import (
 	goengine_dev "github.com/hellofresh/goengine-dev"
 	"github.com/hellofresh/goengine/eventstore/postgres"
 	eventStoreSQL "github.com/hellofresh/goengine/eventstore/sql"
-	"github.com/hellofresh/goengine/log"
 	"github.com/hellofresh/goengine/projector"
 	"github.com/hellofresh/goengine/projector/internal"
 	"github.com/lib/pq"
@@ -83,7 +82,7 @@ func NewStreamProjector(
 		}
 	}
 	if logger == nil {
-		logger = log.NilLogger
+		logger = goengine_dev.NopLogger
 	}
 	logger = logger.WithField("projection", projection)
 

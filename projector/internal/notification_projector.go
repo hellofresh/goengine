@@ -5,7 +5,6 @@ import (
 	"database/sql"
 
 	goengine_dev "github.com/hellofresh/goengine-dev"
-	"github.com/hellofresh/goengine/log"
 	"github.com/hellofresh/goengine/projector"
 	"github.com/pkg/errors"
 )
@@ -53,7 +52,7 @@ func NewNotificationProjector(
 	}
 
 	if logger == nil {
-		logger = log.NilLogger
+		logger = goengine_dev.NopLogger
 	}
 
 	return &NotificationProjector{

@@ -12,7 +12,6 @@ import (
 	goengine_dev "github.com/hellofresh/goengine-dev"
 	"github.com/hellofresh/goengine/eventstore"
 	eventstoreSQL "github.com/hellofresh/goengine/eventstore/sql"
-	"github.com/hellofresh/goengine/log"
 	"github.com/hellofresh/goengine/metadata"
 )
 
@@ -70,7 +69,7 @@ func NewEventStore(
 		return nil, ErrNoMessageFactory
 	}
 	if logger == nil {
-		logger = log.NilLogger
+		logger = goengine_dev.NopLogger
 	}
 
 	columns := fmt.Sprintf("%s", strings.Join(persistenceStrategy.ColumnNames(), ", "))

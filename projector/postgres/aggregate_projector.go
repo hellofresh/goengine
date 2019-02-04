@@ -9,7 +9,6 @@ import (
 
 	goengine_dev "github.com/hellofresh/goengine-dev"
 	eventStoreSQL "github.com/hellofresh/goengine/eventstore/sql"
-	"github.com/hellofresh/goengine/log"
 	"github.com/hellofresh/goengine/projector"
 	"github.com/hellofresh/goengine/projector/internal"
 )
@@ -79,7 +78,7 @@ func NewAggregateProjector(
 		}
 	}
 	if logger == nil {
-		logger = log.NilLogger
+		logger = goengine_dev.NopLogger
 	}
 	logger = logger.WithField("projection", projection)
 
