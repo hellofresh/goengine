@@ -5,54 +5,51 @@ import (
 	"go.uber.org/zap"
 )
 
-var _ goengine.Logger = &Wrapper{}
-
-// Wrapper a struct that embeds the zap.Logger in order to implement log.Logger
-type Wrapper struct {
-	*zap.Logger
+type wrapper struct {
+	logger *zap.Logger
 }
 
 // Wrap wraps a zap.Logger
-func Wrap(logger *zap.Logger) *Wrapper {
-	return &Wrapper{logger}
+func Wrap(logger *zap.Logger) goengine.Logger {
+	return &wrapper{logger}
 }
 
 // Error writes a log with log level error
-func (w *Wrapper) Error(msg string) {
-	w.Logger.Error(msg)
+func (w wrapper) Error(msg string) {
+	w.logger.Error(msg)
 }
 
 // Warn writes a log with log level warning
-func (w *Wrapper) Warn(msg string) {
-	w.Logger.Warn(msg)
+func (w wrapper) Warn(msg string) {
+	w.logger.Warn(msg)
 }
 
 // Info writes a log with log level info
-func (w *Wrapper) Info(msg string) {
-	w.Logger.Info(msg)
+func (w wrapper) Info(msg string) {
+	w.logger.Info(msg)
 }
 
 // Debug writes a log with log level debug
-func (w *Wrapper) Debug(msg string) {
-	w.Logger.Debug(msg)
+func (w wrapper) Debug(msg string) {
+	w.logger.Debug(msg)
 }
 
 // WithField Adds a field to the log entry
-func (w *Wrapper) WithField(key string, val interface{}) goengine.Logger {
-	return Wrap(w.Logger.With(zap.Any(key, val)))
+func (w wrapper) WithField(key string, val interface{}) goengine.Logger {
+	return wrapper{logger: w.logger.With(zap.Any(key, val))}
 }
 
 //WithFields Adds a set of fields to the log entry
-func (w *Wrapper) WithFields(fields goengine.Fields) goengine.Logger {
+func (w wrapper) WithFields(fields goengine.Fields) goengine.Logger {
 	zapFields := make([]zap.Field, 0, len(fields))
 	for k, v := range fields {
 		zapFields = append(zapFields, zap.Any(k, v))
 	}
 
-	return Wrap(w.Logger.With(zapFields...))
+	return wrapper{logger: w.logger.With(zapFields...)}
 }
 
 // WithError Add an error as single field to the log entry
-func (w *Wrapper) WithError(err error) goengine.Logger {
-	return Wrap(w.Logger.With(zap.Error(err)))
+func (w wrapper) WithError(err error) goengine.Logger {
+	return wrapper{logger: w.logger.With(zap.Error(err))}
 }
