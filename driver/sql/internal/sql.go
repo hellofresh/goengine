@@ -6,7 +6,6 @@ import (
 	"database/sql/driver"
 	"time"
 
-	"github.com/hellofresh/goengine"
 	driverSQL "github.com/hellofresh/goengine/driver/sql"
 )
 
@@ -50,24 +49,4 @@ func AcquireConn(ctx context.Context, db *sql.DB) (*sql.Conn, error) {
 	}
 
 	return nil, driver.ErrBadConn
-}
-
-// ExecOnConn execute the provided callback and provides it with a *sql.Conn
-func ExecOnConn(
-	ctx context.Context,
-	db *sql.DB,
-	logger goengine.Logger,
-	callback func(ctx context.Context, conn *sql.Conn) error,
-) error {
-	conn, err := AcquireConn(ctx, db)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		if err := conn.Close(); err != nil {
-			logger.WithError(err).Warn("failed to db close connection")
-		}
-	}()
-
-	return callback(ctx, conn)
 }

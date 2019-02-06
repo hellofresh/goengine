@@ -167,16 +167,24 @@ func (s *StreamProjector) processNotification(
 
 // setupProjection Creates the projection if none exists
 func (s *StreamProjector) setupProjection(ctx context.Context) error {
-	return internalSQL.ExecOnConn(ctx, s.db, s.logger, func(ctx context.Context, conn *sql.Conn) error {
-		if s.projectionExists(ctx, conn) {
-			return nil
+	conn, err := internalSQL.AcquireConn(ctx, s.db)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err := conn.Close(); err != nil {
+			s.logger.WithError(err).Warn("failed to db close connection")
 		}
-		if err := s.createProjection(ctx, conn); err != nil {
-			return err
-		}
+	}()
 
+	if s.projectionExists(ctx, conn) {
 		return nil
-	})
+	}
+	if err := s.createProjection(ctx, conn); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (s *StreamProjector) projectionExists(ctx context.Context, conn *sql.Conn) bool {
