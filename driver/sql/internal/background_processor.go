@@ -12,7 +12,7 @@ import (
 
 var (
 	// ErrBackgroundWorkStopped occurs when queueing a notification when the BackgroundProcessor was stopped
-	ErrBackgroundWorkStopped = errors.New("unable to queue notification because the processor was stopped")
+	ErrBackgroundWorkStopped = errors.New("goengine: unable to queue notification because the processor was stopped")
 
 	// Ensure the BackgroundProcessor.Queue is a ProjectionTrigger
 	_ sql.ProjectionTrigger = (&BackgroundProcessor{}).Queue

@@ -10,7 +10,7 @@ import (
 )
 
 // ErrInvalidID occurs when a string is not a valid ID
-var ErrInvalidID = errors.New("an aggregate.ID must be a valid UUID")
+var ErrInvalidID = errors.New("goengine: an aggregate.ID must be a valid UUID")
 
 type (
 	// ID an UUID for a aggregate.Root instance
@@ -62,10 +62,10 @@ func IDFromString(str string) (ID, error) {
 // RecordChange record the given event onto the aggregate.Root by wrapping it in an aggregate.Changed
 func RecordChange(aggregateRoot Root, event interface{}) error {
 	aggregateID := aggregateRoot.AggregateID()
-	if aggregateID == "" {
+	switch {
+	case aggregateID == "":
 		return ErrMissingAggregateID
-	}
-	if event == nil {
+	case event == nil:
 		return ErrInvalidChangePayload
 	}
 

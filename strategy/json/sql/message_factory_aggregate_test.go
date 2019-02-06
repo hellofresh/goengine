@@ -288,7 +288,7 @@ func TestAggregateChangedFactory_CreateFromRows(t *testing.T) {
 
 					return mockRows, factory
 				},
-				"a changed event must have a version number greater than zero",
+				"goengine: a changed event must have a version number greater than zero",
 			},
 		}
 

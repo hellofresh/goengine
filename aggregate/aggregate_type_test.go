@@ -5,6 +5,7 @@ package aggregate_test
 import (
 	"testing"
 
+	"github.com/hellofresh/goengine"
 	"github.com/hellofresh/goengine/aggregate"
 	"github.com/hellofresh/goengine/mocks"
 	"github.com/stretchr/testify/assert"
@@ -80,7 +81,7 @@ func TestType(t *testing.T) {
 		}{
 			{
 				title:         "name is required",
-				expectedError: aggregate.ErrTypeNameRequired,
+				expectedError: goengine.InvalidArgumentError("name"),
 				name:          "",
 				initiator:     mockInitiator,
 			},

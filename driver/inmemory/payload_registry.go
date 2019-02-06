@@ -9,9 +9,9 @@ import (
 
 var (
 	// ErrUnknownPayloadType occurs when a payload type is unknown
-	ErrUnknownPayloadType = errors.New("unknown payload type was provided")
+	ErrUnknownPayloadType = errors.New("goengine: unknown payload type was provided")
 	// ErrDuplicatePayloadType occurs when a payload type is already registered
-	ErrDuplicatePayloadType = errors.New("payload type is already registered")
+	ErrDuplicatePayloadType = errors.New("goengine: payload type is already registered")
 	// Ensure that we satisfy the eventstore.MessagePayloadResolver interface
 	_ goengine.MessagePayloadResolver = &PayloadRegistry{}
 )

@@ -50,21 +50,21 @@ func TestNewRepository(t *testing.T) {
 				nil,
 				"event_stream",
 				aggregateType,
-				aggregate.ErrEventStoreRequired,
+				goengine.InvalidArgumentError("eventStore"),
 			},
 			{
 				"requires a stream name",
 				eventStore,
 				"",
 				aggregateType,
-				aggregate.ErrStreamNameRequired,
+				goengine.InvalidArgumentError("streamName"),
 			},
 			{
 				"requires a aggregate type",
 				eventStore,
 				"event_stream",
 				nil,
-				aggregate.ErrTypeRequired,
+				goengine.InvalidArgumentError("aggregateType"),
 			},
 		}
 

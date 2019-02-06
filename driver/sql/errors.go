@@ -40,7 +40,7 @@ func NewProjectionHandlerError(err error) *ProjectionHandlerError {
 
 // Error return the error message
 func (e *ProjectionHandlerError) Error() string {
-	return fmt.Sprintf("the projection handler returned with an error. (%s)", e.error.Error())
+	return fmt.Sprintf("goengine: the projection handler returned with an error. (%s)", e.error.Error())
 }
 
 // Cause returns the actual projection errors.

@@ -12,17 +12,17 @@ import (
 
 var (
 	// ErrUnsupportedJSONPayloadData occurs when the data type is not supported by the PayloadTransformer
-	ErrUnsupportedJSONPayloadData = errors.New("payload data was expected to be a []byte, json.RawMessage or string")
+	ErrUnsupportedJSONPayloadData = errors.New("goengine: payload data was expected to be a []byte, json.RawMessage or string")
 	// ErrPayloadCannotBeSerialized occurs when the payload cannot be serialized
-	ErrPayloadCannotBeSerialized = errors.New("payload cannot be serialized")
+	ErrPayloadCannotBeSerialized = errors.New("goengine: payload cannot be serialized")
 	// ErrPayloadNotRegistered occurs when the payload is not registered
-	ErrPayloadNotRegistered = errors.New("payload is not registered")
+	ErrPayloadNotRegistered = errors.New("goengine: payload is not registered")
 	// ErrUnknownPayloadType occurs when a payload type is unknown
-	ErrUnknownPayloadType = errors.New("unknown payload type provided")
+	ErrUnknownPayloadType = errors.New("goengine: unknown payload type provided")
 	// ErrInitiatorInvalidResult occurs when a PayloadInitiator returns a reference to nil
-	ErrInitiatorInvalidResult = errors.New("initializer must return a pointer that is not nil")
+	ErrInitiatorInvalidResult = errors.New("goengine: initializer must return a pointer that is not nil")
 	// ErrDuplicatePayloadType occurs when a payload type is already registered
-	ErrDuplicatePayloadType = errors.New("payload type is already registered")
+	ErrDuplicatePayloadType = errors.New("goengine: payload type is already registered")
 
 	// Ensure that PayloadTransformer satisfies the MessagePayloadFactory interface
 	_ goengine.MessagePayloadFactory = &PayloadTransformer{}

@@ -10,13 +10,13 @@ import (
 
 var (
 	// ErrMissingAggregateID occurs when no or an invalid aggregate.ID was provided
-	ErrMissingAggregateID = errors.New("no or empty aggregate ID was provided")
+	ErrMissingAggregateID = errors.New("goengine: no or empty aggregate ID was provided")
 	// ErrMissingChangeUUID occurs when no or an invalid message.UUID was provided
-	ErrMissingChangeUUID = errors.New("no or empty message UUID was provided")
+	ErrMissingChangeUUID = errors.New("goengine: no or empty message UUID was provided")
 	// ErrInvalidChangeVersion occurs since a version cannot be zero
-	ErrInvalidChangeVersion = errors.New("a changed event must have a version number greater than zero")
+	ErrInvalidChangeVersion = errors.New("goengine: a changed event must have a version number greater than zero")
 	// ErrInvalidChangePayload occurs when no payload is provided
-	ErrInvalidChangePayload = errors.New("a changed event must have a payload that is not nil")
+	ErrInvalidChangePayload = errors.New("goengine: a changed event must have a payload that is not nil")
 )
 
 // Changed is a message indicating that a aggregate was changed
@@ -38,16 +38,14 @@ func ReconstituteChange(
 	createdAt time.Time,
 	version uint,
 ) (*Changed, error) {
-	if aggregateID == "" {
+	switch {
+	case aggregateID == "":
 		return nil, ErrMissingAggregateID
-	}
-	if goengine.IsUUIDEmpty(uuid) {
+	case goengine.IsUUIDEmpty(uuid):
 		return nil, ErrMissingChangeUUID
-	}
-	if payload == nil {
+	case payload == nil:
 		return nil, ErrInvalidChangePayload
-	}
-	if version == 0 {
+	case version == 0:
 		return nil, ErrInvalidChangeVersion
 	}
 

@@ -15,18 +15,12 @@ import (
 )
 
 var (
-	// ErrNoAggregateStreamStrategy error on no aggregate stream strategy provided
-	ErrNoAggregateStreamStrategy = errors.New("no aggregate stream strategy provided")
 	// ErrNoCreateTableQueries occurs when table create queries are not presented in the strategy
-	ErrNoCreateTableQueries = errors.New("create table queries are not provided")
-	// ErrNoDBConnect error on no DB connection provided
-	ErrNoDBConnect = errors.New("no DB connection provided")
-	// ErrNoMessageFactory error on no message factory provided
-	ErrNoMessageFactory = errors.New("sql message factory should be provided")
+	ErrNoCreateTableQueries = errors.New("goengine: create table queries are not provided")
 	// ErrTableAlreadyExists occurs when table cannot be created as it exists already
-	ErrTableAlreadyExists = errors.New("table already exists")
+	ErrTableAlreadyExists = errors.New("goengine: table already exists")
 	// ErrTableNameEmpty occurs when table cannot be created because it has an empty name
-	ErrTableNameEmpty = errors.New("table name could not be empty")
+	ErrTableNameEmpty = errors.New("goengine: table name could not be empty")
 
 	// Ensure that we satisfy the eventstore.EventStore interface
 	_ goengine.EventStore = &EventStore{}

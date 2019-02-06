@@ -96,7 +96,7 @@ func TestNewMetadataMatcher(t *testing.T) {
 					return
 				}
 
-				asserts.Equal("incompatible metadata.Matcher\n"+testCase.expectedError, err.Error())
+				asserts.Equal("goengine: incompatible metadata.Matcher\n"+testCase.expectedError, err.Error())
 				asserts.Nil(matcher)
 				asserts.Len(loggerHook.Entries, 0)
 			})

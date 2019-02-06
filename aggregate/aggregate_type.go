@@ -3,13 +3,13 @@ package aggregate
 import (
 	"errors"
 	"reflect"
+
+	"github.com/hellofresh/goengine"
 )
 
 var (
-	// ErrTypeNameRequired occurs when no name is provided
-	ErrTypeNameRequired = errors.New("aggregate name may not be empty")
 	// ErrInitiatorMustReturnRoot occurs when a aggregate.Initiator did not return a pointer
-	ErrInitiatorMustReturnRoot = errors.New("the aggregate.Initiator must return a pointer to the aggregate.Root")
+	ErrInitiatorMustReturnRoot = errors.New("goengine: the aggregate.Initiator must return a pointer to the aggregate.Root")
 )
 
 type (
@@ -28,7 +28,7 @@ type (
 // NewType create a new aggregate type instance
 func NewType(name string, initiator Initiator) (*Type, error) {
 	if name == "" {
-		return nil, ErrTypeNameRequired
+		return nil, goengine.InvalidArgumentError("name")
 	}
 
 	// In order to avoid strange behavior the Initiator must return a pointer to a aggregate.Root instance

@@ -18,18 +18,12 @@ const (
 )
 
 var (
-	// ErrStreamNameRequired occurs when an empty stream name is provided
-	ErrStreamNameRequired = errors.New("a StreamName may not be empty")
-	// ErrEventStoreRequired occurs when a nil event store is provided
-	ErrEventStoreRequired = errors.New("a EventStore may not be nil")
-	// ErrTypeRequired occurs when a nil aggregate type is provided
-	ErrTypeRequired = errors.New("a AggregateType may not be nil")
 	// ErrUnsupportedAggregateType occurs when the given aggregateType is not handled by the AggregateRepository
-	ErrUnsupportedAggregateType = errors.New("the given AggregateRoot is of a unsupported type")
+	ErrUnsupportedAggregateType = errors.New("goengine: the given AggregateRoot is of a unsupported type")
 	// ErrUnexpectedMessageType occurs when the event store returns a message that is not an *aggregate.Changed
-	ErrUnexpectedMessageType = errors.New("event store returned an unsupported message type")
+	ErrUnexpectedMessageType = errors.New("goengine: event store returned an unsupported message type")
 	// ErrEmptyEventStream occurs when the event stream returned by the event store is empty
-	ErrEmptyEventStream = errors.New("unsupported empty event stream")
+	ErrEmptyEventStream = errors.New("goengine: unsupported empty event stream")
 )
 
 type (
@@ -47,16 +41,13 @@ func NewRepository(
 	streamName goengine.StreamName,
 	aggregateType *Type,
 ) (*Repository, error) {
-	if eventStore == nil {
-		return nil, ErrEventStoreRequired
-	}
-
-	if streamName == "" {
-		return nil, ErrStreamNameRequired
-	}
-
-	if aggregateType == nil {
-		return nil, ErrTypeRequired
+	switch {
+	case eventStore == nil:
+		return nil, goengine.InvalidArgumentError("eventStore")
+	case streamName == "":
+		return nil, goengine.InvalidArgumentError("streamName")
+	case aggregateType == nil:
+		return nil, goengine.InvalidArgumentError("aggregateType")
 	}
 
 	repository := &Repository{

@@ -8,11 +8,11 @@ import (
 
 var (
 	// ErrMessageNumberCountMismatch occurs when the provided messages and numbers do not have the same length
-	ErrMessageNumberCountMismatch = errors.New("provided messages and messageNumbers do not match")
+	ErrMessageNumberCountMismatch = errors.New("goengine: provided messages and messageNumbers do not match")
 	// ErrEventStreamClosed occurs when an eventstream is closed
-	ErrEventStreamClosed = errors.New("no more messages")
+	ErrEventStreamClosed = errors.New("goengine: no more messages")
 	// ErrEventStreamNotStarted occurs when an eventstream Message or MessageNumber is called before Next
-	ErrEventStreamNotStarted = errors.New("eventStream Message called without calling Next")
+	ErrEventStreamNotStarted = errors.New("goengine: eventStream Message called without calling Next")
 	// Ensure that EventStream satisfies the eventstore.EventStream interface
 	_ goengine.EventStream = &EventStream{}
 )

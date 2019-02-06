@@ -12,11 +12,11 @@ import (
 
 var (
 	// ErrStreamExistsAlready occurs when create is called for an already created stream
-	ErrStreamExistsAlready = errors.New("stream already exists")
+	ErrStreamExistsAlready = errors.New("goengine: stream already exists")
 	// ErrStreamNotFound occurs when an unknown streamName is provided
-	ErrStreamNotFound = errors.New("unknown stream")
+	ErrStreamNotFound = errors.New("goengine: unknown stream")
 	// ErrNilMessage occurs when a goengine.Message that is being appended to a stream is nil or a reference to nil
-	ErrNilMessage = errors.New("nil is not a valid message")
+	ErrNilMessage = errors.New("goengine: nil is not a valid message")
 	// Ensure that we satisfy the eventstore.EventStore interface
 	_ goengine.EventStore = &EventStore{}
 )

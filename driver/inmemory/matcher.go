@@ -12,9 +12,9 @@ import (
 
 var (
 	// ErrTypeMismatch occurs when a metadata value cannot be converted to the constraints value type
-	ErrTypeMismatch = errors.New("the values to compare are of a different type")
+	ErrTypeMismatch = errors.New("goengine: the values to compare are of a different type")
 	// ErrUnsupportedOperator occurs when a constraints operation is not supported for a type
-	ErrUnsupportedOperator = errors.New("the operator is not supported for this type")
+	ErrUnsupportedOperator = errors.New("goengine: the operator is not supported for this type")
 )
 
 type (
@@ -117,7 +117,7 @@ func (c *metadataConstraint) Matches(val interface{}) (bool, error) {
 
 // Error an error message
 func (e IncompatibleMatcherError) Error() string {
-	msg := bytes.NewBufferString("incompatible metadata.Matcher")
+	msg := bytes.NewBufferString("goengine: incompatible metadata.Matcher")
 	for _, err := range e {
 		msg.WriteRune('\n')
 		msg.WriteString(err.Error())
