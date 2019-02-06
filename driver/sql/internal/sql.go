@@ -4,22 +4,47 @@ import (
 	"context"
 	"database/sql"
 	"database/sql/driver"
+	"time"
 
 	"github.com/hellofresh/goengine"
+	driverSQL "github.com/hellofresh/goengine/driver/sql"
 )
 
-// AcquireConn will return a new connection.
-// This is needed due to https://github.com/golang/go/issues/29684
+// AcquireConn will return a new connection
 func AcquireConn(ctx context.Context, db *sql.DB) (*sql.Conn, error) {
-	for i := 0; i < 3; i++ {
-		conn, err := db.Conn(ctx)
-		if err == nil || err != driver.ErrBadConn {
-			return conn, err
-		}
+	var (
+		timeoutCtx    context.Context
+		timeoutCancel context.CancelFunc
+	)
 
-		// We have a bad connection so we ping the server and try again
-		if err := db.PingContext(ctx); err != nil {
-			// Even new connections return an error so return the error
+	for i := 0; i < 3; i++ {
+		// Use a context with a timeout this avoid hanging when the db.MaxOpenConnections is reached
+		timeoutCtx, timeoutCancel = context.WithTimeout(ctx, time.Second)
+
+		conn, err := db.Conn(timeoutCtx)
+		timeoutCancel()
+
+		switch err {
+		case nil:
+			return conn, nil
+		case context.DeadlineExceeded:
+			return nil, driverSQL.ErrConnFailedToAcquire
+		case driver.ErrBadConn:
+			// This is needed due to https://github.com/golang/go/issues/29684
+			// We have a bad connection so we ping the server and try again
+			timeoutCtx, timeoutCancel = context.WithTimeout(ctx, time.Second)
+			err := db.PingContext(timeoutCtx)
+			timeoutCancel()
+
+			if err != nil {
+				if err == context.DeadlineExceeded {
+					return nil, driverSQL.ErrConnFailedToAcquire
+				}
+
+				// Even new connections return an error so return the error
+				return nil, err
+			}
+		default:
 			return nil, err
 		}
 	}

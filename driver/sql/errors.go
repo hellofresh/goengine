@@ -18,12 +18,14 @@ const (
 )
 
 var (
+	// ErrConnFailedToAcquire occurs when a connection cannot be acquired within the timelimit
+	ErrConnFailedToAcquire = errors.New("goengine: unable to acquire projection lock")
 	// ErrProjectionFailedToLock occurs when the projector cannot acquire the projection lock
-	ErrProjectionFailedToLock = errors.New("unable to acquire projection lock")
+	ErrProjectionFailedToLock = errors.New("goengine: unable to acquire projection lock")
 	// ErrProjectionPreviouslyLocked occurs when a projection was lock was acquired but a previous lock is still in place
-	ErrProjectionPreviouslyLocked = errors.New("unable to lock projection due to a previous lock being in place")
+	ErrProjectionPreviouslyLocked = errors.New("goengine: unable to lock projection due to a previous lock being in place")
 	// ErrNoProjectionRequired occurs when a notification was being acquired but the projection was already at the indicated position
-	ErrNoProjectionRequired = errors.New("no projection acquisition required")
+	ErrNoProjectionRequired = errors.New("goengine: no projection acquisition required")
 )
 
 // ProjectionHandlerError an error indicating that a projection handler failed

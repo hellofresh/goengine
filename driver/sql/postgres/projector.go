@@ -27,7 +27,7 @@ func resolveErrorAction(
 		return errorFail
 	case context.Canceled, sql.ErrNoProjectionRequired:
 		return errorIgnore
-	case driver.ErrBadConn, sql.ErrProjectionFailedToLock:
+	case driver.ErrBadConn, sql.ErrConnFailedToAcquire, sql.ErrProjectionFailedToLock:
 		return errorRetry
 	default:
 		switch e := err.(type) {
