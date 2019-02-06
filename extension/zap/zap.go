@@ -1,11 +1,11 @@
 package zap
 
 import (
-	goengine_dev "github.com/hellofresh/goengine-dev"
+	"github.com/hellofresh/goengine"
 	"go.uber.org/zap"
 )
 
-var _ goengine_dev.Logger = &Wrapper{}
+var _ goengine.Logger = &Wrapper{}
 
 // Wrapper a struct that embeds the zap.Logger in order to implement log.Logger
 type Wrapper struct {
@@ -38,12 +38,12 @@ func (w *Wrapper) Debug(msg string) {
 }
 
 // WithField Adds a field to the log entry
-func (w *Wrapper) WithField(key string, val interface{}) goengine_dev.Logger {
+func (w *Wrapper) WithField(key string, val interface{}) goengine.Logger {
 	return Wrap(w.Logger.With(zap.Any(key, val)))
 }
 
 //WithFields Adds a set of fields to the log entry
-func (w *Wrapper) WithFields(fields goengine_dev.Fields) goengine_dev.Logger {
+func (w *Wrapper) WithFields(fields goengine.Fields) goengine.Logger {
 	zapFields := make([]zap.Field, 0, len(fields))
 	for k, v := range fields {
 		zapFields = append(zapFields, zap.Any(k, v))
@@ -53,6 +53,6 @@ func (w *Wrapper) WithFields(fields goengine_dev.Fields) goengine_dev.Logger {
 }
 
 // WithError Add an error as single field to the log entry
-func (w *Wrapper) WithError(err error) goengine_dev.Logger {
+func (w *Wrapper) WithError(err error) goengine.Logger {
 	return Wrap(w.Logger.With(zap.Error(err)))
 }

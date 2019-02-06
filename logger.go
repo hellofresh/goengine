@@ -1,4 +1,4 @@
-package goengine_dev
+package goengine
 
 type (
 	// Logger a structured logger interface

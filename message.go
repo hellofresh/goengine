@@ -1,4 +1,4 @@
-package goengine_dev
+package goengine
 
 import (
 	"time"

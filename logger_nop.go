@@ -1,4 +1,4 @@
-package goengine_dev
+package goengine
 
 // NopLogger is a no-op Logger.
 // This logger is used when a logger with the value `nil` is passed and avoids the need for `if logger != nil` everywhere

@@ -1,11 +1,11 @@
 package logrus
 
 import (
-	goengine_dev "github.com/hellofresh/goengine-dev"
+	"github.com/hellofresh/goengine"
 	"github.com/sirupsen/logrus"
 )
 
-var _ goengine_dev.Logger = &Wrapper{}
+var _ goengine.Logger = &Wrapper{}
 
 // Wrapper a struct that wraps the logrus.FieldLogger in order to implement log.Logger
 type Wrapper struct {
@@ -43,16 +43,16 @@ func (w *Wrapper) Debug(msg string) {
 }
 
 // WithError Add an error as single field to the log entry
-func (w *Wrapper) WithError(err error) goengine_dev.Logger {
+func (w *Wrapper) WithError(err error) goengine.Logger {
 	return Wrap(w.logger.WithError(err))
 }
 
 // WithField Adds a field to the log entry
-func (w *Wrapper) WithField(key string, val interface{}) goengine_dev.Logger {
+func (w *Wrapper) WithField(key string, val interface{}) goengine.Logger {
 	return Wrap(w.logger.WithField(key, val))
 }
 
 //WithFields Adds a set of fields to the log entry
-func (w *Wrapper) WithFields(fields goengine_dev.Fields) goengine_dev.Logger {
+func (w *Wrapper) WithFields(fields goengine.Fields) goengine.Logger {
 	return Wrap(w.logger.WithFields(logrus.Fields(fields)))
 }

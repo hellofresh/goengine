@@ -2,7 +2,7 @@
 package mocks
 
 import context "context"
-import goengine_dev "github.com/hellofresh/goengine-dev"
+import "github.com/hellofresh/goengine"
 import metadata "github.com/hellofresh/goengine/metadata"
 import mock "github.com/stretchr/testify/mock"
 
@@ -12,11 +12,11 @@ type EventStore struct {
 }
 
 // AppendTo provides a mock function with given fields: ctx, streamName, streamEvents
-func (_m *EventStore) AppendTo(ctx context.Context, streamName goengine_dev.StreamName, streamEvents []goengine_dev.Message) error {
+func (_m *EventStore) AppendTo(ctx context.Context, streamName goengine.StreamName, streamEvents []goengine.Message) error {
 	ret := _m.Called(ctx, streamName, streamEvents)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, goengine_dev.StreamName, []goengine_dev.Message) error); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, goengine.StreamName, []goengine.Message) error); ok {
 		r0 = rf(ctx, streamName, streamEvents)
 	} else {
 		r0 = ret.Error(0)
@@ -26,11 +26,11 @@ func (_m *EventStore) AppendTo(ctx context.Context, streamName goengine_dev.Stre
 }
 
 // Create provides a mock function with given fields: ctx, streamName
-func (_m *EventStore) Create(ctx context.Context, streamName goengine_dev.StreamName) error {
+func (_m *EventStore) Create(ctx context.Context, streamName goengine.StreamName) error {
 	ret := _m.Called(ctx, streamName)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, goengine_dev.StreamName) error); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, goengine.StreamName) error); ok {
 		r0 = rf(ctx, streamName)
 	} else {
 		r0 = ret.Error(0)
@@ -40,11 +40,11 @@ func (_m *EventStore) Create(ctx context.Context, streamName goengine_dev.Stream
 }
 
 // HasStream provides a mock function with given fields: ctx, streamName
-func (_m *EventStore) HasStream(ctx context.Context, streamName goengine_dev.StreamName) bool {
+func (_m *EventStore) HasStream(ctx context.Context, streamName goengine.StreamName) bool {
 	ret := _m.Called(ctx, streamName)
 
 	var r0 bool
-	if rf, ok := ret.Get(0).(func(context.Context, goengine_dev.StreamName) bool); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, goengine.StreamName) bool); ok {
 		r0 = rf(ctx, streamName)
 	} else {
 		r0 = ret.Get(0).(bool)
@@ -54,20 +54,20 @@ func (_m *EventStore) HasStream(ctx context.Context, streamName goengine_dev.Str
 }
 
 // Load provides a mock function with given fields: ctx, streamName, fromNumber, count, metadataMatcher
-func (_m *EventStore) Load(ctx context.Context, streamName goengine_dev.StreamName, fromNumber int64, count *uint, metadataMatcher metadata.Matcher) (goengine_dev.EventStream, error) {
+func (_m *EventStore) Load(ctx context.Context, streamName goengine.StreamName, fromNumber int64, count *uint, metadataMatcher metadata.Matcher) (goengine.EventStream, error) {
 	ret := _m.Called(ctx, streamName, fromNumber, count, metadataMatcher)
 
-	var r0 goengine_dev.EventStream
-	if rf, ok := ret.Get(0).(func(context.Context, goengine_dev.StreamName, int64, *uint, metadata.Matcher) goengine_dev.EventStream); ok {
+	var r0 goengine.EventStream
+	if rf, ok := ret.Get(0).(func(context.Context, goengine.StreamName, int64, *uint, metadata.Matcher) goengine.EventStream); ok {
 		r0 = rf(ctx, streamName, fromNumber, count, metadataMatcher)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(goengine_dev.EventStream)
+			r0 = ret.Get(0).(goengine.EventStream)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, goengine_dev.StreamName, int64, *uint, metadata.Matcher) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, goengine.StreamName, int64, *uint, metadata.Matcher) error); ok {
 		r1 = rf(ctx, streamName, fromNumber, count, metadataMatcher)
 	} else {
 		r1 = ret.Error(1)

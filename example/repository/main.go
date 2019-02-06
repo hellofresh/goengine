@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	goengine_dev "github.com/hellofresh/goengine-dev"
-	"github.com/hellofresh/goengine/eventstore/inmemory"
+	"github.com/hellofresh/goengine"
+	"github.com/hellofresh/goengine/driver/inmemory"
 	"github.com/hellofresh/goengine/extension/logrus"
 )
 
@@ -15,7 +15,7 @@ func main() {
 
 	store := inmemory.NewEventStore(logger)
 
-	eventStream := goengine_dev.StreamName("event_stream")
+	eventStream := goengine.StreamName("event_stream")
 	store.Create(ctx, eventStream)
 
 	repository, err := NewBankAccountRepository(store, eventStream)

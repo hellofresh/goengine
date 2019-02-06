@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	goengine_dev "github.com/hellofresh/goengine-dev"
+	"github.com/hellofresh/goengine"
 	"github.com/hellofresh/goengine/aggregate"
 	"github.com/hellofresh/goengine/metadata"
 	"github.com/stretchr/testify/assert"
@@ -16,7 +16,7 @@ func TestReconstituteChange(t *testing.T) {
 	t.Run("It reconstitutes a Change message", func(t *testing.T) {
 		// Mock message data
 		id := aggregate.GenerateID()
-		messageID := goengine_dev.GenerateUUID()
+		messageID := goengine.GenerateUUID()
 		payload := struct {
 			order int
 		}{order: 1}
@@ -32,7 +32,7 @@ func TestReconstituteChange(t *testing.T) {
 		asserts := assert.New(t)
 		asserts.NoError(err, "No error should be returned")
 		asserts.NotEmpty(msg, "A message should be returned")
-		asserts.Implements((*goengine_dev.Message)(nil), msg)
+		asserts.Implements((*goengine.Message)(nil), msg)
 
 		asserts.Equal(id, msg.AggregateID(), "Aggregate ID should be equal")
 		asserts.Equal(messageID, msg.UUID(), "Message UUID should be equal")
@@ -45,7 +45,7 @@ func TestReconstituteChange(t *testing.T) {
 	t.Run("Check required arguments", func(t *testing.T) {
 		// Mock message data
 		id := aggregate.GenerateID()
-		messageID := goengine_dev.GenerateUUID()
+		messageID := goengine.GenerateUUID()
 		payload := struct {
 			order int
 		}{order: 1}
@@ -58,7 +58,7 @@ func TestReconstituteChange(t *testing.T) {
 		errorCases := []struct {
 			title         string
 			aggregateID   aggregate.ID
-			uuid          goengine_dev.UUID
+			uuid          goengine.UUID
 			payload       interface{}
 			metadata      metadata.Metadata
 			createdAt     time.Time
@@ -79,7 +79,7 @@ func TestReconstituteChange(t *testing.T) {
 				title:         "message UUID is required",
 				expectedError: aggregate.ErrMissingChangeUUID,
 				aggregateID:   id,
-				uuid:          goengine_dev.UUID{},
+				uuid:          goengine.UUID{},
 				payload:       payload,
 				metadata:      msgMeta,
 				createdAt:     createdOn,

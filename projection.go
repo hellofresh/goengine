@@ -1,4 +1,4 @@
-package goengine_dev
+package goengine
 
 import "context"
 
@@ -20,7 +20,7 @@ type (
 	//  }
 	//  func (q *TotalDepositQuery) Handlers() interface{} {
 	//  	return map[string]MessageHandler{
-	//  		"deposited": func(ctx context.Context, state interface{}, message goengine_dev.Message) (interface{}, error) {
+	//  		"deposited": func(ctx context.Context, state interface{}, message goengine.Message) (interface{}, error) {
 	//  			depositState := state.(TotalDepositState)
 	//
 	//  			switch event := message.Payload().(type) {
@@ -49,8 +49,16 @@ type (
 
 		// FromStream returns the stream this projection is based on
 		FromStream() StreamName
+	}
 
-		// ReconstituteState reconstitute the projection state based on the provided state data
-		ReconstituteState(data []byte) (interface{}, error)
+	// ProjectionSaga is a projection that contains state data
+	ProjectionSaga interface {
+		Projection
+
+		// DecodeState reconstitute the projection state based on the provided state data
+		DecodeState(data []byte) (interface{}, error)
+
+		// EncodeState encode the given object for storage
+		EncodeState(obj interface{}) ([]byte, error)
 	}
 )

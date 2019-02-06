@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	goengine_dev "github.com/hellofresh/goengine-dev"
+	"github.com/hellofresh/goengine"
 	"github.com/hellofresh/goengine/metadata"
 )
 
@@ -71,7 +71,7 @@ func RecordChange(aggregateRoot Root, event interface{}) error {
 
 	aggregateChanged := &Changed{
 		aggregateID: aggregateID,
-		uuid:        goengine_dev.GenerateUUID(),
+		uuid:        goengine.GenerateUUID(),
 		payload:     event,
 		metadata:    metadata.New(),
 		createdAt:   time.Now().UTC(),

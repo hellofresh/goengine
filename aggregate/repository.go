@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	goengine_dev "github.com/hellofresh/goengine-dev"
+	"github.com/hellofresh/goengine"
 	"github.com/hellofresh/goengine/metadata"
 )
 
@@ -36,15 +36,15 @@ type (
 	// Repository a repository to save and load aggregate.Root's of a specific type
 	Repository struct {
 		aggregateType *Type
-		eventStore    goengine_dev.EventStore
-		streamName    goengine_dev.StreamName
+		eventStore    goengine.EventStore
+		streamName    goengine.StreamName
 	}
 )
 
 // NewRepository instantiates a new AggregateRepository
 func NewRepository(
-	eventStore goengine_dev.EventStore,
-	streamName goengine_dev.StreamName,
+	eventStore goengine.EventStore,
+	streamName goengine.StreamName,
 	aggregateType *Type,
 ) (*Repository, error) {
 	if eventStore == nil {
@@ -83,7 +83,7 @@ func (r *Repository) SaveAggregateRoot(ctx context.Context, aggregateRoot Root) 
 
 	aggregateID := aggregateRoot.AggregateID()
 
-	streamEvents := make([]goengine_dev.Message, len(domainEvents))
+	streamEvents := make([]goengine.Message, len(domainEvents))
 	for i, domainEvent := range domainEvents {
 		streamEvents[i] = r.enrichMetadata(domainEvent, aggregateID)
 	}

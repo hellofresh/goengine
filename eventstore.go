@@ -1,4 +1,4 @@
-package goengine_dev
+package goengine
 
 import (
 	"context"
@@ -50,3 +50,25 @@ type (
 		Load(ctx context.Context, streamName StreamName, fromNumber int64, count *uint, metadataMatcher metadata.Matcher) (EventStream, error)
 	}
 )
+
+// ReadEventStream reads the entire event stream and returns it's content as a slice.
+// The main purpose of the function is for testing and debugging.
+func ReadEventStream(stream EventStream) ([]Message, []int64, error) {
+	var messages []Message
+	var messageNumbers []int64
+	for stream.Next() {
+		msg, msgNumber, err := stream.Message()
+		if err != nil {
+			return nil, nil, err
+		}
+
+		messages = append(messages, msg)
+		messageNumbers = append(messageNumbers, msgNumber)
+	}
+
+	if err := stream.Err(); err != nil {
+		return nil, nil, err
+	}
+
+	return messages, messageNumbers, nil
+}
