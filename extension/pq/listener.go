@@ -8,9 +8,11 @@ import (
 
 	"github.com/hellofresh/goengine"
 	"github.com/hellofresh/goengine/driver/sql"
-
 	"github.com/lib/pq"
 )
+
+// Ensure Listener implements sql.Listener
+var _ sql.Listener = &Listener{}
 
 // Listener a Notification listener for pq
 type Listener struct {
