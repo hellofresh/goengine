@@ -5,54 +5,57 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var _ goengine.Logger = &Wrapper{}
-
-// Wrapper a struct that wraps the logrus.FieldLogger in order to implement log.Logger
-type Wrapper struct {
-	logger logrus.FieldLogger
+type wrapper struct {
+	entry *logrus.Entry
 }
 
-// Wrap wraps a logrus.FieldLogger
-func Wrap(logger logrus.FieldLogger) *Wrapper {
-	return &Wrapper{logger: logger}
+// Wrap wraps a logrus.Logger
+func Wrap(logger *logrus.Logger) goengine.Logger {
+	return wrapper{entry: logrus.NewEntry(logger)}
+}
+
+// WrapEntry wraps a logrus.Entry
+func WrapEntry(entry *logrus.Entry) goengine.Logger {
+	return wrapper{entry: entry}
 }
 
 // StandardLogger return a wrapped version of the logrus.StandardLogger()
-func StandardLogger() *Wrapper {
-	return Wrap(logrus.StandardLogger())
+func StandardLogger() goengine.Logger {
+	var origLogger = logrus.StandardLogger()
+	return wrapper{entry: logrus.NewEntry(origLogger)}
 }
 
 // Error writes a log with log level error
-func (w *Wrapper) Error(msg string) {
-	w.logger.Error(msg)
+func (w wrapper) Error(msg string) {
+	w.entry.Error(msg)
 }
 
 // Warn writes a log with log level warn
-func (w *Wrapper) Warn(msg string) {
-	w.logger.Warn(msg)
+func (w wrapper) Warn(msg string) {
+	w.entry.Warn(msg)
 }
 
 // Info writes a log with log level info
-func (w *Wrapper) Info(msg string) {
-	w.logger.Warn(msg)
+func (w wrapper) Info(msg string) {
+	w.entry.Warn(msg)
 }
 
 // Debug writes a log with log level debug
-func (w *Wrapper) Debug(msg string) {
-	w.logger.Debug(msg)
+func (w wrapper) Debug(msg string) {
+	w.entry.Debug(msg)
 }
 
 // WithError Add an error as single field to the log entry
-func (w *Wrapper) WithError(err error) goengine.Logger {
-	return Wrap(w.logger.WithError(err))
+func (w wrapper) WithError(err error) goengine.Logger {
+	return wrapper{entry: w.entry.WithError(err)}
 }
 
 // WithField Adds a field to the log entry
-func (w *Wrapper) WithField(key string, val interface{}) goengine.Logger {
-	return Wrap(w.logger.WithField(key, val))
+func (w wrapper) WithField(key string, val interface{}) goengine.Logger {
+	return wrapper{entry: w.entry.WithField(key, val)}
 }
 
 //WithFields Adds a set of fields to the log entry
-func (w *Wrapper) WithFields(fields goengine.Fields) goengine.Logger {
-	return Wrap(w.logger.WithFields(logrus.Fields(fields)))
+func (w wrapper) WithFields(fields goengine.Fields) goengine.Logger {
+	return wrapper{entry: w.entry.WithFields(logrus.Fields(fields))}
 }
