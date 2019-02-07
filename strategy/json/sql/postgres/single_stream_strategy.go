@@ -24,8 +24,8 @@ type SingleStreamStrategy struct {
 	converter goengine.MessagePayloadConverter
 }
 
-// NewPostgresStrategy is the constructor postgres for PersistenceStrategy interface
-func NewPostgresStrategy(converter goengine.MessagePayloadConverter) (sql.PersistenceStrategy, error) {
+// NewSingleStreamStrategy is the constructor postgres for PersistenceStrategy interface
+func NewSingleStreamStrategy(converter goengine.MessagePayloadConverter) (sql.PersistenceStrategy, error) {
 	if converter == nil {
 		return nil, goengine.InvalidArgumentError("converter")
 	}

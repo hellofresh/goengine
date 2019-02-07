@@ -103,7 +103,7 @@ func (s *projectorSuite) SetupTest() {
 	s.payloadTransformer = strategyJSON.NewPayloadTransformer()
 
 	// Use a persistence strategy
-	persistenceStrategy, err := strategyPostgres.NewPostgresStrategy(s.payloadTransformer)
+	persistenceStrategy, err := strategyPostgres.NewSingleStreamStrategy(s.payloadTransformer)
 	s.Require().NoError(err, "failed initializing persistent strategy")
 
 	// Create message factory

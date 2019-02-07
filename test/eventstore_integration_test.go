@@ -320,7 +320,7 @@ func (s *eventStoreTestSuite) createEventStore() goengine.EventStore {
 		transformer.RegisterPayload("tests", func() interface{} { return &payloadData{} }),
 	)
 
-	persistenceStrategy, err := strategyPostgres.NewPostgresStrategy(transformer)
+	persistenceStrategy, err := strategyPostgres.NewSingleStreamStrategy(transformer)
 	s.Require().NoError(err, "failed initializing persistent strategy")
 
 	messageFactory, err := strategySQL.NewAggregateChangedFactory(transformer)

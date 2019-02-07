@@ -397,7 +397,7 @@ func mockMessages() (*mocks.PayloadConverter, []goengine.Message) {
 func createEventStore(t *testing.T, db *sql.DB, converter goengine.MessagePayloadConverter) *postgres.EventStore {
 	asserts := assert.New(t)
 
-	persistenceStrategy, err := strategyPostgres.NewPostgresStrategy(converter)
+	persistenceStrategy, err := strategyPostgres.NewSingleStreamStrategy(converter)
 	if !asserts.NoError(err) {
 		t.Fail()
 	}

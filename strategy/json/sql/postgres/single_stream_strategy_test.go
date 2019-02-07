@@ -18,7 +18,7 @@ import (
 
 func TestNewPostgresStrategy(t *testing.T) {
 	t.Run("error on no converter provided", func(t *testing.T) {
-		strategy, err := postgres.NewPostgresStrategy(nil)
+		strategy, err := postgres.NewSingleStreamStrategy(nil)
 
 		if assert.Error(t, err) {
 			arg := err.(goengine.InvalidArgumentError)
@@ -28,7 +28,7 @@ func TestNewPostgresStrategy(t *testing.T) {
 	})
 
 	t.Run("error on no converter provided", func(t *testing.T) {
-		strategy, err := postgres.NewPostgresStrategy(&mocks.PayloadConverter{})
+		strategy, err := postgres.NewSingleStreamStrategy(&mocks.PayloadConverter{})
 
 		assert.IsTypef(t, &postgres.SingleStreamStrategy{}, strategy, "")
 		assert.Nil(t, err)
@@ -36,7 +36,7 @@ func TestNewPostgresStrategy(t *testing.T) {
 }
 
 func TestGenerateTableName(t *testing.T) {
-	strategy, err := postgres.NewPostgresStrategy(&mocks.PayloadConverter{})
+	strategy, err := postgres.NewSingleStreamStrategy(&mocks.PayloadConverter{})
 	if err != nil {
 		t.Fatal("Strategy could not be initiated", err)
 	}
@@ -138,7 +138,7 @@ func TestGenerateTableName(t *testing.T) {
 func TestColumnNames(t *testing.T) {
 	expectedColumns := []string{"event_id", "event_name", "payload", "metadata", "created_at"}
 
-	strategy, err := postgres.NewPostgresStrategy(&mocks.PayloadConverter{})
+	strategy, err := postgres.NewSingleStreamStrategy(&mocks.PayloadConverter{})
 	if err != nil {
 		t.Fatal("Strategy could not be initiated", err)
 	}
@@ -159,7 +159,7 @@ func TestColumnNames(t *testing.T) {
 }
 
 func TestCreateSchema(t *testing.T) {
-	strategy, err := postgres.NewPostgresStrategy(&mocks.PayloadConverter{})
+	strategy, err := postgres.NewSingleStreamStrategy(&mocks.PayloadConverter{})
 	if err != nil {
 		t.Fatal("Strategy could not be initiated", err)
 	}
@@ -205,7 +205,7 @@ func TestPrepareData(t *testing.T) {
 			)
 		}
 
-		strategy, err := postgres.NewPostgresStrategy(pc)
+		strategy, err := postgres.NewSingleStreamStrategy(pc)
 		if asserts.NoError(err) {
 			return
 		}
@@ -235,7 +235,7 @@ func TestPrepareData(t *testing.T) {
 		pc := &mocks.PayloadConverter{}
 		pc.On("ConvertPayload", payload).Return("PayloadFirst", nil, expectedErr)
 
-		strategy, err := postgres.NewPostgresStrategy(pc)
+		strategy, err := postgres.NewSingleStreamStrategy(pc)
 		if asserts.NoError(err) {
 			return
 		}
