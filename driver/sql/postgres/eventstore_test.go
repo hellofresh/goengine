@@ -18,7 +18,6 @@ import (
 	"github.com/hellofresh/goengine/metadata"
 	"github.com/hellofresh/goengine/mocks"
 	mockSQL "github.com/hellofresh/goengine/mocks/driver/sql"
-	mockStrategy "github.com/hellofresh/goengine/mocks/strategy"
 	strategyPostgres "github.com/hellofresh/goengine/strategy/json/sql/postgres"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -42,14 +41,14 @@ func TestNewEventStore(t *testing.T) {
 			},
 			{
 				"No database",
-				&mockStrategy.PersistenceStrategy{},
+				&mockSQL.PersistenceStrategy{},
 				nil,
 				&mockSQL.MessageFactory{},
 				"db",
 			},
 			{
 				"No message factory",
-				&mockStrategy.PersistenceStrategy{},
+				&mockSQL.PersistenceStrategy{},
 				db,
 				nil,
 				"messageFactory",
@@ -126,7 +125,7 @@ func TestEventStore_Create(t *testing.T) {
 	test.RunWithMockDB(t, "No queries in strategy", func(t *testing.T, db *sql.DB, dbMock sqlmock.Sqlmock) {
 		asserts := assert.New(t)
 
-		strategy := &mockStrategy.PersistenceStrategy{}
+		strategy := &mockSQL.PersistenceStrategy{}
 		strategy.On("ColumnNames").Return([]string{})
 		strategy.On("GenerateTableName", goengine.StreamName("orders")).Return("events_orders", nil)
 		strategy.On("CreateSchema", "events_orders").Return([]string{})
@@ -226,7 +225,7 @@ func TestEventStore_AppendTo(t *testing.T) {
 			),
 		}
 
-		persistenceStrategy := &mockStrategy.PersistenceStrategy{}
+		persistenceStrategy := &mockSQL.PersistenceStrategy{}
 		persistenceStrategy.On("PrepareData", messages).Return(nil, expectedError)
 		persistenceStrategy.On("GenerateTableName", goengine.StreamName("orders")).Return("events_orders", nil)
 		persistenceStrategy.On("ColumnNames").Return([]string{"event_id", "event_name"})
@@ -297,7 +296,7 @@ func TestEventStore_Load(t *testing.T) {
 				factory := &mockSQL.MessageFactory{}
 				factory.On("CreateEventStream", mock.AnythingOfType("*sql.Rows")).Once().Return(expectedStream, nil)
 
-				strategy := &mockStrategy.PersistenceStrategy{}
+				strategy := &mockSQL.PersistenceStrategy{}
 				strategy.On("ColumnNames").Return(columns)
 				strategy.On("GenerateTableName", goengine.StreamName("event_stream")).Return("event_stream", nil)
 
@@ -325,13 +324,13 @@ func TestEventStore_Load(t *testing.T) {
 
 		testCases := []struct {
 			title         string
-			strategy      func() *mockStrategy.PersistenceStrategy
+			strategy      func() *mockSQL.PersistenceStrategy
 			expectedError error
 		}{
 			{
 				"Empty table name returned",
-				func() *mockStrategy.PersistenceStrategy {
-					strategy := &mockStrategy.PersistenceStrategy{}
+				func() *mockSQL.PersistenceStrategy {
+					strategy := &mockSQL.PersistenceStrategy{}
 					strategy.On("ColumnNames").Return(columns)
 					strategy.On("GenerateTableName", goengine.StreamName("event_stream")).Return("", nil)
 					return strategy
@@ -340,8 +339,8 @@ func TestEventStore_Load(t *testing.T) {
 			},
 			{
 				"Empty table name returned",
-				func() *mockStrategy.PersistenceStrategy {
-					strategy := &mockStrategy.PersistenceStrategy{}
+				func() *mockSQL.PersistenceStrategy {
+					strategy := &mockSQL.PersistenceStrategy{}
 					strategy.On("ColumnNames").Return(columns)
 					strategy.
 						On("GenerateTableName", goengine.StreamName("event_stream")).
