@@ -15,6 +15,7 @@ import (
 	driverSQL "github.com/hellofresh/goengine/driver/sql"
 	"github.com/hellofresh/goengine/driver/sql/postgres"
 	pq "github.com/hellofresh/goengine/extension/pq"
+	strategyPostgres "github.com/hellofresh/goengine/strategy/json/sql/postgres"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
@@ -39,7 +40,7 @@ func (s *aggregateProjectorTestSuite) SetupTest() {
 	s.projectorSuite.SetupTest()
 
 	ctx := context.Background()
-	queries := postgres.AggregateProjectorCreateSchema("agg_projections", s.eventStream, s.eventStoreTable)
+	queries := strategyPostgres.AggregateProjectorCreateSchema("agg_projections", s.eventStream, s.eventStoreTable)
 	for _, query := range queries {
 		_, err := s.DB().ExecContext(ctx, query)
 		s.Require().NoError(err, "failed to create projection tables etc.")

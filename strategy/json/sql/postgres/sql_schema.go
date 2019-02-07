@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/hellofresh/goengine"
+	"github.com/hellofresh/goengine/driver/sql/postgres"
 )
 
 const sqlFuncEventStreamNotify = `CREATE FUNCTION public.event_stream_notify ()
@@ -46,11 +47,11 @@ func sqlTriggerEventStreamNotifyTemplate(eventStreamName goengine.StreamName, ev
 		   END IF;
 		 END;
 		 $$`,
-		QuoteString(eventStreamTable),
-		QuoteString(triggerName),
-		QuoteIdentifier(triggerName),
-		QuoteIdentifier(eventStreamTable),
-		QuoteString(string(eventStreamName)),
+		postgres.QuoteString(eventStreamTable),
+		postgres.QuoteString(triggerName),
+		postgres.QuoteIdentifier(triggerName),
+		postgres.QuoteIdentifier(eventStreamTable),
+		postgres.QuoteString(string(eventStreamName)),
 	)
 }
 
@@ -69,7 +70,7 @@ func StreamProjectorCreateSchema(projectionTable string, streamName goengine.Str
 				locked BOOLEAN NOT NULL DEFAULT (FALSE), 
 				PRIMARY KEY (no)
 			)`,
-			QuoteIdentifier(projectionTable),
+			postgres.QuoteIdentifier(projectionTable),
 		),
 	}
 }
@@ -90,7 +91,7 @@ func AggregateProjectorCreateSchema(projectionTable string, streamName goengine.
 				failed BOOLEAN NOT NULL DEFAULT (FALSE),
   				PRIMARY KEY (no)
 			)`,
-			QuoteIdentifier(projectionTable),
+			postgres.QuoteIdentifier(projectionTable),
 		),
 	}
 }
