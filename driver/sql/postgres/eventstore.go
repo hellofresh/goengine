@@ -96,23 +96,24 @@ func (e *EventStore) Create(ctx context.Context, streamName goengine.StreamName)
 	if err != nil {
 		return err
 	}
+
 	for _, q := range queries {
-		_, err := e.db.ExecContext(ctx, q)
+		_, err := tx.ExecContext(ctx, q)
 		if err == nil {
 			continue
 		}
-		errRollback := tx.Rollback()
-		if errRollback != nil {
-			return fmt.Errorf("error one: %s\nerror two: %s", errRollback, err)
+
+		if errRollback := tx.Rollback(); errRollback != nil {
+			e.logger.
+				WithError(errRollback).
+				WithField("query", q).
+				Error("could not rollback transaction")
 		}
-		return err
-	}
-	err = tx.Commit()
-	if err != nil {
+
 		return err
 	}
 
-	return nil
+	return tx.Commit()
 }
 
 // HasStream returns true if the table for the eventstream already exists
