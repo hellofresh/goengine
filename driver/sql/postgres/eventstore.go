@@ -28,22 +28,15 @@ var (
 	_ driverSQL.ReadOnlyEventStore = &EventStore{}
 )
 
-type (
-	// EventStore a in postgres event store implementation
-	EventStore struct {
-		persistenceStrategy       driverSQL.PersistenceStrategy
-		db                        *sql.DB
-		messageFactory            driverSQL.MessageFactory
-		preparedInsertPlaceholder map[int]string
-		columns                   string
-		logger                    goengine.Logger
-	}
-
-	// sqlQueryContext an interface used to query a sql.DB or sql.Conn
-	sqlQueryContext interface {
-		QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error)
-	}
-)
+// EventStore a in postgres event store implementation
+type EventStore struct {
+	persistenceStrategy       driverSQL.PersistenceStrategy
+	db                        *sql.DB
+	messageFactory            driverSQL.MessageFactory
+	preparedInsertPlaceholder map[int]string
+	columns                   string
+	logger                    goengine.Logger
+}
 
 // NewEventStore return a new postgres.EventStore
 func NewEventStore(
@@ -140,7 +133,7 @@ func (e *EventStore) Load(
 // LoadWithConnection returns an eventstream based on the provided constraints using the provided sql.Conn
 func (e *EventStore) LoadWithConnection(
 	ctx context.Context,
-	conn *sql.Conn,
+	conn driverSQL.Queryer,
 	streamName goengine.StreamName,
 	fromNumber int64,
 	count *uint,
@@ -153,7 +146,7 @@ func (e *EventStore) LoadWithConnection(
 // This func is used by Load and LoadWithConnection.
 func (e *EventStore) loadQuery(
 	ctx context.Context,
-	db sqlQueryContext,
+	db driverSQL.Queryer,
 	streamName goengine.StreamName,
 	fromNumber int64,
 	count *uint,
@@ -193,6 +186,11 @@ func (e *EventStore) loadQuery(
 
 // AppendTo batch inserts Messages into the event stream table
 func (e *EventStore) AppendTo(ctx context.Context, streamName goengine.StreamName, streamEvents []goengine.Message) error {
+	return e.AppendToWithExecer(ctx, e.db, streamName, streamEvents)
+}
+
+// AppendToWithExecer batch inserts Messages into the event stream table using the provided Connection/Execer
+func (e *EventStore) AppendToWithExecer(ctx context.Context, conn driverSQL.Execer, streamName goengine.StreamName, streamEvents []goengine.Message) error {
 	tableName, err := e.tableName(streamName)
 	if err != nil {
 		return err
@@ -206,7 +204,7 @@ func (e *EventStore) AppendTo(ctx context.Context, streamName goengine.StreamNam
 	columns := e.persistenceStrategy.ColumnNames()
 	values := e.prepareInsertValues(streamEvents, len(columns))
 
-	result, err := e.db.ExecContext(
+	result, err := conn.ExecContext(
 		ctx,
 		fmt.Sprintf(
 			"INSERT INTO %s (%s) VALUES %s",
