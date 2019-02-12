@@ -5,17 +5,13 @@ import (
 	"time"
 )
 
-// ContextStrategy is an interface that represents strategy for providing contexts for running MongoDB requests
+// ContextStrategy is an interface that represents strategy for providing contexts for corresponding MongoDB EventStore
+// instance queries to MongoDB
 type ContextStrategy interface {
-	// Append is the context used for EventStore.Append() calls
 	Append() (context.Context, context.CancelFunc)
-	// GetEventsFor is the context used for EventStore.GetEventsFor() calls
 	GetEventsFor() (context.Context, context.CancelFunc)
-	// FromVersion is the context used for EventStore.FromVersion() calls
 	FromVersion() (context.Context, context.CancelFunc)
-	// CountEventsFor is the context used for EventStore.CountEventsFor() calls
 	CountEventsFor() (context.Context, context.CancelFunc)
-	// CreateIndices is the context used for MongoDB EventStore implementation indices creation
 	CreateIndices() (context.Context, context.CancelFunc)
 }
 
@@ -29,27 +25,27 @@ func NewBackgroundContextStrategy() *BackgroundContextStrategy {
 	return &BackgroundContextStrategy{ctx: context.Background()}
 }
 
-// Append is the context used for EventStore.Append() calls
+// Append is the ContextStrategy.Append() implementation
 func (s *BackgroundContextStrategy) Append() (context.Context, context.CancelFunc) {
 	return s.ctx, func() {}
 }
 
-// GetEventsFor is the context used for EventStore.GetEventsFor() calls
+// GetEventsFor is the ContextStrategy.GetEventsFor() implementation
 func (s *BackgroundContextStrategy) GetEventsFor() (context.Context, context.CancelFunc) {
 	return s.ctx, func() {}
 }
 
-// FromVersion is the context used for EventStore.FromVersion() calls
+// FromVersion is the ContextStrategy.FromVersion() implementation
 func (s *BackgroundContextStrategy) FromVersion() (context.Context, context.CancelFunc) {
 	return s.ctx, func() {}
 }
 
-// CountEventsFor is the context used for EventStore.CountEventsFor() calls
+// CountEventsFor is the ContextStrategy.CountEventsFor() implementation
 func (s *BackgroundContextStrategy) CountEventsFor() (context.Context, context.CancelFunc) {
 	return s.ctx, func() {}
 }
 
-// CreateIndices is the context used for MongoDB EventStore implementation indices creation
+// CreateIndices is the ContextStrategy.CreateIndices() implementation
 func (s *BackgroundContextStrategy) CreateIndices() (context.Context, context.CancelFunc) {
 	return s.ctx, func() {}
 }
@@ -83,27 +79,27 @@ func NewTimeoutContextStrategy(options ...TimeoutContextStrategyOption) *Timeout
 	return s
 }
 
-// Append is the context used for EventStore.Append() calls
+// Append is the ContextStrategy.Append() implementation
 func (s *TimeoutContextStrategy) Append() (context.Context, context.CancelFunc) {
 	return context.WithTimeout(context.Background(), s.append)
 }
 
-// GetEventsFor is the context used for EventStore.GetEventsFor() calls
+// GetEventsFor is the ContextStrategy.GetEventsFor() implementation
 func (s *TimeoutContextStrategy) GetEventsFor() (context.Context, context.CancelFunc) {
 	return context.WithTimeout(context.Background(), s.getEventsFor)
 }
 
-// FromVersion is the context used for EventStore.FromVersion() calls
+// FromVersion is the ContextStrategy.FromVersion() implementation
 func (s *TimeoutContextStrategy) FromVersion() (context.Context, context.CancelFunc) {
 	return context.WithTimeout(context.Background(), s.fromVersion)
 }
 
-// CountEventsFor is the context used for EventStore.CountEventsFor() calls
+// CountEventsFor is the ContextStrategy.CountEventsFor() implementation
 func (s *TimeoutContextStrategy) CountEventsFor() (context.Context, context.CancelFunc) {
 	return context.WithTimeout(context.Background(), s.countEventsFor)
 }
 
-// CreateIndices is the context used for MongoDB EventStore implementation indices creation
+// CreateIndices is the ContextStrategy.CreateIndices() implementation
 func (s *TimeoutContextStrategy) CreateIndices() (context.Context, context.CancelFunc) {
 	return context.WithTimeout(context.Background(), s.createIndices)
 }
