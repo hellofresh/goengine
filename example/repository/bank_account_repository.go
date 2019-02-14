@@ -7,6 +7,9 @@ import (
 	"github.com/hellofresh/goengine/aggregate"
 )
 
+// BankAccountTypeName is the name used to identify a bank account within the event store
+const BankAccountTypeName = "bank_account"
+
 // BankAccountRepository is a repository for bank accounts
 type BankAccountRepository struct {
 	repo *aggregate.Repository
@@ -14,9 +17,8 @@ type BankAccountRepository struct {
 
 // NewBankAccountRepository create a new BankAccountRepository
 func NewBankAccountRepository(store goengine.EventStore, name goengine.StreamName) (*BankAccountRepository, error) {
-	bankAccountType, err := aggregate.NewType("bank_account", func() aggregate.Root {
-		return &BankAccount{}
-	})
+	// Create a a aggregate.Type to allow the repository to reconstitute the BankAccount
+	bankAccountType, err := aggregate.NewType(BankAccountTypeName, func() aggregate.Root { return &BankAccount{} })
 	if err != nil {
 		return nil, err
 	}

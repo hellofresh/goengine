@@ -40,7 +40,7 @@ type (
 )
 
 func main() {
-	account := OpenBankAccount()
+	account, _ := OpenBankAccount()
 	account.Deposit(100)
 	account.Withdraw(10)
 	account.Withdraw(20)
@@ -49,16 +49,16 @@ func main() {
 }
 
 // OpenBankAccount opens a new bank account
-func OpenBankAccount() *BankAccount {
+func OpenBankAccount() (*BankAccount, error) {
 	accountID := aggregate.GenerateID()
 
 	account := &BankAccount{
 		accountID: accountID,
 	}
 
-	aggregate.RecordChange(account, AccountOpened{AccountID: accountID})
+	err := aggregate.RecordChange(account, AccountOpened{AccountID: accountID})
 
-	return account
+	return account, err
 }
 
 // AggregateID returns the bank accounts aggregate.ID need to implement aggregate.Root
@@ -71,23 +71,20 @@ func (b *BankAccount) Apply(change *aggregate.Changed) {
 	switch event := change.Payload().(type) {
 	case AccountOpened:
 		b.accountID = event.AccountID
-		break
 	case AccountCredited:
 		b.balance += event.Amount
-		break
 	case AccountDebited:
 		b.balance -= event.Amount
-		break
 	}
 }
 
 // Deposit adds an amount of money to the bank account
-func (b *BankAccount) Deposit(amount uint) {
+func (b *BankAccount) Deposit(amount uint) error {
 	if amount == 0 {
-		return
+		return nil
 	}
 
-	aggregate.RecordChange(b, AccountCredited{Amount: amount})
+	return aggregate.RecordChange(b, AccountCredited{Amount: amount})
 }
 
 // Withdraw removes an amount of money to the bank account
@@ -96,8 +93,7 @@ func (b *BankAccount) Withdraw(amount uint) error {
 		return ErrInsufficientMoney
 	}
 
-	aggregate.RecordChange(b, AccountDebited{Amount: amount})
-	return nil
+	return aggregate.RecordChange(b, AccountDebited{Amount: amount})
 }
 
 // Balance returns the current amount of money that is contained in bank account

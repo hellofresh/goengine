@@ -13,7 +13,7 @@ go get -u github.com/hellofresh/goengine
 
 ## Documentation
 
-Check out our [quick start guide][gitbook-quick-start] which is part of your [GoEngine book][gitbook].
+Check out our [quick start guide][goengine-book-quick-start] which is part of your [GoEngine docs][goengine-book].
 If you prefer to be closer to the code you can always refer to [GoDoc][godoc].
 
 ## RoadMap
@@ -33,5 +33,5 @@ We encourage and support an active, healthy community of contributors — includ
 Details are in the [contribution guide](CONTRIBUTING.md) and the [code of conduct](CODE_OF_CONDUCT.md). 
 
 [godoc]: https://godoc.org/github.com/hellofresh/goengine
-[gitbook]: https://hellofresh.gitbooks.io/goengine/
-[gitbook-quick-start]: https://hellofresh.gitbooks.io/goengine/content/quick-start/
+[goengine-book]: https://goengine.readthedocs.io/en/latest/
+[goengine-book-quick-start]: https://goengine.readthedocs.io/en/latest/quick-start/
