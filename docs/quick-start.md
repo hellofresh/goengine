@@ -264,7 +264,7 @@ func main() {
     // ...
     ctx := context.Background()
     
-	myFirstBankAccount, err := OpenBankAccount()
+    myFirstBankAccount, err := OpenBankAccount()
 	if err != nil {
 		panic(err)
 	}
@@ -368,7 +368,7 @@ func main() {
 	}
 }
 ```
-*In production environments it's a good idea to run any projection separate from the main application*
+*In production environments it's a good idea to run any projection separate from the main application, such as having a separated application binary only responsible for running the projections.*
 
 [repo]: https://github.com/hellofresh/goengine
 [aggregate repository]: https://github.com/hellofresh/goengine/tree/master/aggregate/repository.go

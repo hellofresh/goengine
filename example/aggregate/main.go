@@ -40,7 +40,10 @@ type (
 )
 
 func main() {
-	account, _ := OpenBankAccount()
+	account, err := OpenBankAccount()
+	if err != nil {
+		panic(err)
+	}
 	account.Deposit(100)
 	account.Withdraw(10)
 	account.Withdraw(20)
