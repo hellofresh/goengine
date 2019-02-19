@@ -18,9 +18,9 @@ var _ aggregate.Root = &BankAccount{}
 	
 // BankAccount a simple AggregateRoot representing a BankAccount
 type BankAccount struct {
-    aggregate.BaseRoot
+	aggregate.BaseRoot
 
-    accountID aggregate.ID
+	accountID aggregate.ID
 }
 
 // AggregateID returns the bank accounts aggregate.ID
@@ -39,7 +39,7 @@ Before we can implement the `OpenBankAccount` action we first need to define the
 ```golang
 // BankAccountOpened a DomainEvent indicating that a bank account was opened
 type BankAccountOpened struct {
-    AccountID aggregate.ID `json:"account_id"`
+	AccountID aggregate.ID `json:"account_id"`
 }
 ```
 
@@ -85,17 +85,17 @@ import "errors"
 
 // BankAccountCredited a DomainEvent indicating that a bank account was credited
 type BankAccountCredited struct {
-    Amount uint `json:"amount"`
+	Amount uint `json:"amount"`
 }
 
 // BankAccountDebited a DomainEvent indicating that a bank account was debited
 type BankAccountDebited struct {
-    Amount uint `json:"amount"`
+	Amount uint `json:"amount"`
 }
 
 type BankAccount struct {
-    // ...
-    balance   uint    
+	// ...
+	balance   uint	
 }
 
 // Apply changes the state of the BankAccount based on the aggregate.Changed message
@@ -126,7 +126,6 @@ func (b *BankAccount) Withdraw(amount uint) error {
 
 	return aggregate.RecordChange(b, BankAccountDebited{Amount: amount})
 }
-
 ``` 
 
 Great we are done with our bank account let's take a look at how we can store the aggregate root
@@ -156,11 +155,11 @@ type BankAccountRepository struct {
 
 // NewBankAccountRepository create a new BankAccountRepository
 func NewBankAccountRepository(store goengine.EventStore, name goengine.StreamName) (
-    *BankAccountRepository, error) {
-    // Create a a aggregate.Type to allow the repository to reconstitute the BankAccount 
+	*BankAccountRepository, error) {
+	// Create a a aggregate.Type to allow the repository to reconstitute the BankAccount 
 	bankAccountType, err := aggregate.NewType(BankAccountTypeName, func() aggregate.Root { 
-	    return &BankAccount{} 
-    })
+		return &BankAccount{} 
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -175,7 +174,7 @@ func NewBankAccountRepository(store goengine.EventStore, name goengine.StreamNam
 
 // Get loads the bank account
 func (r *BankAccountRepository) Get(ctx context.Context, aggregateID aggregate.ID) (
-    *BankAccount, error) {
+	*BankAccount, error) {
 	root, err := r.repo.GetAggregateRoot(ctx, aggregateID)
 	if err != nil {
 		return nil, err
@@ -190,7 +189,6 @@ func (r *BankAccountRepository) Get(ctx context.Context, aggregateID aggregate.I
 func (r *BankAccountRepository) Save(ctx context.Context, bankAccount *BankAccount) error {
 	return r.repo.SaveAggregateRoot(ctx, bankAccount)
 }
-
 ```
 
 Now that we have a BankAccountRepository we need to configure the Event Store which manages the events for that the aggregate root.
@@ -261,10 +259,10 @@ Great we now have a event store, aggregate repository and aggregate root so we c
 
 ```golang
 func main() {
-    // ...
-    ctx := context.Background()
-    
-    myFirstBankAccount, err := OpenBankAccount()
+	// ...
+	ctx := context.Background()
+	
+	myFirstBankAccount, err := OpenBankAccount()
 	if err != nil {
 		panic(err)
 	}
@@ -336,24 +334,24 @@ func (p *BankTotalsProjection) Handlers() map[string]goengine.MessageHandler {
 Great now that we have our projection let's run it and listen to the event store.
 ```golang
 import (
-    "time"
+	"time"
 
-    driverSQL "github.com/hellofresh/goengine/driver/sql"
-    "github.com/hellofresh/goengine/extension/pq"
+	driverSQL "github.com/hellofresh/goengine/driver/sql"
+	"github.com/hellofresh/goengine/extension/pq"
 )
 
 func main() {
-    // ...
-    
-    var manager postgres.SingleStreamStrategy
-        
-    projector, err := manager.NewStreamProjector(
-        "bank_account_projections", 
-        NewBankTotalsProjection(postgresDB),
-        func(error, *driverSQL.ProjectionNotification) driverSQL.ProjectionErrorAction {
-            return driverSQL.ProjectionFail
-        },
-    )     
+	// ...
+	
+	var manager postgres.SingleStreamStrategy
+		
+	projector, err := manager.NewStreamProjector(
+		"bank_account_projections", 
+		NewBankTotalsProjection(postgresDB),
+		func(error, *driverSQL.ProjectionNotification) driverSQL.ProjectionErrorAction {
+			return driverSQL.ProjectionFail
+		},
+	)	 
 	if err != nil {
 		panic(err)
 	}
@@ -364,7 +362,7 @@ func main() {
 	}
 	
 	if err := projector.RunAndListen(ctx, listener); err != nil {
-	    panic(err)
+		panic(err)
 	}
 }
 ```

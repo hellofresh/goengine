@@ -6,11 +6,11 @@ In order to work with the Postgres aggregate and stream projector a postgres Lis
 import "github.com/hellofresh/goengine/extension/pq"
 
 listener, err := pq.NewListener(
-    s.PostgresDSN,
-    string(projection.FromStream()),
-    time.Millisecond,
-    time.Second,
-    s.GetLogger(),
+	s.PostgresDSN,
+	string(projection.FromStream()),
+	time.Millisecond,
+	time.Second,
+	s.GetLogger(),
 )
 ```
 

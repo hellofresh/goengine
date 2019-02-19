@@ -4,9 +4,9 @@ In order to use [logrus] as your logger GoEngine provides a wrapper for both `*l
 
 ```golang
 import (
-    "github.com/hellofresh/goengine"
-    goengineLogger "github.com/hellofresh/goengine/extension/logrus"
-    "github.com/sirupsen/logrus"
+	"github.com/hellofresh/goengine"
+	goengineLogger "github.com/hellofresh/goengine/extension/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 var logger goengine.Logger
