@@ -20,7 +20,7 @@ In order to use [zap] as your logger GoEngine provides a wrapper for `*zap.Logge
 
 ```golang
 import (
-    "github.com/hellofresh/goengine"
+	"github.com/hellofresh/goengine"
 	goengineLogger "github.com/hellofresh/goengine/extension/zap"
 	"go.uber.org/zap"
 )

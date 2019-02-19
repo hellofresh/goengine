@@ -194,7 +194,7 @@ func (r *BankAccountRepository) Save(ctx context.Context, bankAccount *BankAccou
 ```
 
 Now that we have a BankAccountRepository we need to configure the Event Store which manages the events for that the aggregate root.
-*Currently GoEngine support a postgres and inmemory (for testing the) event store.*
+*Currently GoEngine support a postgres and inmemory event store.*
 
 To make your live easier we will use the postgres json SingleStreamManager. This manager is a helper so you don't need 
 to create a payload transformer, persistence strategy, message factory and finally the event store.
