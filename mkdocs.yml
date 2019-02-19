@@ -1,0 +1,16 @@
+site_name: GoEngine
+docs_dir: docs
+repo_url: https://github.com/hellofresh/goengine
+copyright: Copyright (c) 2019 HelloFresh
+theme:
+  name: readthedocs
+  highlightjs: true
+  hljs_languages:
+    - golang
+nav:
+  - Home: README.md
+  - Quick Start: quick-start.md
+  - Extensions:
+      - Overview: extension/README.md
+      - Database: extension/database.md
+      - Logging: extension/logging.md
