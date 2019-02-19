@@ -1,23 +1,21 @@
 package inmemory
 
-import (
-	"github.com/hellofresh/goengine"
-)
+import "github.com/hellofresh/goengine"
 
-// InMemoryEventBus provides an inmemory implementation of the VersionedEventPublisher VersionedEventReceiver interfaces
-type InMemoryEventBus struct {
+// EventBus provides an in memory implementation of the VersionedEventPublisher VersionedEventReceiver interfaces
+type EventBus struct {
 	publishedEventsChannel chan *goengine.DomainMessage
 	startReceiving         bool
 }
 
-// NewInMemoryEventBus constructor
-func NewInMemoryEventBus() *InMemoryEventBus {
+// NewEventBus ...
+func NewEventBus() *EventBus {
 	publishedEventsChannel := make(chan *goengine.DomainMessage, 0)
-	return &InMemoryEventBus{publishedEventsChannel, false}
+	return &EventBus{publishedEventsChannel, false}
 }
 
 // PublishEvents publishes events to the event bus
-func (bus *InMemoryEventBus) PublishEvents(events []*goengine.DomainMessage) error {
+func (bus *EventBus) PublishEvents(events []*goengine.DomainMessage) error {
 	if !bus.startReceiving {
 		return nil
 	}
@@ -30,7 +28,7 @@ func (bus *InMemoryEventBus) PublishEvents(events []*goengine.DomainMessage) err
 }
 
 // ReceiveEvents starts a go routine that monitors incoming events and routes them to a receiver channel specified within the options
-func (bus *InMemoryEventBus) ReceiveEvents(options goengine.VersionedEventReceiverOptions) error {
+func (bus *EventBus) ReceiveEvents(options goengine.VersionedEventReceiverOptions) error {
 	bus.startReceiving = true
 
 	go func() {
@@ -40,7 +38,10 @@ func (bus *InMemoryEventBus) ReceiveEvents(options goengine.VersionedEventReceiv
 				ch <- nil
 			case versionedEvent := <-bus.publishedEventsChannel:
 				ackCh := make(chan bool)
-				options.ReceiveEvent <- goengine.VersionedEventTransactedAccept{versionedEvent, ackCh}
+				options.ReceiveEvent <- goengine.VersionedEventTransactedAccept{
+					Event:                 versionedEvent,
+					ProcessedSuccessfully: ackCh,
+				}
 				<-ackCh
 			}
 		}

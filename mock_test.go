@@ -1,22 +1,6 @@
-package goengine_test
+package goengine
 
-import (
-	"time"
-
-	. "github.com/hellofresh/goengine"
-)
-
-type SomethingHappened struct {
-	occurredOn time.Time
-}
-
-func NewSomethingHappened() SomethingHappened {
-	return SomethingHappened{time.Now()}
-}
-
-func (e SomethingHappened) OccurredOn() time.Time {
-	return e.occurredOn
-}
+import "time"
 
 type RecipeCreated struct {
 	occurredOn time.Time
@@ -28,7 +12,7 @@ func (e RecipeCreated) OccurredOn() time.Time {
 
 type RecipeRated struct {
 	occurredOn time.Time
-	Rating    int
+	Rating     int
 }
 
 func (e RecipeRated) OccurredOn() time.Time {

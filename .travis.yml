@@ -4,14 +4,21 @@ services:
   - docker
 
 go:
-  - "1.9"
-  - "1.10"
   - "1.11"
   - "stable"
 
-install:
-  - go get -v -d
-  - go get -u github.com/onsi/ginkgo/ginkgo
-  - go get -u github.com/onsi/gomega
+env:
+  - MAKE_TASK=test-unit
+  - MAKE_TASK=test-integration
 
-script: ginkgo -r
+before_install:
+  - docker-compose up -d
+
+install:
+  - make deps
+
+script:
+  - make $MAKE_TASK
+
+after_script:
+  - docker-compose down -v

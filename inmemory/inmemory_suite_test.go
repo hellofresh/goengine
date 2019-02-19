@@ -1,10 +1,10 @@
-package inmemory_test
+package inmemory
 
 import (
+	"testing"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
-	"testing"
 )
 
 func TestGoengine(t *testing.T) {

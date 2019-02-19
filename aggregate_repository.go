@@ -1,24 +1,26 @@
 package goengine
 
-import (
-	"fmt"
-)
+import "fmt"
 
+// AggregateRepository ...
 type AggregateRepository interface {
 	Load(string, StreamName) (*EventStream, error)
 	Save(AggregateRoot, StreamName) error
 	Reconstitute(string, AggregateRoot, StreamName) error
 }
 
+// PublisherRepository ...
 type PublisherRepository struct {
 	EventStore EventStore
 	EventBus   VersionedEventPublisher
 }
 
+// NewPublisherRepository ...
 func NewPublisherRepository(eventStore EventStore, eventBus VersionedEventPublisher) *PublisherRepository {
 	return &PublisherRepository{eventStore, eventBus}
 }
 
+// Load ...
 func (r *PublisherRepository) Load(id string, streamName StreamName) (*EventStream, error) {
 	Log("Loading events from stream for aggregate", map[string]interface{}{"stream": streamName, "id": id}, nil)
 	stream, err := r.EventStore.GetEventsFor(streamName, id)
@@ -29,6 +31,7 @@ func (r *PublisherRepository) Load(id string, streamName StreamName) (*EventStre
 	return stream, nil
 }
 
+// Save ...
 func (r *PublisherRepository) Save(aggregateRoot AggregateRoot, streamName StreamName) error {
 	events := aggregateRoot.GetUncommittedEvents()
 	eventStream := NewEventStream(streamName, events)
@@ -51,6 +54,7 @@ func (r *PublisherRepository) Save(aggregateRoot AggregateRoot, streamName Strea
 	return nil
 }
 
+// Reconstitute ...
 func (r *PublisherRepository) Reconstitute(id string, source AggregateRoot, streamName StreamName) error {
 	Log("Reconstituting aggregate from stream", map[string]interface{}{"stream": streamName, "id": id}, nil)
 
@@ -61,7 +65,7 @@ func (r *PublisherRepository) Reconstitute(id string, source AggregateRoot, stre
 	events := stream.Events
 
 	if len(events) == 0 {
-		return fmt.Errorf("No events found for id: %s", id)
+		return fmt.Errorf("no events found for id: %s", id)
 	}
 
 	for _, event := range events {

@@ -1,8 +1,6 @@
-package inmemory_test
+package inmemory
 
-import (
-	"time"
-)
+import "time"
 
 type SomethingHappened struct {
 	occurredOn time.Time

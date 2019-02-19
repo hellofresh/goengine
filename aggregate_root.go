@@ -7,6 +7,7 @@ import (
 	"github.com/hellofresh/goengine/reflection"
 )
 
+// AggregateRoot ...
 type AggregateRoot interface {
 	GetID() string
 	GetVersion() int
@@ -15,6 +16,7 @@ type AggregateRoot interface {
 	GetUncommittedEvents() []*DomainMessage
 }
 
+// AggregateRootBased ...
 type AggregateRootBased struct {
 	ID                string
 	version           int
@@ -22,28 +24,32 @@ type AggregateRootBased struct {
 	uncommittedEvents []*DomainMessage
 }
 
-// NewAggregateRootBased constructor
+// NewAggregateRootBased ...
 func NewAggregateRootBased(source interface{}) *AggregateRootBased {
 	return NewEventSourceBasedWithID(source, uuid.Must(uuid.NewV4()).String())
 }
 
-// NewEventSourceBasedWithID constructor
+// NewEventSourceBasedWithID ...
 func NewEventSourceBasedWithID(source interface{}, id string) *AggregateRootBased {
 	return &AggregateRootBased{id, 0, source, []*DomainMessage{}}
 }
 
+// GetID ...
 func (r *AggregateRootBased) GetID() string {
 	return r.ID
 }
 
+// GetVersion ...
 func (r *AggregateRootBased) GetVersion() int {
 	return r.version
 }
 
+// SetVersion ...
 func (r *AggregateRootBased) SetVersion(version int) {
 	r.version = version
 }
 
+// GetUncommittedEvents ...
 func (r *AggregateRootBased) GetUncommittedEvents() []*DomainMessage {
 	stream := r.uncommittedEvents
 	r.uncommittedEvents = nil
@@ -52,6 +58,7 @@ func (r *AggregateRootBased) GetUncommittedEvents() []*DomainMessage {
 	return stream
 }
 
+// Apply ...
 func (r *AggregateRootBased) Apply(event DomainEvent) {
 	t := reflection.TypeOf(event)
 	methodName := fmt.Sprintf("When%s", t.Name())
@@ -62,12 +69,14 @@ func (r *AggregateRootBased) Apply(event DomainEvent) {
 	Log("Event applied", fields, nil)
 }
 
+// RecordThat ...
 func (r *AggregateRootBased) RecordThat(event DomainEvent) {
 	r.version++
 	r.Apply(event)
 	r.Record(event)
 }
 
+// Record ...
 func (r *AggregateRootBased) Record(event DomainEvent) {
 	message := RecordNow(r.ID, r.version, event)
 	r.uncommittedEvents = append(r.uncommittedEvents, message)
