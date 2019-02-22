@@ -38,6 +38,13 @@ func newStreamProjectionStorage(
 	projectionStateEncoder driverSQL.ProjectionStateEncoder,
 	logger goengine.Logger,
 ) *streamProjectionStorage {
+	if logger == nil {
+		logger = goengine.NopLogger
+	}
+	if projectionStateEncoder == nil {
+		projectionStateEncoder = defaultProjectionStateEncoder
+	}
+
 	projectionTableQuoted := QuoteIdentifier(projectionTable)
 	projectionTableStr := QuoteString(projectionTable)
 
@@ -73,15 +80,9 @@ func newStreamProjectionStorage(
 }
 
 func (s *streamProjectionStorage) PersistState(conn *sql.Conn, notification *driverSQL.ProjectionNotification, state driverSQL.ProjectionState) error {
-	var (
-		err          error
-		encodedState = []byte{'{', '}'}
-	)
-	if s.projectionStateEncoder != nil {
-		encodedState, err = s.projectionStateEncoder(state.ProjectionState)
-		if err != nil {
-			return err
-		}
+	encodedState, err := s.projectionStateEncoder(state.ProjectionState)
+	if err != nil {
+		return err
 	}
 
 	_, err = conn.ExecContext(context.Background(), s.queryPersistState, state.Position, encodedState, s.projectionName)
