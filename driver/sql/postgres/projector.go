@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 	"database/sql/driver"
+	"errors"
 
 	"github.com/hellofresh/goengine/driver/sql"
 )
@@ -44,4 +45,13 @@ func resolveErrorAction(
 	}
 
 	return errorFallthrough
+}
+
+// defaultProjectionStateEncoder this `ProjectionStateEncoder` is used for a goeninge.Projection
+func defaultProjectionStateEncoder(state interface{}) ([]byte, error) {
+	if state == nil {
+		return []byte{'{', '}'}, nil
+	}
+
+	return nil, errors.New("unexpected state provided (Did you forget to implement goengine.ProjectionSaga?)")
 }

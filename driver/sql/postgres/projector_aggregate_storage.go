@@ -53,11 +53,15 @@ func newAggregateProjectionStorage(
 	if logger == nil {
 		logger = goengine.NopLogger
 	}
+	if projectionStateEncoder == nil {
+		projectionStateEncoder = defaultProjectionStateEncoder
+	}
 
 	projectionTableQuoted := QuoteIdentifier(projectionTable)
 	projectionTableStr := QuoteString(projectionTable)
 	eventStoreTableQuoted := QuoteIdentifier(eventStoreTable)
 
+	/* #nosec */
 	return &aggregateProjectionStorage{
 		projectionStateEncoder: projectionStateEncoder,
 		logger:                 logger,
@@ -115,15 +119,9 @@ func (a *aggregateProjectionStorage) LoadOutOfSync(ctx context.Context, conn *sq
 }
 
 func (a *aggregateProjectionStorage) PersistState(conn *sql.Conn, notification *driverSQL.ProjectionNotification, state driverSQL.ProjectionState) error {
-	var (
-		err          error
-		encodedState = []byte{'{', '}'}
-	)
-	if a.projectionStateEncoder != nil {
-		encodedState, err = a.projectionStateEncoder(state.ProjectionState)
-		if err != nil {
-			return err
-		}
+	encodedState, err := a.projectionStateEncoder(state.ProjectionState)
+	if err != nil {
+		return err
 	}
 
 	_, err = conn.ExecContext(context.Background(), a.queryPersistState, notification.AggregateID, state.Position, encodedState)
@@ -191,8 +189,8 @@ func (a *aggregateProjectionStorage) Acquire(
 	// Set the projection as row locked
 	_, err := conn.ExecContext(ctx, a.querySetRowLocked, aggregateID, true)
 	if err != nil {
-		if err := a.releaseProjection(conn, aggregateID); err != nil {
-			logger.WithError(err).Error("failed to release lock while setting projection rows as locked")
+		if releaseErr := a.releaseProjection(conn, aggregateID); releaseErr != nil {
+			logger.WithError(releaseErr).Error("failed to release lock while setting projection rows as locked")
 		} else {
 			logger.Debug("failed to set projection as locked")
 		}
