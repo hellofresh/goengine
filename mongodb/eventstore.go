@@ -175,7 +175,7 @@ func (s *EventStore) createIndices(c *mongo.Collection) error {
 		mongo.IndexModel{
 			Keys: bsonx.Doc{
 				{Key: "aggregate_id", Value: bsonx.Int32(1)},
-				{Key: "version", Value: bsonx.Int32(-1)},
+				{Key: "version", Value: bsonx.Int32(1)},
 			},
 			Options: options.Index().SetUnique(true).SetBackground(true),
 		},

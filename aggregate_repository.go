@@ -73,6 +73,6 @@ func (r *PublisherRepository) Reconstitute(id string, source AggregateRoot, stre
 	}
 
 	source.SetVersion(events[len(events)-1].Version)
-	Log("Aggregate reconstituted", map[string]interface{}{"id": id}, nil)
+	Log("Aggregate reconstituted", map[string]interface{}{"id": id, "stream": streamName}, nil)
 	return nil
 }
