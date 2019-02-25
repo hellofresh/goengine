@@ -150,10 +150,6 @@ func TestColumnNames(t *testing.T) {
 	})
 
 	t.Run("cannot modify data", func(t *testing.T) {
-		colsOrig := strategy.ColumnNames()
-		colsOrig = append(colsOrig, "field1")
-		colsOrig = append(colsOrig, "field2")
-
 		assert.Equal(t, strategy.ColumnNames(), expectedColumns)
 	})
 }

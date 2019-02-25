@@ -33,8 +33,7 @@ type (
 
 // GenerateUUID creates a new random UUID or panics
 func GenerateUUID() UUID {
-
-	return UUID(uuid.New())
+	return uuid.New()
 }
 
 // IsUUIDEmpty returns true if the UUID is empty

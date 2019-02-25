@@ -66,16 +66,23 @@ func (c *dbController) Create(t *testing.T, databaseName string) {
 func (c *dbController) disableDatabaseAccess(t *testing.T, databaseName string) {
 	// Making sure the database exists
 	row := c.db.QueryRow("SELECT datname FROM pg_database WHERE datname = $1", databaseName)
-	if row == nil {
+	if err := row.Scan(&databaseName); err != nil {
 		// No database so no one has access
+		if err != sql.ErrNoRows {
+			return
+		}
+		require.NoError(t, err)
 		return
 	}
+
 	// Disallow new connections
 	_, err := c.db.Exec(fmt.Sprintf(`ALTER DATABASE "%s" WITH ALLOW_CONNECTIONS false`, databaseName))
 	require.NoError(t, err, "test.postgres: Unable to disallow connections to the db")
 
 	// Terminate existing connections
-	row = c.db.QueryRow("SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = $1", databaseName)
+	rows, err := c.db.Query("SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = $1", databaseName)
+	require.NoError(t, err)
+	defer rows.Close()
 }
 
 func (c *dbController) enableDatabaseAccess(t *testing.T, databaseName string) {

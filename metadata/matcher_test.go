@@ -86,9 +86,7 @@ func TestMatcherIterate(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run("multiple constraints", func(t *testing.T) {
-			var m metadata.Matcher
-			m = testCase.matcher
-
+			m := testCase.matcher
 			for _, c := range testCase.expectedConstraints {
 				m = metadata.WithConstraint(m, c.field, c.operator, c.value)
 			}
