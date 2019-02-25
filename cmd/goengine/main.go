@@ -9,8 +9,8 @@ import (
 	"github.com/hellofresh/goengine"
 	"github.com/hellofresh/goengine/mongodb"
 	"github.com/hellofresh/goengine/rabbit"
-	"github.com/mongodb/mongo-go-driver/mongo"
-	"github.com/mongodb/mongo-go-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 func main() {
@@ -26,9 +26,10 @@ func main() {
 	}
 
 	goengine.Log("Connecting to the database", map[string]interface{}{"dsn": mongoDSN}, nil)
-	mongoClient, err := mongo.NewClientWithOptions(
-		mongoDSN,
-		options.Client().SetAppName("goengine"),
+	mongoClient, err := mongo.NewClient(
+		options.Client().
+			ApplyURI(mongoDSN).
+			SetAppName("goengine"),
 	)
 	if err != nil {
 		goengine.Log("Failed to create new Mongo mongoClient", nil, err)

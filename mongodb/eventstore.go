@@ -6,10 +6,10 @@ import (
 
 	"github.com/hellofresh/goengine"
 	"github.com/hellofresh/goengine/reflection"
-	"github.com/mongodb/mongo-go-driver/bson"
-	"github.com/mongodb/mongo-go-driver/mongo"
-	"github.com/mongodb/mongo-go-driver/mongo/options"
-	"github.com/mongodb/mongo-go-driver/x/bsonx"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/x/bsonx"
 )
 
 // MongoEvent represents an event on mongodb
@@ -163,7 +163,7 @@ func (s *EventStore) CountEventsFor(streamName goengine.StreamName, id string) (
 	ctx, cancel := s.cs.CountEventsFor()
 	defer cancel()
 
-	return s.mongoDB.Collection(string(streamName)).Count(ctx, bson.M{"aggregate_id": string(streamName)})
+	return s.mongoDB.Collection(string(streamName)).CountDocuments(ctx, bson.M{"aggregate_id": string(streamName)})
 }
 
 func (s *EventStore) createIndices(c *mongo.Collection) error {
