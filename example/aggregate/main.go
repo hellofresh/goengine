@@ -44,9 +44,16 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	account.Deposit(100)
-	account.Withdraw(10)
-	account.Withdraw(20)
+
+	if err := account.Deposit(100); err != nil {
+		panic(err)
+	}
+	if err := account.Withdraw(10); err != nil {
+		panic(err)
+	}
+	if err := account.Withdraw(20); err != nil {
+		panic(err)
+	}
 
 	fmt.Printf("BankAccount %s has a balance of %d\n", account.AggregateID(), account.Balance())
 }

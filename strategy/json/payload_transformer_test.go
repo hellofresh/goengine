@@ -10,6 +10,7 @@ import (
 	"github.com/hellofresh/goengine/internal/mocks/payload"
 	strategyJSON "github.com/hellofresh/goengine/strategy/json"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type simpleType struct {
@@ -22,9 +23,11 @@ func TestPayloadTransformer(t *testing.T) {
 		asserts := assert.New(t)
 
 		transformer := strategyJSON.NewPayloadTransformer()
-		transformer.RegisterPayload("payload", func() interface{} {
-			return payload.Payload{}
-		})
+		require.NoError(t,
+			transformer.RegisterPayload("payload", func() interface{} {
+				return payload.Payload{}
+			}),
+		)
 
 		name, data, err := transformer.ConvertPayload(anotherpayload.Payload{})
 		asserts.Equal(err, strategyJSON.ErrPayloadNotRegistered)
@@ -60,7 +63,9 @@ func TestPayloadTransformer_ConvertPayload(t *testing.T) {
 			t.Run(tc.title, func(t *testing.T) {
 				asserts := assert.New(t)
 				transformer := strategyJSON.NewPayloadTransformer()
-				transformer.RegisterPayload(tc.payloadType, tc.payloadInitiator)
+				require.NoError(t,
+					transformer.RegisterPayload(tc.payloadType, tc.payloadInitiator),
+				)
 
 				name, data, err := transformer.ConvertPayload(tc.payloadData)
 				asserts.NoError(err)
@@ -81,10 +86,7 @@ func TestPayloadTransformer_ConvertPayload(t *testing.T) {
 		testCases := []testCase{
 			{
 				"not registered convert payload",
-				func() interface{} {
-					// not necessary for this test case
-					return nil
-				},
+				nil,
 				&simpleType{Test: "test", Order: 1},
 				strategyJSON.ErrPayloadNotRegistered,
 			},
@@ -103,8 +105,11 @@ func TestPayloadTransformer_ConvertPayload(t *testing.T) {
 			t.Run(tc.title, func(t *testing.T) {
 				asserts := assert.New(t)
 				transformer := strategyJSON.NewPayloadTransformer()
-
-				transformer.RegisterPayload("tests", tc.payloadInitiator)
+				if tc.payloadInitiator != nil {
+					require.NoError(t,
+						transformer.RegisterPayload("tests", tc.payloadInitiator),
+					)
+				}
 
 				name, data, err := transformer.ConvertPayload(tc.payloadData)
 				asserts.Equal(tc.expectedError, err)
@@ -235,13 +240,15 @@ func TestJSONPayloadTransformer_CreatePayload(t *testing.T) {
 		for _, testCase := range testCases {
 			t.Run(testCase.title, func(t *testing.T) {
 				factory := strategyJSON.NewPayloadTransformer()
-				factory.RegisterPayload("tests", testCase.payloadInitiator)
+				require.NoError(t,
+					factory.RegisterPayload("tests", testCase.payloadInitiator),
+				)
 
-				payload, err := factory.CreatePayload("tests", testCase.payloadData)
+				res, err := factory.CreatePayload("tests", testCase.payloadData)
 
 				asserts := assert.New(t)
 				asserts.IsType((*json.SyntaxError)(nil), err)
-				asserts.Nil(payload)
+				asserts.Nil(res)
 			})
 		}
 	})

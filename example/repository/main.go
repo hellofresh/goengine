@@ -16,22 +16,28 @@ func main() {
 	store := inmemory.NewEventStore(logger)
 
 	eventStream := goengine.StreamName("event_stream")
-	store.Create(ctx, eventStream)
+	failOnErr(
+		store.Create(ctx, eventStream),
+	)
 
 	repository, err := NewBankAccountRepository(store, eventStream)
 	failOnErr(err)
 
 	fmt.Print("Opening an account\n")
-	account := OpenBankAccount()
-	accountID := account.AggregateID()
+	account, err := OpenBankAccount()
+	failOnErr(err)
 	failOnErr(
 		repository.Save(ctx, account),
 	)
+	accountID := account.AggregateID()
 	fmt.Printf("Opened account %s balance %d\n\n", account.AggregateID(), account.Balance())
 
 	fmt.Print("Opening an account with 100\n")
-	secondAccount := OpenBankAccount()
-	secondAccount.Deposit(100)
+	secondAccount, err := OpenBankAccount()
+	failOnErr(err)
+	failOnErr(
+		secondAccount.Deposit(100),
+	)
 	failOnErr(
 		repository.Save(ctx, secondAccount),
 	)
@@ -41,7 +47,9 @@ func main() {
 	loadedAccount, err := repository.Get(ctx, accountID)
 	failOnErr(err)
 
-	loadedAccount.Deposit(100)
+	failOnErr(
+		loadedAccount.Deposit(100),
+	)
 	failOnErr(
 		repository.Save(ctx, loadedAccount),
 	)
@@ -52,7 +60,9 @@ func main() {
 	loadedAccount, err = repository.Get(ctx, accountID)
 	failOnErr(err)
 
-	loadedAccount.Withdraw(50)
+	failOnErr(
+		loadedAccount.Withdraw(50),
+	)
 	failOnErr(
 		repository.Save(ctx, loadedAccount),
 	)
