@@ -68,9 +68,14 @@ func NewStreamProjector(
 		stateEncoder = saga.EncodeState
 	}
 
+	storage, err := newStreamProjectionStorage(projection.Name(), projectionTable, stateEncoder, logger)
+	if err != nil {
+		return nil, err
+	}
+
 	executor, err := internalSQL.NewNotificationProjector(
 		db,
-		newStreamProjectionStorage(projection.Name(), projectionTable, stateEncoder, logger),
+		storage,
 		stateDecoder,
 		projection.Handlers(),
 		streamProjectionEventStreamLoader(eventStore, projection.FromStream()),

@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/hellofresh/goengine"
 
@@ -37,7 +38,14 @@ func newStreamProjectionStorage(
 	projectionTable string,
 	projectionStateEncoder driverSQL.ProjectionStateEncoder,
 	logger goengine.Logger,
-) *streamProjectionStorage {
+) (*streamProjectionStorage, error) {
+	switch {
+	case strings.TrimSpace(projectionName) == "":
+		return nil, goengine.InvalidArgumentError("projectionName")
+	case strings.TrimSpace(projectionTable) == "":
+		return nil, goengine.InvalidArgumentError("projectionTable")
+	}
+
 	if logger == nil {
 		logger = goengine.NopLogger
 	}
@@ -48,6 +56,7 @@ func newStreamProjectionStorage(
 	projectionTableQuoted := QuoteIdentifier(projectionTable)
 	projectionTableStr := QuoteString(projectionTable)
 
+	/* #nosec */
 	return &streamProjectionStorage{
 		projectionName:         projectionName,
 		projectionStateEncoder: projectionStateEncoder,
@@ -76,7 +85,7 @@ func newStreamProjectionStorage(
 			`UPDATE ONLY %[1]s SET locked = $2 WHERE name = $1`,
 			projectionTableQuoted,
 		),
-	}
+	}, nil
 }
 
 func (s *streamProjectionStorage) PersistState(conn *sql.Conn, notification *driverSQL.ProjectionNotification, state driverSQL.ProjectionState) error {
@@ -147,8 +156,8 @@ func (s *streamProjectionStorage) Acquire(
 	// Set the projection as row locked
 	_, err := conn.ExecContext(ctx, s.querySetRowLocked, s.projectionName, true)
 	if err != nil {
-		if err := s.releaseProjectionLock(conn); err != nil {
-			logger.WithError(err).Error("failed to release lock while setting projection row as locked")
+		if releaseErr := s.releaseProjectionLock(conn); releaseErr != nil {
+			logger.WithError(releaseErr).Error("failed to release lock while setting projection row as locked")
 		} else {
 			logger.Debug("failed to set projection as locked")
 		}
