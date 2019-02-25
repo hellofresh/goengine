@@ -8,11 +8,10 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/pkg/errors"
-
 	"github.com/hellofresh/goengine"
 	driverSQL "github.com/hellofresh/goengine/driver/sql"
 	internalSQL "github.com/hellofresh/goengine/driver/sql/internal"
+	"github.com/pkg/errors"
 )
 
 // StreamProjector is a postgres projector used to execute a projection against an event stream.
@@ -172,80 +171,16 @@ func (s *StreamProjector) processNotification(
 
 // setupProjection Creates the projection if none exists
 func (s *StreamProjector) setupProjection(ctx context.Context) error {
-	conn, err := internalSQL.AcquireConn(ctx, s.db)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		if err := conn.Close(); err != nil {
-			s.logger.WithError(err).Warn("failed to db close connection")
-		}
-	}()
-
-	if s.projectionExists(ctx, conn) {
-		return nil
-	}
-	if err := s.createProjection(ctx, conn); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (s *StreamProjector) projectionExists(ctx context.Context, conn *sql.Conn) bool {
-	rows, err := conn.QueryContext(
+	// Ignore duplicate inserts
+	_, err := s.db.ExecContext(
 		ctx,
-		fmt.Sprintf(
-			`SELECT 1 FROM %s WHERE name = $1 LIMIT 1`,
-			QuoteIdentifier(s.projectionTable),
-		),
-		s.projectionName,
-	)
-	if err != nil {
-		s.logger.
-			WithError(err).
-			WithField("table", s.projectionTable).
-			Error("failed to query projection table")
-		return false
-	}
-	defer func() {
-		if err := rows.Close(); err != nil {
-			s.logger.
-				WithError(err).
-				WithField("table", s.projectionTable).
-				Warn("failed to close rows")
-		}
-	}()
-
-	if !rows.Next() {
-		return false
-	}
-
-	var found bool
-	if err := rows.Scan(&found); err != nil {
-		s.logger.
-			WithError(err).
-			WithField("table", s.projectionTable).
-			Error("failed to scan projection table")
-		return false
-	}
-
-	return found
-}
-
-func (s *StreamProjector) createProjection(ctx context.Context, conn *sql.Conn) error {
-	// Ignore duplicate inserts. This can occur when multiple projectors are started at the same time.
-	_, err := conn.ExecContext(
-		ctx,
+		/* #nosec */
 		fmt.Sprintf(
 			`INSERT INTO %s (name) VALUES ($1) ON CONFLICT DO NOTHING`,
 			QuoteIdentifier(s.projectionTable),
 		),
 		s.projectionName,
 	)
-	if err != nil {
-		return err
-	}
 
-	return nil
+	return err
 }
