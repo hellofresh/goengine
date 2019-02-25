@@ -57,7 +57,7 @@ func NewEventStore(
 		logger = goengine.NopLogger
 	}
 
-	columns := fmt.Sprintf("%s", strings.Join(persistenceStrategy.ColumnNames(), ", "))
+	columns := strings.Join(persistenceStrategy.ColumnNames(), ", ")
 
 	return &EventStore{
 		persistenceStrategy:       persistenceStrategy,
@@ -169,6 +169,7 @@ func (e *EventStore) loadQuery(
 
 	rows, err := db.QueryContext(
 		ctx,
+		/* #nosec */
 		fmt.Sprintf(
 			`SELECT * FROM %s WHERE %s ORDER BY no %s`,
 			tableName,
@@ -206,6 +207,7 @@ func (e *EventStore) AppendToWithExecer(ctx context.Context, conn driverSQL.Exec
 
 	result, err := conn.ExecContext(
 		ctx,
+		/* #nosec */
 		fmt.Sprintf(
 			"INSERT INTO %s (%s) VALUES %s",
 			tableName,

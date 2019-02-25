@@ -15,6 +15,7 @@ import (
 	"github.com/hellofresh/goengine/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNewRepository(t *testing.T) {
@@ -103,7 +104,9 @@ func TestRepository_SaveAggregateRoot(t *testing.T) {
 			{order: 2},
 		}
 		for _, event := range events {
-			aggregate.RecordChange(root, event)
+			require.NoError(t,
+				aggregate.RecordChange(root, event),
+			)
 		}
 		err := repo.SaveAggregateRoot(context.Background(), root)
 

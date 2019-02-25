@@ -8,6 +8,7 @@ addons:
   postgresql: '10'
 cache:
   directories:
+    - "$GOPATH/pkg/dep"
     - "$HOME/gopath/pkg/mod"
 env:
   global:
@@ -15,6 +16,16 @@ env:
     - POSTGRES_DSN="postgres://postgres@localhost:5432/goengine?sslmode=disable&client_encoding=UTF8"
 
 matrix:
+  include:
+    - name: "GoLang CI lint"
+      go: 1.11.x
+      install:
+        - dep ensure -v
+        - curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s -- -b $(go env GOPATH)/bin v1.15.0
+      before_script: []
+      script:
+        - golangci-lint run
+      after_success: []
   allow_failures:
     - go: master
 

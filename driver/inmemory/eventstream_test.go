@@ -9,6 +9,7 @@ import (
 	"github.com/hellofresh/goengine/driver/inmemory"
 	"github.com/hellofresh/goengine/mocks"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestEventStream(t *testing.T) {
@@ -44,15 +45,12 @@ func TestEventStream(t *testing.T) {
 			asserts := assert.New(t)
 
 			stream, err := inmemory.NewEventStream(testCase.messages, testCase.messageNumbers)
-			if !asserts.NoError(err) {
-				return
-			}
+			require.NoError(t, err)
 			asserts.NotNil(stream)
 
 			messages, messageNumbers, err := goengine.ReadEventStream(stream)
-			if !asserts.NoError(stream.Err()) {
-				asserts.FailNow("no exception was expected while reading the stream")
-			}
+			require.NoError(t, err)
+			require.NoError(t, stream.Err(), "no exception was expected while reading the stream")
 
 			asserts.Equal(testCase.messages, messages)
 			asserts.Equal(testCase.messageNumbers, messageNumbers)

@@ -61,7 +61,8 @@ func TestEventStore_HasStream(t *testing.T) {
 	asserts.False(store.HasStream(ctx, createThisStream))
 	asserts.False(store.HasStream(ctx, unkownStream))
 
-	store.Create(ctx, createThisStream)
+	err := store.Create(ctx, createThisStream)
+	asserts.NoError(err)
 	asserts.True(store.HasStream(ctx, createThisStream))
 	asserts.False(store.HasStream(ctx, unkownStream))
 

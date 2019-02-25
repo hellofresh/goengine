@@ -114,7 +114,7 @@ func newAggregateProjectionStorage(
 	}, nil
 }
 
-func (a *aggregateProjectionStorage) LoadOutOfSync(ctx context.Context, conn *sql.Conn) (*sql.Rows, error) {
+func (a *aggregateProjectionStorage) LoadOutOfSync(ctx context.Context, conn driverSQL.Queryer) (*sql.Rows, error) {
 	return conn.QueryContext(ctx, a.queryOutOfSyncProjections)
 }
 
@@ -136,7 +136,7 @@ func (a *aggregateProjectionStorage) PersistState(conn *sql.Conn, notification *
 	return nil
 }
 
-func (a *aggregateProjectionStorage) PersistFailure(ctx context.Context, conn *sql.Conn, notification *driverSQL.ProjectionNotification) error {
+func (a *aggregateProjectionStorage) PersistFailure(ctx context.Context, conn driverSQL.Execer, notification *driverSQL.ProjectionNotification) error {
 	if _, err := conn.ExecContext(ctx, a.queryPersistFailure, notification.AggregateID); err != nil {
 		return err
 	}

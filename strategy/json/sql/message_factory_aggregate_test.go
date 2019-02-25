@@ -15,6 +15,7 @@ import (
 	"github.com/hellofresh/goengine/mocks"
 	"github.com/hellofresh/goengine/strategy/json/sql"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type nameChanged struct {
@@ -119,9 +120,8 @@ func TestAggregateChangedFactory_CreateFromRows(t *testing.T) {
 				defer stream.Close()
 
 				messages, messageNumbers, err := goengine.ReadEventStream(stream)
-				if !asserts.NoError(stream.Err()) {
-					asserts.FailNow("no exception was expected while reading the stream")
-				}
+				require.NoError(t, err)
+				require.NoError(t, stream.Err(), "no exception was expected while reading the stream")
 
 				assertEqualMessages(t, expectedMessages, messages)
 				asserts.Equal(expectedMessageNumbers, messageNumbers)

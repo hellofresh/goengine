@@ -21,6 +21,7 @@ import (
 	strategyPostgres "github.com/hellofresh/goengine/strategy/json/sql/postgres"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNewEventStore(t *testing.T) {
@@ -301,6 +302,7 @@ func TestEventStore_Load(t *testing.T) {
 				strategy.On("GenerateTableName", goengine.StreamName("event_stream")).Return("event_stream", nil)
 
 				store, err := postgres.NewEventStore(strategy, db, factory, nil)
+				require.NoError(t, err)
 
 				stream, err := store.Load(
 					context.Background(),
@@ -309,10 +311,9 @@ func TestEventStore_Load(t *testing.T) {
 					testCase.count,
 					testCase.matcher(),
 				)
+				require.NoError(t, err)
+				assert.Equal(t, expectedStream, stream)
 
-				if assert.NoError(t, err) {
-					assert.Equal(t, expectedStream, stream)
-				}
 				factory.AssertExpectations(t)
 				strategy.AssertExpectations(t)
 			})
@@ -355,6 +356,7 @@ func TestEventStore_Load(t *testing.T) {
 			test.RunWithMockDB(t, testCase.title, func(t *testing.T, db *sql.DB, dbMock sqlmock.Sqlmock) {
 				strategy := testCase.strategy()
 				store, err := postgres.NewEventStore(strategy, db, &mockSQL.MessageFactory{}, nil)
+				require.NoError(t, err)
 
 				stream, err := store.Load(context.Background(), "event_stream", 1, nil, nil)
 				if assert.Error(t, err) {

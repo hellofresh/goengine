@@ -1,0 +1,25 @@
+run:
+  build-tags:
+    - unit
+  skip-files:
+    - driver/inmemory/matcher_gen.go
+
+linters:
+  enable:
+    - maligned
+    - deadcode
+    - errcheck
+    - gosec
+    - goconst
+    - gocyclo
+    - gofmt
+    - goimports
+    - golint
+    - ineffassign
+    - interfacer
+    - staticcheck
+    - structcheck
+    - unconvert
+    - varcheck
+    - vet
+    - vetshadow

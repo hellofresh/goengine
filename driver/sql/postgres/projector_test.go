@@ -4,9 +4,10 @@ package postgres
 
 import (
 	"fmt"
+	"testing"
+
 	"github.com/hellofresh/goengine"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestDefaultProjectionStateEncoder(t *testing.T) {
