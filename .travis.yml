@@ -1,16 +1,17 @@
 language: go
 go:
-  - "1.10.x"
-  - "1.11.x"
+  - 1.10.x
+  - 1.11.x
   - master
 dist: xenial
 addons:
-  postgresql: "10"
+  postgresql: '10'
 cache:
   directories:
-    - $HOME/gopath/pkg/mod
+    - "$HOME/gopath/pkg/mod"
 env:
   global:
+    - secure: KONX7893Jxeu3zBnNRWMl0x9DNsriN+RFojuFE28bDBjE2NJKTBeIhWNF4Jnoy7ba9hvE3LB7aGFUETnUR2sxKgNp/yz1Q6Wjk2qFvIPxYB8soOXWnOcRRvRulM2jOpLLJdT4aKewyTGTQfszib/3BD2fWgIgnH0aAvhoV6F/e9Mhtt1ZXLvvRDyDX2q0XkDtjK9tTB8/QOJFz6c9UI/fScYglI+Ob5lx7GwjYg6LHbIaPXt4wrGLXW9/FXOHTI1F6+FuDE08n7EtqkuEqmh3gURQRRyjmX2nDnxUuvSPpbTR6cRHctgwaYSL2gu0321lbXIUv4bFAW14MoQLnI5xKW8nFjuD0Z3DrePr3G96sTombrg2PeI0eM/twW9YgTlHpjt+gkblSriOZ8vVe1UDMZ0OidXSzO9dOk0vDustwvbA+TYP3/e7Tw60wn1NWoEFl38W8F+jB2kBuMON45AT4I5zPQAjZLmEwTgYm4jOahpnvOY3Z6cxqpN+zDNlqllETJCdf+e5bp8xk9vYZtEZ0ML3L7cMMw3IbLg+slE4rIUZuydvk4rC9EXwqPw/089BhCFhpc62GfvlVhDrPJfnHIPhzZ9nyYS1FDBl96gVNze2uFOyaEMACFtevFF4EP0NmUYRhLWPcasdjbhUjUsIiFQVS3CFQODR9FL0SXSM9M=
     - POSTGRES_DSN="postgres://postgres@localhost:5432/goengine?sslmode=disable&client_encoding=UTF8"
 
 matrix:
@@ -27,8 +28,10 @@ before_script:
   - psql -U postgres -c "CREATE DATABASE goengine ENCODING 'UTF8';"
 
 script:
-  - go test -tags=unit -race ./...
+  - go test -tags=unit -race -coverprofile=coverage.txt -covermode=atomic ./...
   - go test -tags=integration -race ./...
   - go run -race example/aggregate/*.go
   - go run -race example/repository/*.go
 
+after_success:
+  - bash <(curl -s https://codecov.io/bash)
