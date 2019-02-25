@@ -163,7 +163,7 @@ func (s *EventStore) CountEventsFor(streamName goengine.StreamName, id string) (
 	ctx, cancel := s.cs.CountEventsFor()
 	defer cancel()
 
-	return s.mongoDB.Collection(string(streamName)).Count(ctx, bson.M{"aggregate_id": string(streamName)})
+	return s.mongoDB.Collection(string(streamName)).CountDocuments(ctx, bson.M{"aggregate_id": string(streamName)})
 }
 
 func (s *EventStore) createIndices(c *mongo.Collection) error {
