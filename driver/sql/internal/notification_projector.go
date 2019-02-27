@@ -130,28 +130,8 @@ func (s *NotificationProjector) project(
 		}
 	}()
 
-	// Decode or initialize projection state
-	var projectionState interface{}
-	if rawState.Position == 0 {
-		// This is the fist time the projection runs so initialize the state
-		projectionState, err = s.projectionStateInit(ctx)
-		if err != nil {
-			return err
-		}
-	} else if s.projectionStateDecode != nil {
-		// Unmarshal the projection state
-		projectionState, err = s.projectionStateDecode(rawState.ProjectionState)
-		if err != nil {
-			return err
-		}
-	}
-	state := driverSQL.ProjectionState{
-		Position:        rawState.Position,
-		ProjectionState: projectionState,
-	}
-
 	// project event stream
-	if err := s.projectStream(ctx, conn, notification, state, eventStream); err != nil {
+	if err := s.projectStream(ctx, conn, notification, rawState, eventStream); err != nil {
 		return err
 	}
 
@@ -163,9 +143,13 @@ func (s *NotificationProjector) projectStream(
 	ctx context.Context,
 	conn driverSQL.Execer,
 	notification *driverSQL.ProjectionNotification,
-	state driverSQL.ProjectionState,
+	rawState *driverSQL.ProjectionRawState,
 	stream goengine.EventStream,
 ) error {
+	var (
+		state         driverSQL.ProjectionState
+		stateAcquired bool
+	)
 	for stream.Next() {
 		// Check if the context is expired
 		select {
@@ -179,7 +163,6 @@ func (s *NotificationProjector) projectStream(
 		if err != nil {
 			return err
 		}
-		state.Position = msgNumber
 
 		// Resolve the payload event name
 		eventName, err := s.resolver.ResolveName(msg.Payload())
@@ -196,7 +179,17 @@ func (s *NotificationProjector) projectStream(
 			continue
 		}
 
+		// Acquire the state if we have none
+		if !stateAcquired {
+			state, err = s.acquireProjectState(ctx, rawState)
+			if err != nil {
+				return err
+			}
+			stateAcquired = true
+		}
+
 		// Execute the handler
+		state.Position = msgNumber
 		state.ProjectionState, err = handler(ctx, state.ProjectionState, msg)
 		if err != nil {
 			return err
@@ -209,6 +202,24 @@ func (s *NotificationProjector) projectStream(
 	}
 
 	return stream.Err()
+}
+
+func (s *NotificationProjector) acquireProjectState(ctx context.Context, rawState *driverSQL.ProjectionRawState) (driverSQL.ProjectionState, error) {
+	state := driverSQL.ProjectionState{
+		Position: rawState.Position,
+	}
+
+	// Decode or initialize projection state
+	var err error
+	if rawState.Position == 0 {
+		// This is the fist time the projection runs so initialize the state
+		state.ProjectionState, err = s.projectionStateInit(ctx)
+	} else if s.projectionStateDecode != nil {
+		// Unmarshal the projection state
+		state.ProjectionState, err = s.projectionStateDecode(rawState.ProjectionState)
+	}
+
+	return state, err
 }
 
 // wrapProjectionHandlers wraps the projection handlers so that any error or panic is caught and returned
