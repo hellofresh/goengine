@@ -119,6 +119,17 @@ func (s *NotificationProjector) project(
 	}
 	defer releaseLock()
 
+	// Load the event stream
+	eventStream, err := s.eventLoader(ctx, streamConn, notification, rawState.Position)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err := eventStream.Close(); err != nil {
+			logger.WithError(err).Warn("failed to close the event stream")
+		}
+	}()
+
 	// Decode or initialize projection state
 	var projectionState interface{}
 	if rawState.Position == 0 {
@@ -139,17 +150,6 @@ func (s *NotificationProjector) project(
 		ProjectionState: projectionState,
 	}
 
-	// Load the event stream
-	eventStream, err := s.eventLoader(ctx, streamConn, notification, state)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		if err := eventStream.Close(); err != nil {
-			logger.WithError(err).Warn("failed to close the event stream")
-		}
-	}()
-
 	// project event stream
 	if err := s.projectStream(ctx, conn, notification, state, eventStream); err != nil {
 		return err
@@ -161,7 +161,7 @@ func (s *NotificationProjector) project(
 // projectStream will project the events in the event stream and persist the state after the projection
 func (s *NotificationProjector) projectStream(
 	ctx context.Context,
-	conn *sql.Conn,
+	conn driverSQL.Execer,
 	notification *driverSQL.ProjectionNotification,
 	state driverSQL.ProjectionState,
 	stream goengine.EventStream,

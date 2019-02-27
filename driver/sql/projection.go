@@ -55,5 +55,5 @@ type (
 	ProjectionErrorAction int
 
 	// EventStreamLoader loads a event stream based on the provided notification and state
-	EventStreamLoader func(ctx context.Context, conn *sql.Conn, notification *ProjectionNotification, state ProjectionState) (goengine.EventStream, error)
+	EventStreamLoader func(ctx context.Context, conn *sql.Conn, notification *ProjectionNotification, position int64) (goengine.EventStream, error)
 )
