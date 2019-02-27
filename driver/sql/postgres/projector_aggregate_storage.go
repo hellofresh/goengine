@@ -14,12 +14,12 @@ import (
 )
 
 func aggregateProjectionEventStreamLoader(eventStore driverSQL.ReadOnlyEventStore, streamName goengine.StreamName, aggregateTypeName string) driverSQL.EventStreamLoader {
-	return func(ctx context.Context, conn *sql.Conn, notification *driverSQL.ProjectionNotification, state driverSQL.ProjectionState) (goengine.EventStream, error) {
+	return func(ctx context.Context, conn *sql.Conn, notification *driverSQL.ProjectionNotification, position int64) (goengine.EventStream, error) {
 		matcher := metadata.NewMatcher()
 		matcher = metadata.WithConstraint(matcher, aggregate.IDKey, metadata.Equals, notification.AggregateID)
 		matcher = metadata.WithConstraint(matcher, aggregate.TypeKey, metadata.Equals, aggregateTypeName)
 
-		return eventStore.LoadWithConnection(ctx, conn, streamName, state.Position+1, nil, matcher)
+		return eventStore.LoadWithConnection(ctx, conn, streamName, position+1, nil, matcher)
 	}
 }
 
@@ -92,7 +92,7 @@ func newAggregateProjectionStorage(
 		queryAcquireLock: fmt.Sprintf(
 			`WITH new_projection AS (
 			  INSERT INTO %[1]s (aggregate_id, state) SELECT $1, 'null' WHERE NOT EXISTS (
-		    	SELECT * FROM %[1]s WHERE aggregate_id = $1
+		    	SELECT * FROM %[1]s WHERE aggregate_id = $1 LIMIT 1
 			  ) ON CONFLICT DO NOTHING
 			  RETURNING *
 			)
@@ -118,7 +118,7 @@ func (a *aggregateProjectionStorage) LoadOutOfSync(ctx context.Context, conn dri
 	return conn.QueryContext(ctx, a.queryOutOfSyncProjections)
 }
 
-func (a *aggregateProjectionStorage) PersistState(conn *sql.Conn, notification *driverSQL.ProjectionNotification, state driverSQL.ProjectionState) error {
+func (a *aggregateProjectionStorage) PersistState(conn driverSQL.Execer, notification *driverSQL.ProjectionNotification, state driverSQL.ProjectionState) error {
 	encodedState, err := a.projectionStateEncoder(state.ProjectionState)
 	if err != nil {
 		return err

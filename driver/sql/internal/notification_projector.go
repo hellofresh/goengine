@@ -18,7 +18,8 @@ type NotificationProjector struct {
 
 	storage driverSQL.ProjectionStorage
 
-	decodeProjectionState driverSQL.ProjectionStateDecoder
+	projectionStateInit   driverSQL.ProjectionStateInitializer
+	projectionStateDecode driverSQL.ProjectionStateDecoder
 	handlers              map[string]goengine.MessageHandler
 
 	eventLoader driverSQL.EventStreamLoader
@@ -31,7 +32,8 @@ type NotificationProjector struct {
 func NewNotificationProjector(
 	db *sql.DB,
 	storage driverSQL.ProjectionStorage,
-	acquireUnmarshalState driverSQL.ProjectionStateDecoder,
+	projectionStateInit driverSQL.ProjectionStateInitializer,
+	projectionStateDecode driverSQL.ProjectionStateDecoder,
 	eventHandlers map[string]goengine.MessageHandler,
 	eventLoader driverSQL.EventStreamLoader,
 	resolver goengine.MessagePayloadResolver,
@@ -39,15 +41,17 @@ func NewNotificationProjector(
 ) (*NotificationProjector, error) {
 	switch {
 	case db == nil:
-		return nil, errors.New("db cannot be nil")
+		return nil, goengine.InvalidArgumentError("db")
 	case storage == nil:
-		return nil, errors.New("storage cannot be nil")
+		return nil, goengine.InvalidArgumentError("storage")
+	case projectionStateInit == nil:
+		return nil, goengine.InvalidArgumentError("projectionStateInit")
 	case len(eventHandlers) == 0:
-		return nil, errors.New("eventHandlers cannot be empty")
+		return nil, goengine.InvalidArgumentError("eventHandlers")
 	case eventLoader == nil:
-		return nil, errors.New("eventLoader cannot be nil")
+		return nil, goengine.InvalidArgumentError("eventLoader")
 	case resolver == nil:
-		return nil, errors.New("resolver cannot be nil")
+		return nil, goengine.InvalidArgumentError("resolver")
 	}
 
 	if logger == nil {
@@ -57,7 +61,8 @@ func NewNotificationProjector(
 	return &NotificationProjector{
 		db:                    db,
 		storage:               storage,
-		decodeProjectionState: acquireUnmarshalState,
+		projectionStateInit:   projectionStateInit,
+		projectionStateDecode: projectionStateDecode,
 		handlers:              wrapProjectionHandlers(eventHandlers),
 		eventLoader:           eventLoader,
 		resolver:              resolver,
@@ -114,21 +119,8 @@ func (s *NotificationProjector) project(
 	}
 	defer releaseLock()
 
-	// Unmarshal the projection state
-	var projectionState interface{}
-	if s.decodeProjectionState != nil {
-		projectionState, err = s.decodeProjectionState(rawState.ProjectionState)
-		if err != nil {
-			return err
-		}
-	}
-	state := driverSQL.ProjectionState{
-		Position:        rawState.Position,
-		ProjectionState: projectionState,
-	}
-
 	// Load the event stream
-	eventStream, err := s.eventLoader(ctx, streamConn, notification, state)
+	eventStream, err := s.eventLoader(ctx, streamConn, notification, rawState.Position)
 	if err != nil {
 		return err
 	}
@@ -139,7 +131,7 @@ func (s *NotificationProjector) project(
 	}()
 
 	// project event stream
-	if err := s.projectStream(ctx, conn, notification, state, eventStream); err != nil {
+	if err := s.projectStream(ctx, conn, notification, rawState, eventStream); err != nil {
 		return err
 	}
 
@@ -149,11 +141,15 @@ func (s *NotificationProjector) project(
 // projectStream will project the events in the event stream and persist the state after the projection
 func (s *NotificationProjector) projectStream(
 	ctx context.Context,
-	conn *sql.Conn,
+	conn driverSQL.Execer,
 	notification *driverSQL.ProjectionNotification,
-	state driverSQL.ProjectionState,
+	rawState *driverSQL.ProjectionRawState,
 	stream goengine.EventStream,
 ) error {
+	var (
+		state         driverSQL.ProjectionState
+		stateAcquired bool
+	)
 	for stream.Next() {
 		// Check if the context is expired
 		select {
@@ -167,7 +163,6 @@ func (s *NotificationProjector) projectStream(
 		if err != nil {
 			return err
 		}
-		state.Position = msgNumber
 
 		// Resolve the payload event name
 		eventName, err := s.resolver.ResolveName(msg.Payload())
@@ -184,7 +179,17 @@ func (s *NotificationProjector) projectStream(
 			continue
 		}
 
+		// Acquire the state if we have none
+		if !stateAcquired {
+			state, err = s.acquireProjectState(ctx, rawState)
+			if err != nil {
+				return err
+			}
+			stateAcquired = true
+		}
+
 		// Execute the handler
+		state.Position = msgNumber
 		state.ProjectionState, err = handler(ctx, state.ProjectionState, msg)
 		if err != nil {
 			return err
@@ -197,6 +202,24 @@ func (s *NotificationProjector) projectStream(
 	}
 
 	return stream.Err()
+}
+
+func (s *NotificationProjector) acquireProjectState(ctx context.Context, rawState *driverSQL.ProjectionRawState) (driverSQL.ProjectionState, error) {
+	state := driverSQL.ProjectionState{
+		Position: rawState.Position,
+	}
+
+	// Decode or initialize projection state
+	var err error
+	if rawState.Position == 0 {
+		// This is the fist time the projection runs so initialize the state
+		state.ProjectionState, err = s.projectionStateInit(ctx)
+	} else if s.projectionStateDecode != nil {
+		// Unmarshal the projection state
+		state.ProjectionState, err = s.projectionStateDecode(rawState.ProjectionState)
+	}
+
+	return state, err
 }
 
 // wrapProjectionHandlers wraps the projection handlers so that any error or panic is caught and returned

@@ -8,13 +8,12 @@ import (
 	"strings"
 
 	"github.com/hellofresh/goengine"
-
 	driverSQL "github.com/hellofresh/goengine/driver/sql"
 )
 
 func streamProjectionEventStreamLoader(eventStore driverSQL.ReadOnlyEventStore, streamName goengine.StreamName) driverSQL.EventStreamLoader {
-	return func(ctx context.Context, conn *sql.Conn, notification *driverSQL.ProjectionNotification, state driverSQL.ProjectionState) (goengine.EventStream, error) {
-		return eventStore.LoadWithConnection(ctx, conn, streamName, state.Position+1, nil, nil)
+	return func(ctx context.Context, conn *sql.Conn, notification *driverSQL.ProjectionNotification, position int64) (goengine.EventStream, error) {
+		return eventStore.LoadWithConnection(ctx, conn, streamName, position+1, nil, nil)
 	}
 }
 
@@ -26,6 +25,7 @@ type streamProjectionStorage struct {
 
 	logger goengine.Logger
 
+	queryCreateProjection    string
 	queryAcquireLock         string
 	queryAcquirePositionLock string
 	queryReleaseLock         string
@@ -62,6 +62,10 @@ func newStreamProjectionStorage(
 		projectionStateEncoder: projectionStateEncoder,
 		logger:                 logger,
 
+		queryCreateProjection: fmt.Sprintf(
+			`INSERT INTO %s (name) VALUES ($1) ON CONFLICT DO NOTHING`,
+			projectionTableQuoted,
+		),
 		queryAcquireLock: fmt.Sprintf(
 			`SELECT pg_try_advisory_lock(%[2]s::regclass::oid::int, no), locked, position, state FROM %[1]s WHERE name = $1`,
 			projectionTableQuoted,
@@ -88,7 +92,12 @@ func newStreamProjectionStorage(
 	}, nil
 }
 
-func (s *streamProjectionStorage) PersistState(conn *sql.Conn, notification *driverSQL.ProjectionNotification, state driverSQL.ProjectionState) error {
+func (s *streamProjectionStorage) CreateProjection(ctx context.Context, conn driverSQL.Execer) error {
+	_, err := conn.ExecContext(ctx, s.queryCreateProjection, s.projectionName)
+	return err
+}
+
+func (s *streamProjectionStorage) PersistState(conn driverSQL.Execer, notification *driverSQL.ProjectionNotification, state driverSQL.ProjectionState) error {
 	encodedState, err := s.projectionStateEncoder(state.ProjectionState)
 	if err != nil {
 		return err
