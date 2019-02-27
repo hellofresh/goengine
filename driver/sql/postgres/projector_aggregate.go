@@ -84,6 +84,7 @@ func NewAggregateProjector(
 	executor, err := internal.NewNotificationProjector(
 		db,
 		storage,
+		projection.Init,
 		stateDecoder,
 		projection.Handlers(),
 		aggregateProjectionEventStreamLoader(eventStore, projection.FromStream(), aggregateTypeName),

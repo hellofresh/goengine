@@ -18,7 +18,8 @@ type NotificationProjector struct {
 
 	storage driverSQL.ProjectionStorage
 
-	decodeProjectionState driverSQL.ProjectionStateDecoder
+	projectionStateInit   driverSQL.ProjectionStateInitializer
+	projectionStateDecode driverSQL.ProjectionStateDecoder
 	handlers              map[string]goengine.MessageHandler
 
 	eventLoader driverSQL.EventStreamLoader
@@ -31,7 +32,8 @@ type NotificationProjector struct {
 func NewNotificationProjector(
 	db *sql.DB,
 	storage driverSQL.ProjectionStorage,
-	acquireUnmarshalState driverSQL.ProjectionStateDecoder,
+	projectionStateInit driverSQL.ProjectionStateInitializer,
+	projectionStateDecode driverSQL.ProjectionStateDecoder,
 	eventHandlers map[string]goengine.MessageHandler,
 	eventLoader driverSQL.EventStreamLoader,
 	resolver goengine.MessagePayloadResolver,
@@ -39,15 +41,17 @@ func NewNotificationProjector(
 ) (*NotificationProjector, error) {
 	switch {
 	case db == nil:
-		return nil, errors.New("db cannot be nil")
+		return nil, goengine.InvalidArgumentError("db")
 	case storage == nil:
-		return nil, errors.New("storage cannot be nil")
+		return nil, goengine.InvalidArgumentError("storage")
+	case projectionStateInit == nil:
+		return nil, goengine.InvalidArgumentError("projectionStateInit")
 	case len(eventHandlers) == 0:
-		return nil, errors.New("eventHandlers cannot be empty")
+		return nil, goengine.InvalidArgumentError("eventHandlers")
 	case eventLoader == nil:
-		return nil, errors.New("eventLoader cannot be nil")
+		return nil, goengine.InvalidArgumentError("eventLoader")
 	case resolver == nil:
-		return nil, errors.New("resolver cannot be nil")
+		return nil, goengine.InvalidArgumentError("resolver")
 	}
 
 	if logger == nil {
@@ -57,7 +61,8 @@ func NewNotificationProjector(
 	return &NotificationProjector{
 		db:                    db,
 		storage:               storage,
-		decodeProjectionState: acquireUnmarshalState,
+		projectionStateInit:   projectionStateInit,
+		projectionStateDecode: projectionStateDecode,
 		handlers:              wrapProjectionHandlers(eventHandlers),
 		eventLoader:           eventLoader,
 		resolver:              resolver,
@@ -114,10 +119,17 @@ func (s *NotificationProjector) project(
 	}
 	defer releaseLock()
 
-	// Unmarshal the projection state
+	// Decode or initialize projection state
 	var projectionState interface{}
-	if s.decodeProjectionState != nil {
-		projectionState, err = s.decodeProjectionState(rawState.ProjectionState)
+	if rawState.Position == 0 {
+		// This is the fist time the projection runs so initialize the state
+		projectionState, err = s.projectionStateInit(ctx)
+		if err != nil {
+			return err
+		}
+	} else if s.projectionStateDecode != nil {
+		// Unmarshal the projection state
+		projectionState, err = s.projectionStateDecode(rawState.ProjectionState)
 		if err != nil {
 			return err
 		}

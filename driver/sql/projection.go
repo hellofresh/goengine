@@ -29,6 +29,9 @@ type (
 		ProjectionState []byte
 	}
 
+	// ProjectionStateInitializer is a func to initialize a ProjectionState.ProjectionState
+	ProjectionStateInitializer func(ctx context.Context) (interface{}, error)
+
 	// ProjectionStateEncoder is a func to marshal the ProjectionState.ProjectionState
 	ProjectionStateEncoder func(interface{}) ([]byte, error)
 
@@ -38,7 +41,7 @@ type (
 	// ProjectionStorage is an interface for handling the projection storage
 	ProjectionStorage interface {
 		// PersistState persists the state of the projection
-		PersistState(conn *sql.Conn, notification *ProjectionNotification, state ProjectionState) error
+		PersistState(conn Execer, notification *ProjectionNotification, state ProjectionState) error
 
 		// Acquire this function is used to acquire the projection and it's projectionState
 		// A projection can only be acquired once and must be released using the returned func

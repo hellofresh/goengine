@@ -3,7 +3,6 @@ package postgres
 import (
 	"context"
 	"database/sql"
-	"fmt"
 	"math"
 	"strings"
 	"sync"
@@ -17,15 +16,14 @@ import (
 // StreamProjector is a postgres projector used to execute a projection against an event stream.
 type StreamProjector struct {
 	sync.Mutex
+
+	db       *sql.DB
 	executor *internalSQL.NotificationProjector
+	storage  *streamProjectionStorage
 
-	db *sql.DB
-
-	projectionName  string
-	projectionTable string
-
-	logger                 goengine.Logger
 	projectionErrorHandler driverSQL.ProjectionErrorCallback
+
+	logger goengine.Logger
 }
 
 // NewStreamProjector creates a new projector for a projection
@@ -75,6 +73,7 @@ func NewStreamProjector(
 	executor, err := internalSQL.NewNotificationProjector(
 		db,
 		storage,
+		projection.Init,
 		stateDecoder,
 		projection.Handlers(),
 		streamProjectionEventStreamLoader(eventStore, projection.FromStream()),
@@ -86,15 +85,11 @@ func NewStreamProjector(
 	}
 
 	return &StreamProjector{
-		executor: executor,
-
-		db: db,
-
-		projectionName:         projection.Name(),
-		projectionTable:        projectionTable,
+		db:                     db,
+		executor:               executor,
+		storage:                storage,
 		projectionErrorHandler: projectionErrorHandler,
-
-		logger: logger,
+		logger:                 logger,
 	}, nil
 }
 
@@ -110,7 +105,7 @@ func (s *StreamProjector) Run(ctx context.Context) error {
 		return nil
 	}
 
-	if err := s.setupProjection(ctx); err != nil {
+	if err := s.storage.CreateProjection(ctx, s.db); err != nil {
 		return err
 	}
 
@@ -129,7 +124,7 @@ func (s *StreamProjector) RunAndListen(ctx context.Context, listener driverSQL.L
 		return nil
 	}
 
-	if err := s.setupProjection(ctx); err != nil {
+	if err := s.storage.CreateProjection(ctx, s.db); err != nil {
 		return err
 	}
 
@@ -167,20 +162,4 @@ func (s *StreamProjector) processNotification(
 		"seriously %d retries is enough! maybe it's time to fix your projection or error handling code?",
 		math.MaxInt16,
 	)
-}
-
-// setupProjection Creates the projection if none exists
-func (s *StreamProjector) setupProjection(ctx context.Context) error {
-	// Ignore duplicate inserts
-	_, err := s.db.ExecContext(
-		ctx,
-		/* #nosec */
-		fmt.Sprintf(
-			`INSERT INTO %s (name) VALUES ($1) ON CONFLICT DO NOTHING`,
-			QuoteIdentifier(s.projectionTable),
-		),
-		s.projectionName,
-	)
-
-	return err
 }
