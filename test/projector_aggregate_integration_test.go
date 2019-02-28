@@ -14,7 +14,7 @@ import (
 	"github.com/hellofresh/goengine/driver/sql"
 	driverSQL "github.com/hellofresh/goengine/driver/sql"
 	"github.com/hellofresh/goengine/driver/sql/postgres"
-	pq "github.com/hellofresh/goengine/extension/pq"
+	"github.com/hellofresh/goengine/extension/pq"
 	strategyPostgres "github.com/hellofresh/goengine/strategy/json/sql/postgres"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
@@ -288,10 +288,7 @@ func (s *aggregateProjectorTestSuite) TestRun() {
 
 func (s *aggregateProjectorTestSuite) assertAggregateProjectionStates(expectedProjections map[aggregate.ID]projectionInfo) {
 	stmt, err := s.DB().Prepare(`SELECT aggregate_id, position, state FROM agg_projections`)
-	if err != nil {
-		s.T().Fatal(err)
-		return
-	}
+	s.Require().NoError(err)
 
 	var result map[aggregate.ID]projectionInfo
 	for i := 0; i < 10; i++ {

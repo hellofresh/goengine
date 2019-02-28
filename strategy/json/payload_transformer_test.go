@@ -166,14 +166,12 @@ func TestJSONPayloadTransformer_CreatePayload(t *testing.T) {
 
 				factory := strategyJSON.NewPayloadTransformer()
 				err := factory.RegisterPayload(testCase.payloadType, testCase.payloadInitiator)
-				if !asserts.Nil(err) {
-					return
-				}
+				require.NoError(t, err)
 
-				payload, err := factory.CreatePayload(testCase.payloadType, testCase.payloadData)
+				res, err := factory.CreatePayload(testCase.payloadType, testCase.payloadData)
 
-				asserts.EqualValues(testCase.expectedData, payload)
-				asserts.Nil(err)
+				asserts.EqualValues(testCase.expectedData, res)
+				asserts.NoError(err)
 			})
 		}
 	})
@@ -204,11 +202,10 @@ func TestJSONPayloadTransformer_CreatePayload(t *testing.T) {
 		for _, testCase := range testCases {
 			t.Run(testCase.title, func(t *testing.T) {
 				factory := strategyJSON.NewPayloadTransformer()
-				payload, err := factory.CreatePayload(testCase.payloadType, testCase.payloadData)
+				res, err := factory.CreatePayload(testCase.payloadType, testCase.payloadData)
 
-				asserts := assert.New(t)
-				asserts.Equal(testCase.expectedError, err)
-				asserts.Nil(payload)
+				assert.Equal(t, testCase.expectedError, err)
+				assert.Nil(t, res)
 			})
 		}
 	})
@@ -246,9 +243,8 @@ func TestJSONPayloadTransformer_CreatePayload(t *testing.T) {
 
 				res, err := factory.CreatePayload("tests", testCase.payloadData)
 
-				asserts := assert.New(t)
-				asserts.IsType((*json.SyntaxError)(nil), err)
-				asserts.Nil(res)
+				assert.IsType(t, (*json.SyntaxError)(nil), err)
+				assert.Nil(t, res)
 			})
 		}
 	})

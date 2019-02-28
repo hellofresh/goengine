@@ -9,8 +9,6 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
-	"github.com/stretchr/testify/require"
-
 	"github.com/hellofresh/goengine"
 	"github.com/hellofresh/goengine/aggregate"
 	"github.com/hellofresh/goengine/driver/inmemory"
@@ -18,6 +16,7 @@ import (
 	"github.com/hellofresh/goengine/mocks"
 	aggregateMocks "github.com/hellofresh/goengine/mocks/aggregate"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNewRepository(t *testing.T) {
@@ -32,9 +31,8 @@ func TestNewRepository(t *testing.T) {
 			aggregateType,
 		)
 
-		asserts := assert.New(t)
-		asserts.NotNil(repo, "Expected a repository to be returned")
-		asserts.Nil(err, "Expected no error")
+		assert.NotNil(t, repo, "Expected a repository to be returned")
+		assert.NoError(t, err)
 	})
 
 	t.Run("invalid arguments", func(t *testing.T) {
@@ -123,7 +121,7 @@ func TestRepository_SaveAggregateRoot(t *testing.T) {
 		}
 		err := repo.SaveAggregateRoot(context.Background(), root)
 
-		asserts.Nil(err, "Expect no error")
+		asserts.NoError(err)
 	})
 
 	t.Run("store nothing when there are no pending events", func(t *testing.T) {
@@ -151,7 +149,6 @@ func TestRepository_SaveAggregateRoot(t *testing.T) {
 
 func TestRepository_GetAggregateRoot(t *testing.T) {
 	t.Run("load and reconstitute a AggregateRoot", func(t *testing.T) {
-		asserts := assert.New(t)
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
@@ -175,9 +172,7 @@ func TestRepository_GetAggregateRoot(t *testing.T) {
 			2,
 		)
 		messageStream, err := inmemory.NewEventStream([]goengine.Message{firstEvent, secondEvent}, []int64{1, 2})
-		if !asserts.NoError(err) {
-			return
-		}
+		require.NoError(t, err)
 
 		store := mocks.NewEventStore(ctrl)
 		aggregateTypeCalls := 0
@@ -192,7 +187,7 @@ func TestRepository_GetAggregateRoot(t *testing.T) {
 					root.EXPECT().Apply(secondEvent),
 				)
 			default:
-				asserts.Fail("unexpected type creation")
+				t.Error("unexpected type creation")
 			}
 			aggregateTypeCalls++
 			return root
@@ -225,8 +220,8 @@ func TestRepository_GetAggregateRoot(t *testing.T) {
 		// Get/Load the aggregate
 		root, err := repo.GetAggregateRoot(ctx, rootID)
 
-		asserts.NoError(err)
-		asserts.NotNil(root, "Expected a aggregate root")
+		assert.NoError(t, err)
+		assert.NotNil(t, root, "Expected a aggregate root")
 	})
 
 	t.Run("load failures", func(t *testing.T) {
@@ -260,7 +255,6 @@ func TestRepository_GetAggregateRoot(t *testing.T) {
 
 		for _, testCase := range badTestCases {
 			t.Run(testCase.title, func(t *testing.T) {
-				asserts := assert.New(t)
 				ctrl := gomock.NewController(t)
 				defer ctrl.Finish()
 
@@ -268,9 +262,7 @@ func TestRepository_GetAggregateRoot(t *testing.T) {
 				rootID := aggregate.GenerateID()
 
 				stream, err := inmemory.NewEventStream(testCase.storeMessages, make([]int64, len(testCase.storeMessages)))
-				if !asserts.NoError(err) {
-					return
-				}
+				require.NoError(t, err)
 
 				repo, store := mockRepository(ctrl)
 				store.EXPECT().Load(
@@ -284,8 +276,8 @@ func TestRepository_GetAggregateRoot(t *testing.T) {
 				// Get/Load the aggregate
 				root, err := repo.GetAggregateRoot(ctx, rootID)
 
-				asserts.Equal(testCase.expectedError, err, "Expected error")
-				asserts.Nil(root, "Expected no aggregate root")
+				assert.Equal(t, testCase.expectedError, err, "Expected error")
+				assert.Nil(t, root, "Expected no aggregate root")
 			})
 		}
 	})

@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
-
 	"github.com/hellofresh/goengine"
 	"github.com/hellofresh/goengine/mocks"
 	"github.com/stretchr/testify/assert"
@@ -37,10 +36,9 @@ func TestReadEventStream(t *testing.T) {
 
 		messages, numbers, err := goengine.ReadEventStream(stream)
 
-		if assert.NoError(t, err) {
-			assert.Equal(t, mockedMessages, messages)
-			assert.Equal(t, []int64{1, 2, 3, 4}, numbers)
-		}
+		assert.NoError(t, err)
+		assert.Equal(t, mockedMessages, messages)
+		assert.Equal(t, []int64{1, 2, 3, 4}, numbers)
 	})
 
 	t.Run("Error while iterating", func(t *testing.T) {
@@ -56,9 +54,7 @@ func TestReadEventStream(t *testing.T) {
 		messages, numbers, err := goengine.ReadEventStream(stream)
 
 		asserts := assert.New(t)
-		if asserts.Error(err) {
-			asserts.Equal(expectedError, err)
-		}
+		asserts.Equal(expectedError, err)
 		asserts.Empty(messages)
 		asserts.Empty(numbers)
 	})
@@ -86,9 +82,7 @@ func TestReadEventStream(t *testing.T) {
 		messages, numbers, err := goengine.ReadEventStream(stream)
 
 		asserts := assert.New(t)
-		if asserts.Error(err) {
-			asserts.Equal(expectedError, err)
-		}
+		asserts.Equal(expectedError, err)
 		asserts.Empty(numbers)
 		asserts.Empty(messages)
 	})

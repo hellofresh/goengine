@@ -10,12 +10,12 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
-
 	"github.com/hellofresh/goengine"
 	"github.com/hellofresh/goengine/metadata"
 	"github.com/hellofresh/goengine/mocks"
 	"github.com/hellofresh/goengine/strategy/json/sql/postgres"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNewPostgresStrategy(t *testing.T) {
@@ -39,9 +39,7 @@ func TestNewPostgresStrategy(t *testing.T) {
 
 func TestGenerateTableName(t *testing.T) {
 	strategy, err := postgres.NewSingleStreamStrategy(&mocks.MessagePayloadConverter{})
-	if err != nil {
-		t.Fatal("Strategy could not be initiated", err)
-	}
+	require.NoError(t, err)
 
 	t.Run("name conversions", func(t *testing.T) {
 		type validTestCase struct {
@@ -117,10 +115,8 @@ func TestGenerateTableName(t *testing.T) {
 			t.Run(testCase.title, func(t *testing.T) {
 				tableName, err := strategy.GenerateTableName(testCase.input)
 
-				asserts := assert.New(t)
-				if asserts.NoError(err) {
-					asserts.Equal(testCase.output, tableName)
-				}
+				assert.NoError(t, err)
+				assert.Equal(t, testCase.output, tableName)
 			})
 		}
 	})
@@ -141,9 +137,7 @@ func TestColumnNames(t *testing.T) {
 	expectedColumns := []string{"event_id", "event_name", "payload", "metadata", "created_at"}
 
 	strategy, err := postgres.NewSingleStreamStrategy(&mocks.MessagePayloadConverter{})
-	if err != nil {
-		t.Fatal("Strategy could not be initiated", err)
-	}
+	require.NoError(t, err)
 
 	t.Run("get expected columns", func(t *testing.T) {
 		cols := strategy.ColumnNames()
@@ -158,9 +152,7 @@ func TestColumnNames(t *testing.T) {
 
 func TestCreateSchema(t *testing.T) {
 	strategy, err := postgres.NewSingleStreamStrategy(&mocks.MessagePayloadConverter{})
-	if err != nil {
-		t.Fatal("Strategy could not be initiated", err)
-	}
+	require.NoError(t, err)
 
 	t.Run("output statement elements count", func(t *testing.T) {
 		cs := strategy.CreateSchema("abc")
@@ -172,13 +164,12 @@ func TestCreateSchema(t *testing.T) {
 
 func TestPrepareData(t *testing.T) {
 	t.Run("get expected columns", func(t *testing.T) {
-		asserts := assert.New(t)
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
 		pc := mocks.NewMessagePayloadConverter(ctrl)
 		messages := make([]goengine.Message, 3)
-		expectedColumns := make([]interface{}, 3*5)
+		expectedColumns := make([]interface{}, 0, 3*5)
 		for i := range messages {
 			id := goengine.GenerateUUID()
 			payload := []byte(fmt.Sprintf(`{"Name":"%d","Balance":0}`, i))
@@ -191,9 +182,7 @@ func TestPrepareData(t *testing.T) {
 			pc.EXPECT().ConvertPayload(payload).Return(payloadType, payload, nil).AnyTimes()
 
 			metaJSON, err := json.Marshal(meta)
-			if !asserts.NoError(err) {
-				return
-			}
+			require.NoError(t, err)
 
 			expectedColumns = append(
 				expectedColumns,
@@ -206,18 +195,15 @@ func TestPrepareData(t *testing.T) {
 		}
 
 		strategy, err := postgres.NewSingleStreamStrategy(pc)
-		if asserts.NoError(err) {
-			return
-		}
+		require.NoError(t, err)
 
 		data, err := strategy.PrepareData(messages)
 
-		asserts.Equal(expectedColumns, data)
-		asserts.Equal(nil, err)
+		assert.NoError(t, err)
+		assert.Equal(t, expectedColumns, data)
 	})
 
 	t.Run("Converter error", func(t *testing.T) {
-		asserts := assert.New(t)
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
@@ -234,14 +220,15 @@ func TestPrepareData(t *testing.T) {
 			),
 		}
 
-		strategy, err := postgres.NewSingleStreamStrategy(&mocks.MessagePayloadConverter{})
-		if asserts.NoError(err) {
-			return
-		}
+		pc := mocks.NewMessagePayloadConverter(ctrl)
+		pc.EXPECT().ConvertPayload(payload).Return("PayloadFirst", nil, expectedErr).Times(1)
+
+		strategy, err := postgres.NewSingleStreamStrategy(pc)
+		require.NoError(t, err)
 
 		data, err := strategy.PrepareData(messages)
 
-		asserts.Error(expectedErr, err)
-		asserts.Nil(data)
+		assert.Error(t, expectedErr, err)
+		assert.Nil(t, data)
 	})
 }

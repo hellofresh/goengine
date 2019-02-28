@@ -42,15 +42,15 @@ func TestEventStream(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.title, func(t *testing.T) {
-			asserts := assert.New(t)
-
 			stream, err := inmemory.NewEventStream(testCase.messages, testCase.messageNumbers)
-			require.NoError(t, err)
+
+			asserts := assert.New(t)
+			asserts.NoError(err)
 			asserts.NotNil(stream)
 
 			messages, messageNumbers, err := goengine.ReadEventStream(stream)
-			require.NoError(t, err)
-			require.NoError(t, stream.Err(), "no exception was expected while reading the stream")
+			asserts.NoError(err)
+			asserts.NoError(stream.Err(), "no exception was expected while reading the stream")
 
 			asserts.Equal(testCase.messages, messages)
 			asserts.Equal(testCase.messageNumbers, messageNumbers)
@@ -67,29 +67,21 @@ func TestEventStream(t *testing.T) {
 	}
 
 	t.Run("invalid arguments", func(t *testing.T) {
-		asserts := assert.New(t)
-
 		stream, err := inmemory.NewEventStream(nil, []int64{1})
-		if asserts.Error(err) {
-			asserts.Equal(err, inmemory.ErrMessageNumberCountMismatch)
-		}
-		asserts.Nil(stream)
+
+		assert.Equal(t, err, inmemory.ErrMessageNumberCountMismatch)
+		assert.Nil(t, stream)
 	})
 
 	t.Run("iteration must start before a message can be fetched", func(t *testing.T) {
-		asserts := assert.New(t)
-
 		stream, err := inmemory.NewEventStream([]goengine.Message{}, []int64{})
-		if !asserts.NoError(err) {
-			return
-		}
-		asserts.NotNil(stream)
+		require.NoError(t, err)
 
 		msg, msgNumber, err := stream.Message()
+
+		asserts := assert.New(t)
+		asserts.Equal(inmemory.ErrEventStreamNotStarted, err)
 		asserts.Nil(msg)
 		asserts.Empty(msgNumber)
-		if asserts.Error(err) {
-			asserts.Equal(inmemory.ErrEventStreamNotStarted, err)
-		}
 	})
 }

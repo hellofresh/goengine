@@ -10,9 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang/mock/gomock"
-
 	sqlmock "github.com/DATA-DOG/go-sqlmock"
+	"github.com/golang/mock/gomock"
 	"github.com/hellofresh/goengine"
 	driverSQL "github.com/hellofresh/goengine/driver/sql"
 	"github.com/hellofresh/goengine/driver/sql/internal/test"
@@ -99,9 +98,7 @@ func TestEventStore_Create(t *testing.T) {
 		store := createEventStore(t, db, &mocks.MessagePayloadConverter{})
 
 		err := store.Create(context.Background(), "orders")
-		if assert.Error(t, err) {
-			assert.Equal(t, expectedError, err)
-		}
+		assert.Equal(t, expectedError, err)
 	})
 	test.RunWithMockDB(t, "Empty stream name", func(t *testing.T, db *sql.DB, dbMock sqlmock.Sqlmock) {
 		store := createEventStore(t, db, &mocks.MessagePayloadConverter{})
@@ -119,9 +116,7 @@ func TestEventStore_Create(t *testing.T) {
 		store := createEventStore(t, db, &mocks.MessagePayloadConverter{})
 
 		err := store.Create(context.Background(), "orders")
-		if assert.Error(t, err) {
-			assert.Equal(t, postgres.ErrTableAlreadyExists, err)
-		}
+		assert.Equal(t, postgres.ErrTableAlreadyExists, err)
 	})
 
 	test.RunWithMockDB(t, "No queries in strategy", func(t *testing.T, db *sql.DB, dbMock sqlmock.Sqlmock) {
@@ -135,14 +130,10 @@ func TestEventStore_Create(t *testing.T) {
 		strategy.EXPECT().CreateSchema("events_orders").Return([]string{}).AnyTimes()
 
 		store, err := postgres.NewEventStore(strategy, db, &mockSQL.MessageFactory{}, nil)
-		if !asserts.NoError(err) {
-			t.Fail()
-		}
+		require.NoError(t, err)
 
 		err = store.Create(context.Background(), "orders")
-		if asserts.Error(err) {
-			asserts.Equal(postgres.ErrNoCreateTableQueries, err)
-		}
+		asserts.Equal(postgres.ErrNoCreateTableQueries, err)
 	})
 }
 
@@ -241,15 +232,10 @@ func TestEventStore_AppendTo(t *testing.T) {
 		persistenceStrategy.EXPECT().ColumnNames().Return([]string{"event_id", "event_name"}).AnyTimes()
 
 		store, err := postgres.NewEventStore(persistenceStrategy, db, &mockSQL.MessageFactory{}, nil)
-		asserts := assert.New(t)
-		if !asserts.NoError(err) {
-			t.Fail()
-		}
+		require.NoError(t, err)
 
 		err = store.AppendTo(context.Background(), "orders", messages)
-		if asserts.Error(err) {
-			asserts.Equal(expectedError, err)
-		}
+		assert.Equal(t, expectedError, err)
 	})
 }
 
@@ -323,7 +309,8 @@ func TestEventStore_Load(t *testing.T) {
 					testCase.count,
 					testCase.matcher(),
 				)
-				require.NoError(t, err)
+
+				assert.NoError(t, err)
 				assert.Equal(t, expectedStream, stream)
 			})
 		}
@@ -371,9 +358,8 @@ func TestEventStore_Load(t *testing.T) {
 				require.NoError(t, err)
 
 				stream, err := store.Load(context.Background(), "event_stream", 1, nil, nil)
-				if assert.Error(t, err) {
-					assert.Equal(t, testCase.expectedError, err)
-				}
+
+				assert.Equal(t, testCase.expectedError, err)
 				assert.Nil(t, stream)
 			})
 		}
@@ -408,17 +394,11 @@ func mockMessages(ctrl *gomock.Controller) (*mocks.MessagePayloadConverter, []go
 }
 
 func createEventStore(t *testing.T, db *sql.DB, converter goengine.MessagePayloadConverter) *postgres.EventStore {
-	asserts := assert.New(t)
-
 	persistenceStrategy, err := strategyPostgres.NewSingleStreamStrategy(converter)
-	if !asserts.NoError(err) {
-		t.Fail()
-	}
+	require.NoError(t, err)
 
 	store, err := postgres.NewEventStore(persistenceStrategy, db, &mockSQL.MessageFactory{}, nil)
-	if !asserts.NoError(err) {
-		t.Fail()
-	}
+	require.NoError(t, err)
 
 	return store
 }
