@@ -5,6 +5,7 @@ package inmemory_test
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/hellofresh/goengine"
 	"github.com/hellofresh/goengine/driver/inmemory"
@@ -92,6 +93,7 @@ func TestEventStore_Load(t *testing.T) {
 		},
 		"empty": {},
 	}
+
 	var intTwo uint = 2
 	testCases := []validTestCase{
 		{
@@ -165,19 +167,19 @@ func TestEventStore_Load(t *testing.T) {
 
 			stream, err := store.Load(ctx, testCase.loadFrom, 1, testCase.loadCount, testCase.matcher)
 			asserts := assert.New(t)
-
-			if asserts.Nil(err) {
-				defer stream.Close()
-
-				messages, messageNumbers, err := goengine.ReadEventStream(stream)
-				if !asserts.NoError(err) {
-					asserts.FailNow("no exception was expected while reading the stream")
-				}
-
-				asserts.Equal(testCase.expectedEvents, messages)
-				asserts.Equal(testCase.expectedNumbers, messageNumbers)
-				asserts.Len(loggerHooks.Entries, 0)
+			if !asserts.Nil(err) {
+				return
 			}
+			defer stream.Close()
+
+			messages, messageNumbers, err := goengine.ReadEventStream(stream)
+			if !asserts.NoError(err) {
+				asserts.FailNow("no exception was expected while reading the stream")
+			}
+
+			asserts.Equal(testCase.expectedEvents, messages)
+			asserts.Equal(testCase.expectedNumbers, messageNumbers)
+			asserts.Len(loggerHooks.Entries, 0)
 		})
 	}
 
@@ -278,9 +280,6 @@ func createEventStoreWithStream(t *testing.T, name goengine.StreamName) (*inmemo
 	return store, loggerHooks
 }
 
-func mockMessage(metadataInfo map[string]interface{}) *mocks.Message {
-	msg := &mocks.Message{}
-	msg.On("Metadata").Return(metadata.FromMap(metadataInfo))
-
-	return msg
+func mockMessage(metadataInfo map[string]interface{}) *mocks.DummyMessage {
+	return mocks.NewDummyMessage(goengine.UUID{}, nil, metadata.FromMap(metadataInfo), time.Now())
 }

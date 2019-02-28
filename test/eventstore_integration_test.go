@@ -355,7 +355,7 @@ func (s *eventStoreTestSuite) generateAppendMessages(aggregateIDs []goengine.UUI
 			payload := &payloadData{Name: "alice", Balance: i * 11}
 			messages = append(
 				messages,
-				s.mockAppendMessage(id, payload, meta, createdAt),
+				mocks.NewDummyMessage(id, payload, meta, createdAt),
 			)
 		}
 	}
@@ -368,13 +368,4 @@ func (s *eventStoreTestSuite) appendMeta(metadataInfo map[string]interface{}) me
 		meta = metadata.WithValue(meta, key, val)
 	}
 	return meta
-}
-
-func (s *eventStoreTestSuite) mockAppendMessage(id goengine.UUID, payload interface{}, meta interface{}, time time.Time) *mocks.Message {
-	m := &mocks.Message{}
-	m.On("UUID").Return(id)
-	m.On("Payload").Return(payload)
-	m.On("Metadata").Return(meta)
-	m.On("CreatedAt").Return(time)
-	return m
 }

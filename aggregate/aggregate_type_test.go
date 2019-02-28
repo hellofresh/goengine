@@ -7,18 +7,16 @@ import (
 
 	"github.com/hellofresh/goengine"
 	"github.com/hellofresh/goengine/aggregate"
-	"github.com/hellofresh/goengine/mocks"
+	mocks "github.com/hellofresh/goengine/mocks/aggregate"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestType(t *testing.T) {
 	mockInitiator := func() aggregate.Root {
-		return &mocks.AggregateRoot{}
+		return &mocks.Root{}
 	}
 
 	t.Run("Create a new type", func(t *testing.T) {
-		t.Parallel()
-
 		aggregateType, err := aggregate.NewType("mock", mockInitiator)
 
 		asserts := assert.New(t)
@@ -28,7 +26,7 @@ func TestType(t *testing.T) {
 		asserts.NotEmpty(aggregateType, "A aggregate.Type should be returned")
 		asserts.Equal("mock", aggregateType.String(), "Expected name to be set")
 		asserts.True(
-			aggregateType.IsImplementedBy(&mocks.AggregateRoot{}),
+			aggregateType.IsImplementedBy(&mocks.Root{}),
 			"Expected the same aggregate type to be valid",
 		)
 
@@ -38,11 +36,11 @@ func TestType(t *testing.T) {
 		}{
 			{
 				title: "another aggregate is not of this type",
-				value: &mocks.AnotherAggregateRoot{},
+				value: &mocks.AnotherRoot{},
 			},
 			{
 				title: "not a reference is not of this type",
-				value: mocks.AggregateRoot{},
+				value: mocks.Root{},
 			},
 			{
 				title: "nil is not of this type",
@@ -98,7 +96,7 @@ func TestType(t *testing.T) {
 				expectedError: aggregate.ErrInitiatorMustReturnRoot,
 				name:          "init",
 				initiator: func() aggregate.Root {
-					return (*mocks.AggregateRoot)(nil)
+					return (*mocks.Root)(nil)
 				},
 			},
 		}

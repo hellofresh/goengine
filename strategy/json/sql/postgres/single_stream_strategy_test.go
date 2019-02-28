@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang/mock/gomock"
+
 	"github.com/hellofresh/goengine"
 	"github.com/hellofresh/goengine/metadata"
 	"github.com/hellofresh/goengine/mocks"
@@ -28,7 +30,7 @@ func TestNewPostgresStrategy(t *testing.T) {
 	})
 
 	t.Run("error on no converter provided", func(t *testing.T) {
-		strategy, err := postgres.NewSingleStreamStrategy(&mocks.PayloadConverter{})
+		strategy, err := postgres.NewSingleStreamStrategy(&mocks.MessagePayloadConverter{})
 
 		assert.IsTypef(t, &postgres.SingleStreamStrategy{}, strategy, "")
 		assert.Nil(t, err)
@@ -36,7 +38,7 @@ func TestNewPostgresStrategy(t *testing.T) {
 }
 
 func TestGenerateTableName(t *testing.T) {
-	strategy, err := postgres.NewSingleStreamStrategy(&mocks.PayloadConverter{})
+	strategy, err := postgres.NewSingleStreamStrategy(&mocks.MessagePayloadConverter{})
 	if err != nil {
 		t.Fatal("Strategy could not be initiated", err)
 	}
@@ -138,7 +140,7 @@ func TestGenerateTableName(t *testing.T) {
 func TestColumnNames(t *testing.T) {
 	expectedColumns := []string{"event_id", "event_name", "payload", "metadata", "created_at"}
 
-	strategy, err := postgres.NewSingleStreamStrategy(&mocks.PayloadConverter{})
+	strategy, err := postgres.NewSingleStreamStrategy(&mocks.MessagePayloadConverter{})
 	if err != nil {
 		t.Fatal("Strategy could not be initiated", err)
 	}
@@ -155,7 +157,7 @@ func TestColumnNames(t *testing.T) {
 }
 
 func TestCreateSchema(t *testing.T) {
-	strategy, err := postgres.NewSingleStreamStrategy(&mocks.PayloadConverter{})
+	strategy, err := postgres.NewSingleStreamStrategy(&mocks.MessagePayloadConverter{})
 	if err != nil {
 		t.Fatal("Strategy could not be initiated", err)
 	}
@@ -171,8 +173,10 @@ func TestCreateSchema(t *testing.T) {
 func TestPrepareData(t *testing.T) {
 	t.Run("get expected columns", func(t *testing.T) {
 		asserts := assert.New(t)
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
 
-		pc := &mocks.PayloadConverter{}
+		pc := mocks.NewMessagePayloadConverter(ctrl)
 		messages := make([]goengine.Message, 3)
 		expectedColumns := make([]interface{}, 3*5)
 		for i := range messages {
@@ -182,9 +186,9 @@ func TestPrepareData(t *testing.T) {
 			meta := metadata.FromMap(map[string]interface{}{"type": "m", "version": i})
 			createdAt := time.Now()
 
-			messages[i] = mockMessage(id, payload, meta, createdAt)
+			messages[i] = mocks.NewDummyMessage(id, payload, meta, createdAt)
 
-			pc.On("ConvertPayload", payload).Return(payloadType, payload, nil)
+			pc.EXPECT().ConvertPayload(payload).Return(payloadType, payload, nil).AnyTimes()
 
 			metaJSON, err := json.Marshal(meta)
 			if !asserts.NoError(err) {
@@ -214,13 +218,15 @@ func TestPrepareData(t *testing.T) {
 
 	t.Run("Converter error", func(t *testing.T) {
 		asserts := assert.New(t)
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
 
 		expectedErr := errors.New("converter error")
 
 		payload := []byte(`{"Name":"alice","Balance":0}`)
 
 		messages := []goengine.Message{
-			mockMessage(
+			mocks.NewDummyMessage(
 				goengine.GenerateUUID(),
 				payload,
 				metadata.FromMap(map[string]interface{}{"type": "m1", "version": 1}),
@@ -228,10 +234,7 @@ func TestPrepareData(t *testing.T) {
 			),
 		}
 
-		pc := &mocks.PayloadConverter{}
-		pc.On("ConvertPayload", payload).Return("PayloadFirst", nil, expectedErr)
-
-		strategy, err := postgres.NewSingleStreamStrategy(pc)
+		strategy, err := postgres.NewSingleStreamStrategy(&mocks.MessagePayloadConverter{})
 		if asserts.NoError(err) {
 			return
 		}
@@ -241,13 +244,4 @@ func TestPrepareData(t *testing.T) {
 		asserts.Error(expectedErr, err)
 		asserts.Nil(data)
 	})
-}
-
-func mockMessage(id goengine.UUID, payload []byte, meta interface{}, time time.Time) *mocks.Message {
-	m := &mocks.Message{}
-	m.On("UUID").Return(id)
-	m.On("Payload").Return(payload)
-	m.On("Metadata").Return(meta)
-	m.On("CreatedAt").Return(time)
-	return m
 }

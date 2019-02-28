@@ -5,6 +5,9 @@ package generic_test
 import (
 	"context"
 	"testing"
+	"time"
+
+	"github.com/golang/mock/gomock"
 
 	"github.com/hellofresh/goengine"
 	"github.com/hellofresh/goengine/driver/generic"
@@ -12,19 +15,22 @@ import (
 	"github.com/hellofresh/goengine/metadata"
 	"github.com/hellofresh/goengine/mocks"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 )
 
 func TestNewQueryExecutor(t *testing.T) {
 	t.Run("Create Query Executor", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
 		store := &mocks.EventStore{}
-		registry := &mocks.PayloadResolver{}
-		query := &mocks.Query{}
-		query.On("Handlers").Return(map[string]goengine.MessageHandler{
+		registry := mocks.NewMessagePayloadResolver(ctrl)
+
+		query := mocks.NewQuery(ctrl)
+		query.EXPECT().Handlers().Return(map[string]goengine.MessageHandler{
 			"my_event": func(ctx context.Context, rawState interface{}, message goengine.Message) (interface{}, error) {
 				return nil, nil
 			},
-		})
+		}).Times(1)
 
 		executor, err := generic.NewQueryExecutor(store, "test", registry, query, 100)
 
@@ -47,7 +53,7 @@ func TestNewQueryExecutor(t *testing.T) {
 			{
 				"eventStore may not be nil",
 				nil,
-				&mocks.PayloadResolver{},
+				&mocks.MessagePayloadResolver{},
 				"event_stream",
 				&mocks.Query{},
 				"store",
@@ -63,7 +69,7 @@ func TestNewQueryExecutor(t *testing.T) {
 			{
 				"query may not be nil",
 				&mocks.EventStore{},
-				&mocks.PayloadResolver{},
+				&mocks.MessagePayloadResolver{},
 				"event_stream",
 				nil,
 				"query",
@@ -104,6 +110,9 @@ func TestQueryExecutor_Run(t *testing.T) {
 	}
 
 	t.Run("Run a Query", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
 		expectedState := myState{
 			count:   3,
 			numbers: []int{1, 2, 3},
@@ -136,21 +145,19 @@ func TestQueryExecutor_Run(t *testing.T) {
 		ctx := context.Background()
 
 		queryBatchSize := uint(2)
-		store := &mocks.EventStore{}
-		store.On("Load", ctx, streamName, int64(1), &queryBatchSize, metadata.NewMatcher()).
-			Once().
-			Return(eventBatch1, nil)
-		store.On("Load", ctx, streamName, int64(2), &queryBatchSize, metadata.NewMatcher()).
-			Once().
-			Return(eventBatch2, nil)
+		store := mocks.NewEventStore(ctrl)
+		store.EXPECT().Load(ctx, streamName, int64(1), &queryBatchSize, metadata.NewMatcher()).
+			Return(eventBatch1, nil).Times(1)
+		store.EXPECT().Load(ctx, streamName, int64(2), &queryBatchSize, metadata.NewMatcher()).
+			Return(eventBatch2, nil).Times(1)
 
-		registry := &mocks.PayloadResolver{}
-		registry.On("ResolveName", mock.AnythingOfType("myEvent")).Return("my_event", nil)
-		registry.On("ResolveName", mock.AnythingOfType("mySecondEvent")).Return("second_event", nil)
+		registry := mocks.NewMessagePayloadResolver(ctrl)
+		registry.EXPECT().ResolveName(gomock.AssignableToTypeOf(myEvent{})).Return("my_event", nil).AnyTimes()
+		registry.EXPECT().ResolveName(gomock.AssignableToTypeOf(mySecondEvent{})).Return("second_event", nil).AnyTimes()
 
-		query := &mocks.Query{}
-		query.On("Init", ctx).Once().Return(myState{}, nil)
-		query.On("Handlers").Times(2).Return(map[string]goengine.MessageHandler{
+		query := mocks.NewQuery(ctrl)
+		query.EXPECT().Init(ctx).Return(myState{}, nil).Times(1)
+		query.EXPECT().Handlers().Return(map[string]goengine.MessageHandler{
 			"my_event": func(ctx context.Context, rawState interface{}, message goengine.Message) (interface{}, error) {
 				state := rawState.(myState)
 				state.count++
@@ -171,7 +178,7 @@ func TestQueryExecutor_Run(t *testing.T) {
 
 				return state, nil
 			},
-		})
+		}).MinTimes(1)
 
 		executor, err := generic.NewQueryExecutor(store, streamName, registry, query, queryBatchSize)
 		if !asserts.NoError(err) {
@@ -185,15 +192,11 @@ func TestQueryExecutor_Run(t *testing.T) {
 	})
 }
 
-func mockMessageWithPayload(payload interface{}, metadataInfo map[string]interface{}) *mocks.Message {
+func mockMessageWithPayload(payload interface{}, metadataInfo map[string]interface{}) *mocks.DummyMessage {
 	meta := metadata.New()
 	for key, val := range metadataInfo {
 		meta = metadata.WithValue(meta, key, val)
 	}
 
-	msg := &mocks.Message{}
-	msg.On("Metadata").Return(meta)
-	msg.On("Payload").Return(payload)
-
-	return msg
+	return mocks.NewDummyMessage(goengine.UUID{}, payload, metadata.FromMap(metadataInfo), time.Now())
 }
