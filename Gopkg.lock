@@ -18,6 +18,17 @@
   version = "v1.1.0"
 
 [[projects]]
+  digest = "1:f666fe2f09cc621ab3505ce7cd6437dfb01c4d2ace1ac3fd6b550bcf44663e53"
+  name = "github.com/golang/mock"
+  packages = [
+    "mockgen",
+    "mockgen/model",
+  ]
+  pruneopts = "UT"
+  revision = "51421b967af1f557f93a59e0057aaf15ca02e29c"
+  version = "v1.2.0"
+
+[[projects]]
   digest = "1:3a26588bc48b96825977c1b3df964f8fd842cd6860cc26370588d3563433cf11"
   name = "github.com/google/uuid"
   packages = ["."]
@@ -85,17 +96,6 @@
   version = "v1.2.2"
 
 [[projects]]
-  branch = "master"
-  digest = "1:8fea6af94c992098dd130cd73bf977739ac7124537965251e3de79381b0e35f1"
-  name = "github.com/vektra/mockery"
-  packages = [
-    "cmd/mockery",
-    "mockery",
-  ]
-  pruneopts = "UT"
-  revision = "2a9162cbfb7a0f9094ed6f765d212a5ddee000d3"
-
-[[projects]]
   digest = "1:3c1a69cdae3501bf75e76d0d86dc6f2b0a7421bc205c0cb7b96b19eed464a34d"
   name = "go.uber.org/atomic"
   packages = ["."]
@@ -145,26 +145,12 @@
   pruneopts = "UT"
   revision = "98c5dad5d1a0e8a73845ecc8897d0bd56586511d"
 
-[[projects]]
-  branch = "master"
-  digest = "1:02bfebf263d1e285a24c804c87abe5bbe1a88d0da4496256524a2482adeb5a97"
-  name = "golang.org/x/tools"
-  packages = [
-    "go/ast/astutil",
-    "go/buildutil",
-    "go/internal/cgo",
-    "go/loader",
-    "imports",
-    "internal/fastwalk",
-  ]
-  pruneopts = "UT"
-  revision = "3c07937fe18c27668fd78bbaed3d6b8b39e202ea"
-
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
     "github.com/DATA-DOG/go-sqlmock",
+    "github.com/golang/mock/mockgen",
     "github.com/google/uuid",
     "github.com/lib/pq",
     "github.com/pkg/errors",
@@ -174,7 +160,6 @@
     "github.com/stretchr/testify/mock",
     "github.com/stretchr/testify/require",
     "github.com/stretchr/testify/suite",
-    "github.com/vektra/mockery/cmd/mockery",
     "go.uber.org/zap",
   ]
   solver-name = "gps-cdcl"
