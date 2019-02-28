@@ -1,6 +1,7 @@
 run:
   build-tags:
     - unit
+    - integration
   skip-files:
     - driver/inmemory/matcher_gen.go
 
