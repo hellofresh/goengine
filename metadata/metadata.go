@@ -1,6 +1,12 @@
 package metadata
 
-import "encoding/json"
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+
+	"github.com/pkg/errors"
+)
 
 // Metadata is an immutable map[string]interface{} implementation
 type Metadata interface {
@@ -117,12 +123,97 @@ func (j JSONMetadata) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON unmarshal the json into Metdadata
 func (j *JSONMetadata) UnmarshalJSON(data []byte) error {
-	var valueMap map[string]interface{}
-	err := json.Unmarshal(data, &valueMap)
+	dec := json.NewDecoder(bytes.NewReader(data))
+	if !dec.More() {
+		j.Metadata = New()
+		return nil
+	}
+
+	t, err := dec.Token()
 	if err != nil {
 		return err
 	}
+	if t != json.Delim('{') {
+		return errors.New("failed to parse metadata an object was expected")
+	}
 
-	j.Metadata = FromMap(valueMap)
+	metadata := New()
+	var (
+		asKey = true
+		key   string
+	)
+	for dec.More() {
+		t, err := dec.Token()
+		if err != nil {
+			fmt.Println("token")
+			return err
+		}
+
+		if asKey {
+			key = t.(string)
+			asKey = false
+			continue
+		}
+
+		switch t {
+		case json.Delim('{'):
+			var (
+				vAsKey = true
+				objKey string
+				obj    = map[string]interface{}{}
+			)
+			for dec.More() {
+				if vAsKey {
+					v, err := dec.Token()
+					if err != nil {
+						fmt.Println("token")
+						return err
+					}
+
+					objKey = v.(string)
+					vAsKey = false
+					continue
+				}
+
+				var v interface{}
+				if err := dec.Decode(&v); err != nil {
+					fmt.Println("innerToken")
+					return err
+				}
+
+				obj[objKey] = v
+				vAsKey = true
+			}
+
+			// Discard '}'
+			_, err := dec.Token()
+			if err != nil {
+				return err
+			}
+			metadata = WithValue(metadata, key, obj)
+		case json.Delim('['):
+			var arr []interface{}
+			for dec.More() {
+				var v interface{}
+				if err := dec.Decode(&v); err != nil {
+					return err
+				}
+				arr = append(arr, v)
+			}
+
+			// Discard ']'
+			_, err := dec.Token()
+			if err != nil {
+				return err
+			}
+
+			metadata = WithValue(metadata, key, arr)
+		default:
+			metadata = WithValue(metadata, key, t)
+		}
+		asKey = true
+	}
+
+	j.Metadata = metadata
 	return nil
 }

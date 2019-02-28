@@ -172,6 +172,30 @@ var jsonTestCases = []struct {
 			"another": "value"
 		}`,
 	},
+	{
+		"metadata with 'complex' json",
+		func() metadata.Metadata {
+			m := metadata.New()
+			m = metadata.WithValue(m, "test", nil)
+			m = metadata.WithValue(m, "another", "value")
+			m = metadata.WithValue(m, "arr", []interface{}{"a", "b", "c"})
+			m = metadata.WithValue(m, "arrInArr", []interface{}{"a", []interface{}{"b"}})
+			m = metadata.WithValue(m, "obj", map[string]interface{}{"a": float64(1)})
+			m = metadata.WithValue(m, "objInObj", map[string]interface{}{
+				"a": float64(1),
+				"b": map[string]interface{}{"a": float64(2)},
+			})
+			return m
+		},
+		`{
+			"test": null,
+			"another": "value",
+			"arr": [ "a", "b", "c" ],
+			"arrInArr": [ "a", [ "b" ] ],
+			"obj": { "a": 1 },
+			"objInObj": { "a": 1, "b": {"a": 2} }
+		}`,
+	},
 }
 
 func TestMetadata_MarshalJSON(t *testing.T) {
@@ -212,8 +236,22 @@ func TestJSONMetadata_UnmarshalJSON(t *testing.T) {
 
 			asserts := assert.New(t)
 			// Need to use AsMap otherwise we can have inconsistent tests results.
-			asserts.Equal(testCase.metadata().AsMap(), m.Metadata.AsMap())
-			asserts.NoError(err)
+			if asserts.NoError(err) {
+				asserts.Equal(testCase.metadata().AsMap(), m.Metadata.AsMap())
+			}
 		})
+	}
+}
+
+func BenchmarkJSONMetadata_UnmarshalJSON(b *testing.B) {
+	payload := []byte(`{"_aggregate_id": "b9ebca7a-c1eb-40dd-94a4-fac7c5e84fb5", "_aggregate_type": "bank_account", "_aggregate_version": 1}`)
+
+	b.ResetTimer()
+	for i := 0; i < 1; i++ {
+		var m metadata.JSONMetadata
+		err := json.Unmarshal(payload, &m)
+		if err != nil {
+			b.Fail()
+		}
 	}
 }
