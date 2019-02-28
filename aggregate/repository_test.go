@@ -8,25 +8,26 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/require"
+
 	"github.com/hellofresh/goengine"
 	"github.com/hellofresh/goengine/aggregate"
 	"github.com/hellofresh/goengine/driver/inmemory"
 	"github.com/hellofresh/goengine/metadata"
 	"github.com/hellofresh/goengine/mocks"
+	aggregateMocks "github.com/hellofresh/goengine/mocks/aggregate"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
-	"github.com/stretchr/testify/require"
 )
 
 func TestNewRepository(t *testing.T) {
-	eventStore := &mocks.EventStore{}
 	aggregateType, _ := aggregate.NewType("mock", func() aggregate.Root {
-		return &mocks.AggregateRoot{}
+		return &aggregateMocks.Root{}
 	})
 
 	t.Run("create a new repository", func(t *testing.T) {
 		repo, err := aggregate.NewRepository(
-			eventStore,
+			&mocks.EventStore{},
 			"event_stream",
 			aggregateType,
 		)
@@ -55,14 +56,14 @@ func TestNewRepository(t *testing.T) {
 			},
 			{
 				"requires a stream name",
-				eventStore,
+				&mocks.EventStore{},
 				"",
 				aggregateType,
 				goengine.InvalidArgumentError("streamName"),
 			},
 			{
 				"requires a aggregate type",
-				eventStore,
+				&mocks.EventStore{},
 				"event_stream",
 				nil,
 				goengine.InvalidArgumentError("aggregateType"),
@@ -87,22 +88,34 @@ func TestNewRepository(t *testing.T) {
 
 func TestRepository_SaveAggregateRoot(t *testing.T) {
 	t.Run("store any pending events", func(t *testing.T) {
-		ctx := context.Background()
+		asserts := assert.New(t)
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
 
 		rootID := aggregate.GenerateID()
-
-		root := &mocks.AggregateRoot{}
-		root.On("AggregateID").Return(rootID)
-		root.On("Apply", mock.AnythingOfType("*aggregate.Changed"))
-
-		repo, store := mockRepository()
-		store.On("AppendTo", ctx, mock.Anything, mock.Anything).Return(nil)
-
-		// Record the events
 		events := []struct{ order int }{
 			{order: 1},
 			{order: 2},
 		}
+
+		root := aggregateMocks.NewRoot(ctrl)
+		root.EXPECT().AggregateID().Return(rootID).AnyTimes()
+		root.EXPECT().Apply(gomock.AssignableToTypeOf(&aggregate.Changed{})).Times(2)
+
+		repo, store := mockRepository(ctrl)
+		store.EXPECT().AppendTo(gomock.Any(), gomock.Any(), gomock.AssignableToTypeOf([]goengine.Message{})).Return(nil).
+			Do(func(_ context.Context, _ goengine.StreamName, streamEvents []goengine.Message) {
+				for i, msg := range streamEvents {
+					msgMeta := msg.Metadata()
+
+					asserts.Equalf(events[i], msg.Payload(), "Expect payload to equal event %d", i)
+					asserts.Equal(rootID, msgMeta.Value(aggregate.IDKey))
+					asserts.Equal("mock", msgMeta.Value(aggregate.TypeKey))
+					asserts.Equal(uint(i+1), msgMeta.Value(aggregate.VersionKey))
+				}
+			}).Times(1)
+
+		// Record the events
 		for _, event := range events {
 			require.NoError(t,
 				aggregate.RecordChange(root, event),
@@ -110,51 +123,27 @@ func TestRepository_SaveAggregateRoot(t *testing.T) {
 		}
 		err := repo.SaveAggregateRoot(context.Background(), root)
 
-		asserts := assert.New(t)
 		asserts.Nil(err, "Expect no error")
-		store.AssertExpectations(t)
-
-		calls := mocks.FetchFuncCalls(store.Calls, "AppendTo")
-		if !asserts.Len(calls, 1) {
-			return
-		}
-
-		call := calls[0]
-		if !asserts.IsType(
-			([]goengine.Message)(nil),
-			call.Arguments[2],
-			"Expected AppendTo to be called with the pending Changes",
-		) {
-			return
-		}
-
-		messages := call.Arguments[2].([]goengine.Message)
-		for i, msg := range messages {
-			msgMeta := msg.Metadata()
-
-			asserts.Equalf(events[i], msg.Payload(), "Expect payload to equal event %d", i)
-			asserts.Equal(rootID, msgMeta.Value(aggregate.IDKey))
-			asserts.Equal("mock", msgMeta.Value(aggregate.TypeKey))
-			asserts.Equal(uint(i+1), msgMeta.Value(aggregate.VersionKey))
-		}
 	})
 
 	t.Run("store nothing when there are no pending events", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
 		ctx := context.Background()
 
-		repo, store := mockRepository()
-		store.On("AppendTo", ctx, mock.Anything, mock.Anything).Return(nil)
-
-		err := repo.SaveAggregateRoot(ctx, &mocks.AggregateRoot{})
+		repo, _ := mockRepository(ctrl)
+		err := repo.SaveAggregateRoot(ctx, aggregateMocks.NewRoot(ctrl))
 
 		assert.Nil(t, err, "Expect no error")
-		store.AssertNotCalled(t, "AppendTo", ctx, mock.Anything, mock.Anything)
 	})
 
 	t.Run("reject aggregates of a different type", func(t *testing.T) {
-		repo, _ := mockRepository()
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
 
-		err := repo.SaveAggregateRoot(context.Background(), &mocks.AnotherAggregateRoot{})
+		repo, _ := mockRepository(ctrl)
+		err := repo.SaveAggregateRoot(context.Background(), aggregateMocks.NewAnotherRoot(ctrl))
 
 		assert.Equal(t, aggregate.ErrUnsupportedAggregateType, err)
 	})
@@ -163,6 +152,9 @@ func TestRepository_SaveAggregateRoot(t *testing.T) {
 func TestRepository_GetAggregateRoot(t *testing.T) {
 	t.Run("load and reconstitute a AggregateRoot", func(t *testing.T) {
 		asserts := assert.New(t)
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
 		ctx := context.Background()
 		rootID := aggregate.GenerateID()
 
@@ -182,45 +174,47 @@ func TestRepository_GetAggregateRoot(t *testing.T) {
 			time.Now().UTC(),
 			2,
 		)
-		eventStream := []*aggregate.Changed{firstEvent, secondEvent}
 		messageStream, err := inmemory.NewEventStream([]goengine.Message{firstEvent, secondEvent}, []int64{1, 2})
 		if !asserts.NoError(err) {
 			return
 		}
 
-		store := &mocks.EventStore{}
+		store := mocks.NewEventStore(ctrl)
+		aggregateTypeCalls := 0
 		aggregateType, _ := aggregate.NewType("mock", func() aggregate.Root {
-			root := &mocks.AggregateRoot{}
-			root.On("Apply", mock.AnythingOfType("*aggregate.Changed"))
+			root := aggregateMocks.NewRoot(ctrl)
 
+			switch aggregateTypeCalls {
+			case 0:
+			case 1:
+				gomock.InOrder(
+					root.EXPECT().Apply(firstEvent),
+					root.EXPECT().Apply(secondEvent),
+				)
+			default:
+				asserts.Fail("unexpected type creation")
+			}
+			aggregateTypeCalls++
 			return root
 		})
 
-		store.
-			On(
-				"Load",
-				ctx,
-				goengine.StreamName("event_stream"),
-				int64(1),
-				(*uint)(nil),
-				mock.MatchedBy(func(m metadata.Matcher) bool {
-					expected := metadata.WithConstraint(
-						metadata.WithConstraint(
-							metadata.NewMatcher(),
-							aggregate.TypeKey,
-							metadata.Equals,
-							"mock",
-						),
-						aggregate.IDKey,
-						metadata.Equals,
-						rootID,
-					)
-
-					return assert.Equal(t, expected, m)
-				}),
-			).
-			Return(messageStream, nil).
-			Once()
+		store.EXPECT().Load(
+			ctx,
+			goengine.StreamName("event_stream"),
+			int64(1),
+			(*uint)(nil),
+			metadata.WithConstraint(
+				metadata.WithConstraint(
+					metadata.NewMatcher(),
+					aggregate.TypeKey,
+					metadata.Equals,
+					"mock",
+				),
+				aggregate.IDKey,
+				metadata.Equals,
+				rootID,
+			),
+		).Return(messageStream, nil).Times(1)
 
 		repo, _ := aggregate.NewRepository(
 			store,
@@ -231,21 +225,8 @@ func TestRepository_GetAggregateRoot(t *testing.T) {
 		// Get/Load the aggregate
 		root, err := repo.GetAggregateRoot(ctx, rootID)
 
-		if !asserts.NoError(err) {
-			asserts.FailNow("Expected no error")
-		}
-
+		asserts.NoError(err)
 		asserts.NotNil(root, "Expected a aggregate root")
-		store.AssertExpectations(t)
-
-		rootAggregate := root.(*mocks.AggregateRoot)
-		rootAggregate.AssertExpectations(t)
-
-		appendCalls := mocks.FetchFuncCalls(rootAggregate.Calls, "Apply")
-		asserts.Len(appendCalls, 2)
-		for i, call := range appendCalls {
-			asserts.Equal(eventStream[i], call.Arguments[0])
-		}
 	})
 
 	t.Run("load failures", func(t *testing.T) {
@@ -280,6 +261,9 @@ func TestRepository_GetAggregateRoot(t *testing.T) {
 		for _, testCase := range badTestCases {
 			t.Run(testCase.title, func(t *testing.T) {
 				asserts := assert.New(t)
+				ctrl := gomock.NewController(t)
+				defer ctrl.Finish()
+
 				ctx := context.Background()
 				rootID := aggregate.GenerateID()
 
@@ -288,34 +272,29 @@ func TestRepository_GetAggregateRoot(t *testing.T) {
 					return
 				}
 
-				repo, store := mockRepository()
-				store.
-					On(
-						"Load",
-						ctx,
-						goengine.StreamName("event_stream"),
-						int64(1),
-						(*uint)(nil),
-						mock.Anything,
-					).
-					Return(stream, testCase.storeError).
-					Once()
+				repo, store := mockRepository(ctrl)
+				store.EXPECT().Load(
+					ctx,
+					goengine.StreamName("event_stream"),
+					int64(1),
+					(*uint)(nil),
+					gomock.Any(),
+				).Return(stream, testCase.storeError).Times(1)
 
 				// Get/Load the aggregate
 				root, err := repo.GetAggregateRoot(ctx, rootID)
 
 				asserts.Equal(testCase.expectedError, err, "Expected error")
 				asserts.Nil(root, "Expected no aggregate root")
-				store.AssertExpectations(t)
 			})
 		}
 	})
 }
 
-func mockRepository() (*aggregate.Repository, *mocks.EventStore) {
-	eventStore := &mocks.EventStore{}
+func mockRepository(ctrl *gomock.Controller) (*aggregate.Repository, *mocks.EventStore) {
+	eventStore := mocks.NewEventStore(ctrl)
 	aggregateType, _ := aggregate.NewType("mock", func() aggregate.Root {
-		return &mocks.AggregateRoot{}
+		return aggregateMocks.NewRoot(ctrl)
 	})
 
 	repo, _ := aggregate.NewRepository(

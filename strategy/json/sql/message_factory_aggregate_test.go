@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang/mock/gomock"
+
 	sqlmock "github.com/DATA-DOG/go-sqlmock"
 	"github.com/hellofresh/goengine"
 	"github.com/hellofresh/goengine/aggregate"
@@ -66,13 +68,16 @@ func TestAggregateChangedFactory_CreateFromRows(t *testing.T) {
 
 		for _, testCase := range testCases {
 			t.Run(testCase.title, func(t *testing.T) {
+				ctrl := gomock.NewController(t)
+				defer ctrl.Finish()
+
 				expectedMessages := testCase.expectedMessages(t)
 
 				asserts := assert.New(t)
 
 				// Mock payload factory and rows
 				var expectedMessageNumbers []int64
-				payloadFactory := &mocks.PayloadFactory{}
+				payloadFactory := mocks.NewMessagePayloadFactory(ctrl)
 				mockRows := sqlmock.NewRows(rowColumns)
 				for i, msg := range expectedMessages {
 					rowPayload, err := json.Marshal(msg.Payload())
@@ -87,7 +92,7 @@ func TestAggregateChangedFactory_CreateFromRows(t *testing.T) {
 
 					msgNr := i + 1
 					uuid, _ := msg.UUID().MarshalBinary()
-					payloadFactory.On("CreatePayload", "name_changed", rowPayload).Once().Return(msg.Payload(), nil)
+					payloadFactory.EXPECT().CreatePayload("name_changed", rowPayload).Return(msg.Payload(), nil).Times(1)
 					mockRows.AddRow(msgNr, uuid, "name_changed", rowPayload, rowMetadata, msg.CreatedAt())
 					expectedMessageNumbers = append(expectedMessageNumbers, int64(msgNr))
 				}
@@ -125,16 +130,17 @@ func TestAggregateChangedFactory_CreateFromRows(t *testing.T) {
 
 				assertEqualMessages(t, expectedMessages, messages)
 				asserts.Equal(expectedMessageNumbers, messageNumbers)
-				payloadFactory.AssertExpectations(t)
 			})
 		}
 	})
 
 	t.Run("no rows", func(t *testing.T) {
 		asserts := assert.New(t)
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
 
 		// Create the factory
-		messageFactory, err := sql.NewAggregateChangedFactory(&mocks.PayloadFactory{})
+		messageFactory, err := sql.NewAggregateChangedFactory(mocks.NewMessagePayloadFactory(ctrl))
 		if !asserts.Nil(err) {
 			return
 		}
@@ -153,35 +159,35 @@ func TestAggregateChangedFactory_CreateFromRows(t *testing.T) {
 	t.Run("invalid row", func(t *testing.T) {
 		type invalidTestCase struct {
 			title                string
-			mockRows             func(t *testing.T) (*sqlmock.Rows, *mocks.PayloadFactory)
+			mockRows             func(ctrl *gomock.Controller) (*sqlmock.Rows, *mocks.MessagePayloadFactory)
 			expectedErrorMessage string
 		}
 
 		testCases := []invalidTestCase{
 			{
 				"invalid columns in row",
-				func(t *testing.T) (*sqlmock.Rows, *mocks.PayloadFactory) {
+				func(ctrl *gomock.Controller) (*sqlmock.Rows, *mocks.MessagePayloadFactory) {
 					mockRows := sqlmock.NewRows([]string{"invalid"})
 					mockRows.AddRow("test")
 
-					return mockRows, &mocks.PayloadFactory{}
+					return mockRows, mocks.NewMessagePayloadFactory(ctrl)
 				},
 				"sql: expected 1 destination arguments in Scan, not 6",
 			},
 			{
 				"bad metadata json",
-				func(t *testing.T) (*sqlmock.Rows, *mocks.PayloadFactory) {
+				func(ctrl *gomock.Controller) (*sqlmock.Rows, *mocks.MessagePayloadFactory) {
 					uuid, _ := goengine.GenerateUUID().MarshalBinary()
 					mockRows := sqlmock.NewRows(rowColumns)
 					mockRows.AddRow(1, uuid, "some", []byte("{}"), []byte(`[ "missing array end" `), time.Now().UTC())
 
-					return mockRows, &mocks.PayloadFactory{}
+					return mockRows, mocks.NewMessagePayloadFactory(ctrl)
 				},
 				"unexpected end of JSON input",
 			},
 			{
 				"bad payload",
-				func(t *testing.T) (*sqlmock.Rows, *mocks.PayloadFactory) {
+				func(ctrl *gomock.Controller) (*sqlmock.Rows, *mocks.MessagePayloadFactory) {
 					uuid, _ := goengine.GenerateUUID().MarshalBinary()
 					mockRows := sqlmock.NewRows(rowColumns)
 					mockRows.AddRow(
@@ -193,8 +199,8 @@ func TestAggregateChangedFactory_CreateFromRows(t *testing.T) {
 						time.Now().UTC(),
 					)
 
-					factory := &mocks.PayloadFactory{}
-					factory.On("CreatePayload", "some", []byte("{}")).Once().Return(nil, errors.New("bad payload"))
+					factory := mocks.NewMessagePayloadFactory(ctrl)
+					factory.EXPECT().CreatePayload("some", []byte("{}")).Return(nil, errors.New("bad payload")).Times(1)
 
 					return mockRows, factory
 				},
@@ -202,7 +208,7 @@ func TestAggregateChangedFactory_CreateFromRows(t *testing.T) {
 			},
 			{
 				"missing aggregate id",
-				func(t *testing.T) (*sqlmock.Rows, *mocks.PayloadFactory) {
+				func(ctrl *gomock.Controller) (*sqlmock.Rows, *mocks.MessagePayloadFactory) {
 					uuid, _ := goengine.GenerateUUID().MarshalBinary()
 					mockRows := sqlmock.NewRows(rowColumns)
 					mockRows.AddRow(
@@ -214,8 +220,8 @@ func TestAggregateChangedFactory_CreateFromRows(t *testing.T) {
 						time.Now().UTC(),
 					)
 
-					factory := &mocks.PayloadFactory{}
-					factory.On("CreatePayload", "some", []byte("{}")).Once().Return(struct{}{}, nil)
+					factory := mocks.NewMessagePayloadFactory(ctrl)
+					factory.EXPECT().CreatePayload("some", []byte("{}")).Return(struct{}{}, nil).Times(1)
 
 					return mockRows, factory
 				},
@@ -223,7 +229,7 @@ func TestAggregateChangedFactory_CreateFromRows(t *testing.T) {
 			},
 			{
 				"missing aggregate version",
-				func(t *testing.T) (*sqlmock.Rows, *mocks.PayloadFactory) {
+				func(ctrl *gomock.Controller) (*sqlmock.Rows, *mocks.MessagePayloadFactory) {
 					uuid, _ := goengine.GenerateUUID().MarshalBinary()
 					mockRows := sqlmock.NewRows(rowColumns)
 					mockRows.AddRow(
@@ -235,8 +241,8 @@ func TestAggregateChangedFactory_CreateFromRows(t *testing.T) {
 						time.Now().UTC(),
 					)
 
-					factory := &mocks.PayloadFactory{}
-					factory.On("CreatePayload", "some", []byte("{}")).Once().Return(struct{}{}, nil)
+					factory := mocks.NewMessagePayloadFactory(ctrl)
+					factory.EXPECT().CreatePayload("some", []byte("{}")).Return(struct{}{}, nil).Times(1)
 
 					return mockRows, factory
 				},
@@ -244,7 +250,7 @@ func TestAggregateChangedFactory_CreateFromRows(t *testing.T) {
 			},
 			{
 				"invalid aggregate version type",
-				func(t *testing.T) (*sqlmock.Rows, *mocks.PayloadFactory) {
+				func(ctrl *gomock.Controller) (*sqlmock.Rows, *mocks.MessagePayloadFactory) {
 					uuid, _ := goengine.GenerateUUID().MarshalBinary()
 					mockRows := sqlmock.NewRows(rowColumns)
 					mockRows.AddRow(
@@ -259,8 +265,8 @@ func TestAggregateChangedFactory_CreateFromRows(t *testing.T) {
 						time.Now().UTC(),
 					)
 
-					factory := &mocks.PayloadFactory{}
-					factory.On("CreatePayload", "some", []byte("{}")).Once().Return(struct{}{}, nil)
+					factory := mocks.NewMessagePayloadFactory(ctrl)
+					factory.EXPECT().CreatePayload("some", []byte("{}")).Return(struct{}{}, nil).Times(1)
 
 					return mockRows, factory
 				},
@@ -268,7 +274,7 @@ func TestAggregateChangedFactory_CreateFromRows(t *testing.T) {
 			},
 			{
 				"invalid aggregate version",
-				func(t *testing.T) (*sqlmock.Rows, *mocks.PayloadFactory) {
+				func(ctrl *gomock.Controller) (*sqlmock.Rows, *mocks.MessagePayloadFactory) {
 					uuid, _ := goengine.GenerateUUID().MarshalBinary()
 					mockRows := sqlmock.NewRows(rowColumns)
 					mockRows.AddRow(
@@ -283,8 +289,8 @@ func TestAggregateChangedFactory_CreateFromRows(t *testing.T) {
 						time.Now().UTC(),
 					)
 
-					factory := &mocks.PayloadFactory{}
-					factory.On("CreatePayload", "some", []byte("{}")).Once().Return(struct{}{}, nil)
+					factory := mocks.NewMessagePayloadFactory(ctrl)
+					factory.EXPECT().CreatePayload("some", []byte("{}")).Return(struct{}{}, nil).Times(1)
 
 					return mockRows, factory
 				},
@@ -295,8 +301,10 @@ func TestAggregateChangedFactory_CreateFromRows(t *testing.T) {
 		for _, testCase := range testCases {
 			t.Run(testCase.title, func(t *testing.T) {
 				asserts := assert.New(t)
+				ctrl := gomock.NewController(t)
+				defer ctrl.Finish()
 
-				mockRows, payloadFactory := testCase.mockRows(t)
+				mockRows, payloadFactory := testCase.mockRows(ctrl)
 
 				// A little overhead but we need to query in order to get sql.Rows
 				db, dbMock, err := sqlmock.New()
@@ -333,8 +341,6 @@ func TestAggregateChangedFactory_CreateFromRows(t *testing.T) {
 
 				asserts.EqualError(err, testCase.expectedErrorMessage)
 				asserts.Nil(messages)
-
-				payloadFactory.AssertExpectations(t)
 			})
 		}
 	})

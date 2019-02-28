@@ -18,6 +18,18 @@
   version = "v1.1.0"
 
 [[projects]]
+  digest = "1:552a143cfb2692a4a8cbae568a9b4633ec4e7ce9269cfe74c07ea08ce50d866f"
+  name = "github.com/golang/mock"
+  packages = [
+    "gomock",
+    "mockgen",
+    "mockgen/model",
+  ]
+  pruneopts = "UT"
+  revision = "51421b967af1f557f93a59e0057aaf15ca02e29c"
+  version = "v1.2.0"
+
+[[projects]]
   digest = "1:3a26588bc48b96825977c1b3df964f8fd842cd6860cc26370588d3563433cf11"
   name = "github.com/google/uuid"
   packages = ["."]
@@ -64,36 +76,16 @@
   version = "v1.0.6"
 
 [[projects]]
-  digest = "1:ac83cf90d08b63ad5f7e020ef480d319ae890c208f8524622a2f3136e2686b02"
-  name = "github.com/stretchr/objx"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "477a77ecc69700c7cdeb1fa9e129548e1c1c393c"
-  version = "v0.1.1"
-
-[[projects]]
-  digest = "1:ffae6a0390594c05dc5ba534c385229e883508f17f6da257624913fd9aaa4d21"
+  digest = "1:5110e3d4f130772fd39e6ce8208ad1955b242ccfcc8ad9d158857250579c82f4"
   name = "github.com/stretchr/testify"
   packages = [
     "assert",
-    "mock",
     "require",
     "suite",
   ]
   pruneopts = "UT"
   revision = "f35b8ab0b5a2cef36673838d662e249dd9c94686"
   version = "v1.2.2"
-
-[[projects]]
-  branch = "master"
-  digest = "1:8fea6af94c992098dd130cd73bf977739ac7124537965251e3de79381b0e35f1"
-  name = "github.com/vektra/mockery"
-  packages = [
-    "cmd/mockery",
-    "mockery",
-  ]
-  pruneopts = "UT"
-  revision = "2a9162cbfb7a0f9094ed6f765d212a5ddee000d3"
 
 [[projects]]
   digest = "1:3c1a69cdae3501bf75e76d0d86dc6f2b0a7421bc205c0cb7b96b19eed464a34d"
@@ -145,36 +137,21 @@
   pruneopts = "UT"
   revision = "98c5dad5d1a0e8a73845ecc8897d0bd56586511d"
 
-[[projects]]
-  branch = "master"
-  digest = "1:02bfebf263d1e285a24c804c87abe5bbe1a88d0da4496256524a2482adeb5a97"
-  name = "golang.org/x/tools"
-  packages = [
-    "go/ast/astutil",
-    "go/buildutil",
-    "go/internal/cgo",
-    "go/loader",
-    "imports",
-    "internal/fastwalk",
-  ]
-  pruneopts = "UT"
-  revision = "3c07937fe18c27668fd78bbaed3d6b8b39e202ea"
-
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
     "github.com/DATA-DOG/go-sqlmock",
+    "github.com/golang/mock/gomock",
+    "github.com/golang/mock/mockgen",
     "github.com/google/uuid",
     "github.com/lib/pq",
     "github.com/pkg/errors",
     "github.com/sirupsen/logrus",
     "github.com/sirupsen/logrus/hooks/test",
     "github.com/stretchr/testify/assert",
-    "github.com/stretchr/testify/mock",
     "github.com/stretchr/testify/require",
     "github.com/stretchr/testify/suite",
-    "github.com/vektra/mockery/cmd/mockery",
     "go.uber.org/zap",
   ]
   solver-name = "gps-cdcl"
