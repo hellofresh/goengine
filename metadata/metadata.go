@@ -1,6 +1,10 @@
 package metadata
 
-import "encoding/json"
+import (
+	"encoding/json"
+
+	"github.com/mailru/easyjson/jlexer"
+)
 
 // Metadata is an immutable map[string]interface{} implementation
 type Metadata interface {
@@ -117,12 +121,34 @@ func (j JSONMetadata) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON unmarshal the json into Metdadata
 func (j *JSONMetadata) UnmarshalJSON(data []byte) error {
-	var valueMap map[string]interface{}
-	err := json.Unmarshal(data, &valueMap)
-	if err != nil {
-		return err
+	r := jlexer.Lexer{Data: data}
+	j.UnmarshalEasyJSON(&r)
+	return r.Error()
+}
+
+// UnmarshalEasyJSON supports easyjson.Unmarshaler interface
+func (j *JSONMetadata) UnmarshalEasyJSON(in *jlexer.Lexer) {
+	metadata := New()
+
+	isTopLevel := in.IsStart()
+	if in.IsNull() {
+		if isTopLevel {
+			in.Consumed()
+		}
+		in.Skip()
+		return
+	}
+	in.Delim('{')
+	for !in.IsDelim('}') {
+		key := in.UnsafeString()
+		in.WantColon()
+		metadata = WithValue(metadata, key, in.Interface())
+		in.WantComma()
+	}
+	in.Delim('}')
+	if isTopLevel {
+		in.Consumed()
 	}
 
-	j.Metadata = FromMap(valueMap)
-	return nil
+	j.Metadata = metadata
 }

@@ -49,6 +49,19 @@
   version = "v1.0.0"
 
 [[projects]]
+  branch = "master"
+  digest = "1:5bf23f15fd4550fa19e9fbc8e9fd2e254444a01f4644ad835b5389d1f7d91077"
+  name = "github.com/mailru/easyjson"
+  packages = [
+    ".",
+    "buffer",
+    "jlexer",
+    "jwriter",
+  ]
+  pruneopts = "UT"
+  revision = "6243d8e04c3f819e79757e8bc3faa15c3cb27003"
+
+[[projects]]
   digest = "1:40e195917a951a8bf867cd05de2a46aaf1806c50cf92eebf4c16f78cd196f747"
   name = "github.com/pkg/errors"
   packages = ["."]
@@ -146,6 +159,8 @@
     "github.com/golang/mock/mockgen",
     "github.com/google/uuid",
     "github.com/lib/pq",
+    "github.com/mailru/easyjson",
+    "github.com/mailru/easyjson/jlexer",
     "github.com/pkg/errors",
     "github.com/sirupsen/logrus",
     "github.com/sirupsen/logrus/hooks/test",
