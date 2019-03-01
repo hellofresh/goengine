@@ -1,6 +1,9 @@
 required = [
   "github.com/golang/mock/mockgen"
 ]
+ignored = [
+  "github.com/hellofresh/goengine/example/*"
+]
 
 [[override]]
   name = "gopkg.in/fsnotify.v1"

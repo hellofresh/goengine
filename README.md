@@ -1,4 +1,4 @@
-# GoEngine [![GitHub][license-img]][license] [![GoDoc][doc-img]][doc] [![Build Status][ci-img]][ci] [![Code Coverage][cov-img]][cov]
+# GoEngine [![GitHub][license-img]][license] [![GoDoc][doc-img]][doc] [![Build Status][ci-img]][ci] [![Code Coverage][cov-img]][cov] [![Go Report Card][go-report-img]][go-report]
 
 GoEngine is an Event Sourcing library written for GoLang.
 
@@ -32,6 +32,14 @@ The following features are planned for the future (in no specific order)
 We encourage and support an active, healthy community of contributors — including you! 
 Details are in the [contribution guide](CONTRIBUTING.md) and the [code of conduct](CODE_OF_CONDUCT.md). 
 
+------------------
+<p align="center">
+    <a href="https://hellofresh.com" style="text-decoration:none; margin-right:2rem;">
+    <img height="110" src="https://www.hellofresh.de/images/hellofresh/press/HelloFresh_Logo.png">
+  </a>
+</p>
+
+
 [doc-img]: https://godoc.org/github.com/hellofresh?status.svg
 [doc]: https://godoc.org/github.com/hellofresh/goengine
 [ci-img]: https://travis-ci.org/hellofresh/goengine.svg?branch=master
@@ -40,5 +48,7 @@ Details are in the [contribution guide](CONTRIBUTING.md) and the [code of conduc
 [cov]: https://codecov.io/gh/hellofresh/goengine
 [license-img]: https://img.shields.io/github/license/hellofresh/goengine.svg?style=flat
 [license]: LICENSE
+[go-report-img]:https://goreportcard.com/badge/github.com/hellofresh/goengine
+[go-report]: https://goreportcard.com/report/github.com/hellofresh/goengine
 [goengine-book]: https://goengine.readthedocs.io/en/latest/
 [goengine-book-quick-start]: https://goengine.readthedocs.io/en/latest/quick-start/
