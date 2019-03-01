@@ -104,20 +104,9 @@ type JSONMetadata struct {
 }
 
 var (
-	// Ensure JSONMetadata implements the json.Marshaler interface
-	_ json.Marshaler = &JSONMetadata{}
 	// Ensure JSONMetadata implements the json.Unmarshaler interface
 	_ json.Unmarshaler = &JSONMetadata{}
 )
-
-// MarshalJSON returns a json representation of the wrapped Metadata
-func (j JSONMetadata) MarshalJSON() ([]byte, error) {
-	if j.Metadata == nil {
-		j.Metadata = New()
-	}
-
-	return json.Marshal(j.Metadata)
-}
 
 // UnmarshalJSON unmarshal the json into Metdadata
 func (j *JSONMetadata) UnmarshalJSON(data []byte) error {

@@ -212,21 +212,6 @@ func TestMetadata_MarshalJSON(t *testing.T) {
 	}
 }
 
-func TestJSONMetadata_MarshalJSON(t *testing.T) {
-	for _, testCase := range jsonTestCases {
-		t.Run(testCase.title, func(t *testing.T) {
-			m := metadata.JSONMetadata{
-				Metadata: testCase.metadata(),
-			}
-
-			mJSON, err := json.Marshal(m)
-
-			assert.JSONEq(t, testCase.json, string(mJSON))
-			assert.NoError(t, err)
-		})
-	}
-}
-
 func TestJSONMetadata_UnmarshalJSON(t *testing.T) {
 	for _, testCase := range jsonTestCases {
 		t.Run(testCase.title, func(t *testing.T) {
