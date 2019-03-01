@@ -1,4 +1,4 @@
-# GoEngine [![GitHub][license-img]][license] [![GoDoc][doc-img]][doc] [![Build Status][ci-img]][ci] [![Code Coverage][cov-img]][cov]
+# GoEngine [![GitHub][license-img]][license] [![GoDoc][doc-img]][doc] [![Build Status][ci-img]][ci] [![Code Coverage][cov-img]][cov] [![Go Report Card][go-report-img]][go-report]
 
 GoEngine is an Event Sourcing library written for GoLang.
 
@@ -40,5 +40,7 @@ Details are in the [contribution guide](CONTRIBUTING.md) and the [code of conduc
 [cov]: https://codecov.io/gh/hellofresh/goengine
 [license-img]: https://img.shields.io/github/license/hellofresh/goengine.svg?style=flat
 [license]: LICENSE
+[go-report-img]:https://goreportcard.com/badge/github.com/hellofresh/goengine
+[go-report]: https://goreportcard.com/report/github.com/hellofresh/goengine
 [goengine-book]: https://goengine.readthedocs.io/en/latest/
 [goengine-book-quick-start]: https://goengine.readthedocs.io/en/latest/quick-start/
