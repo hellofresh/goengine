@@ -3,7 +3,6 @@ package metadata
 import (
 	"encoding/json"
 
-	"github.com/mailru/easyjson"
 	"github.com/mailru/easyjson/jlexer"
 )
 
@@ -100,23 +99,7 @@ func (v *valueData) MarshalJSON() ([]byte, error) {
 }
 
 func UnmarshalJSON(json []byte) (Metadata, error) {
-	wrapper := jsonMetadata{
-		Metadata: New(),
-	}
-
-	if err := easyjson.Unmarshal(json, &wrapper); err != nil {
-		return nil, err
-	}
-	return wrapper.Metadata, nil
-}
-
-// jsonMetadata is a special struct to UnmarshalJSON metadata
-type jsonMetadata struct {
-	Metadata Metadata
-}
-
-// UnmarshalEasyJSON supports easyjson.Unmarshaler interface
-func (j *jsonMetadata) UnmarshalEasyJSON(in *jlexer.Lexer) {
+	in := jlexer.Lexer{Data: json}
 	metadata := New()
 
 	isTopLevel := in.IsStart()
@@ -125,8 +108,9 @@ func (j *jsonMetadata) UnmarshalEasyJSON(in *jlexer.Lexer) {
 			in.Consumed()
 		}
 		in.Skip()
-		return
+		return metadata, in.Error()
 	}
+
 	in.Delim('{')
 	for !in.IsDelim('}') {
 		key := in.UnsafeString()
@@ -135,9 +119,10 @@ func (j *jsonMetadata) UnmarshalEasyJSON(in *jlexer.Lexer) {
 		in.WantComma()
 	}
 	in.Delim('}')
+
 	if isTopLevel {
 		in.Consumed()
 	}
 
-	j.Metadata = metadata
+	return metadata, in.Error()
 }
