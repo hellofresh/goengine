@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/hellofresh/goengine/metadata"
-	"github.com/mailru/easyjson"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -215,12 +214,11 @@ func TestMetadata_MarshalJSON(t *testing.T) {
 func TestJSONMetadata_UnmarshalJSON(t *testing.T) {
 	for _, testCase := range jsonTestCases {
 		t.Run(testCase.title, func(t *testing.T) {
-			var m metadata.JSONMetadata
-			err := json.Unmarshal([]byte(testCase.json), &m)
+			m, err := metadata.UnmarshalJSON([]byte(testCase.json))
 
 			// Need to use AsMap otherwise we can have inconsistent tests results.
 			if assert.NoError(t, err) {
-				assert.Equal(t, testCase.metadata().AsMap(), m.Metadata.AsMap())
+				assert.Equal(t, testCase.metadata().AsMap(), m.AsMap())
 			}
 		})
 	}
@@ -231,21 +229,7 @@ func BenchmarkJSONMetadata_UnmarshalJSON(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		var m metadata.JSONMetadata
-		err := json.Unmarshal(payload, &m)
-		if err != nil {
-			b.Fail()
-		}
-	}
-}
-
-func BenchmarkJSONMetadata_UnmarshalEasyJSON(b *testing.B) {
-	payload := []byte(`{"_aggregate_id": "b9ebca7a-c1eb-40dd-94a4-fac7c5e84fb5", "_aggregate_type": "bank_account", "_aggregate_version": 1}`)
-
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		var m metadata.JSONMetadata
-		err := easyjson.Unmarshal(payload, &m)
+		_, err := metadata.UnmarshalJSON(payload)
 		if err != nil {
 			b.Fail()
 		}

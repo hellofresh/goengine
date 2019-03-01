@@ -9,7 +9,6 @@ import (
 	"github.com/hellofresh/goengine/aggregate"
 	driverSQL "github.com/hellofresh/goengine/driver/sql"
 	"github.com/hellofresh/goengine/metadata"
-	"github.com/mailru/easyjson"
 )
 
 // Ensure that AggregateChangedFactory satisfies the MessageFactory interface
@@ -78,11 +77,10 @@ func (a *aggregateChangedEventStream) Message() (goengine.Message, int64, error)
 		return nil, 0, err
 	}
 
-	metadataWrapper := metadata.JSONMetadata{Metadata: metadata.New()}
-	if err := easyjson.Unmarshal(jsonMetadata, &metadataWrapper); err != nil {
+	meta, err := metadata.UnmarshalJSON(jsonMetadata)
+	if err != nil {
 		return nil, 0, err
 	}
-	meta := metadataWrapper.Metadata
 
 	payload, err := a.payloadFactory.CreatePayload(eventName, jsonPayload)
 	if err != nil {

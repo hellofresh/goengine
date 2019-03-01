@@ -3,6 +3,7 @@ package metadata
 import (
 	"encoding/json"
 
+	"github.com/mailru/easyjson"
 	"github.com/mailru/easyjson/jlexer"
 )
 
@@ -98,25 +99,24 @@ func (v *valueData) MarshalJSON() ([]byte, error) {
 	return json.Marshal(v.AsMap())
 }
 
-// JSONMetadata is a special struct to UnmarshalJSON metadata
-type JSONMetadata struct {
+func UnmarshalJSON(json []byte) (Metadata, error) {
+	wrapper := jsonMetadata{
+		Metadata: New(),
+	}
+
+	if err := easyjson.Unmarshal(json, &wrapper); err != nil {
+		return nil, err
+	}
+	return wrapper.Metadata, nil
+}
+
+// jsonMetadata is a special struct to UnmarshalJSON metadata
+type jsonMetadata struct {
 	Metadata Metadata
 }
 
-var (
-	// Ensure JSONMetadata implements the json.Unmarshaler interface
-	_ json.Unmarshaler = &JSONMetadata{}
-)
-
-// UnmarshalJSON unmarshal the json into Metdadata
-func (j *JSONMetadata) UnmarshalJSON(data []byte) error {
-	r := jlexer.Lexer{Data: data}
-	j.UnmarshalEasyJSON(&r)
-	return r.Error()
-}
-
 // UnmarshalEasyJSON supports easyjson.Unmarshaler interface
-func (j *JSONMetadata) UnmarshalEasyJSON(in *jlexer.Lexer) {
+func (j *jsonMetadata) UnmarshalEasyJSON(in *jlexer.Lexer) {
 	metadata := New()
 
 	isTopLevel := in.IsStart()
