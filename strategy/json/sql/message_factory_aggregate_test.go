@@ -164,7 +164,7 @@ func TestAggregateChangedFactory_CreateFromRows(t *testing.T) {
 
 					return mockRows, mocks.NewMessagePayloadFactory(ctrl)
 				},
-				"unexpected end of JSON input",
+				"parse error: expected { near offset 1 of ''",
 			},
 			{
 				"bad payload",

@@ -2,7 +2,6 @@ package sql
 
 import (
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"time"
 
@@ -78,11 +77,10 @@ func (a *aggregateChangedEventStream) Message() (goengine.Message, int64, error)
 		return nil, 0, err
 	}
 
-	metadataWrapper := metadata.JSONMetadata{Metadata: metadata.New()}
-	if err := json.Unmarshal(jsonMetadata, &metadataWrapper); err != nil {
+	meta, err := metadata.UnmarshalJSON(jsonMetadata)
+	if err != nil {
 		return nil, 0, err
 	}
-	meta := metadataWrapper.Metadata
 
 	payload, err := a.payloadFactory.CreatePayload(eventName, jsonPayload)
 	if err != nil {

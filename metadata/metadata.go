@@ -1,6 +1,10 @@
 package metadata
 
-import "encoding/json"
+import (
+	"encoding/json"
+
+	"github.com/mailru/easyjson/jlexer"
+)
 
 // Metadata is an immutable map[string]interface{} implementation
 type Metadata interface {
@@ -94,35 +98,31 @@ func (v *valueData) MarshalJSON() ([]byte, error) {
 	return json.Marshal(v.AsMap())
 }
 
-// JSONMetadata is a special struct to UnmarshalJSON metadata
-type JSONMetadata struct {
-	Metadata Metadata
-}
+func UnmarshalJSON(json []byte) (Metadata, error) {
+	in := jlexer.Lexer{Data: json}
+	metadata := New()
 
-var (
-	// Ensure JSONMetadata implements the json.Marshaler interface
-	_ json.Marshaler = &JSONMetadata{}
-	// Ensure JSONMetadata implements the json.Unmarshaler interface
-	_ json.Unmarshaler = &JSONMetadata{}
-)
-
-// MarshalJSON returns a json representation of the wrapped Metadata
-func (j JSONMetadata) MarshalJSON() ([]byte, error) {
-	if j.Metadata == nil {
-		j.Metadata = New()
+	isTopLevel := in.IsStart()
+	if in.IsNull() {
+		if isTopLevel {
+			in.Consumed()
+		}
+		in.Skip()
+		return metadata, in.Error()
 	}
 
-	return json.Marshal(j.Metadata)
-}
+	in.Delim('{')
+	for !in.IsDelim('}') {
+		key := in.UnsafeString()
+		in.WantColon()
+		metadata = WithValue(metadata, key, in.Interface())
+		in.WantComma()
+	}
+	in.Delim('}')
 
-// UnmarshalJSON unmarshal the json into Metdadata
-func (j *JSONMetadata) UnmarshalJSON(data []byte) error {
-	var valueMap map[string]interface{}
-	err := json.Unmarshal(data, &valueMap)
-	if err != nil {
-		return err
+	if isTopLevel {
+		in.Consumed()
 	}
 
-	j.Metadata = FromMap(valueMap)
-	return nil
+	return metadata, in.Error()
 }
