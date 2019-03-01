@@ -20,7 +20,7 @@ func TestType(t *testing.T) {
 		aggregateType, err := aggregate.NewType("mock", mockInitiator)
 
 		asserts := assert.New(t)
-		if !asserts.Empty(err, "No error should be returned") {
+		if !asserts.NoError(err, "No error should be returned") {
 			return
 		}
 		asserts.NotEmpty(aggregateType, "A aggregate.Type should be returned")
@@ -61,9 +61,9 @@ func TestType(t *testing.T) {
 		t.Run("CreateInstance", func(t *testing.T) {
 			newInstance := aggregateType.CreateInstance()
 
-			asserts := assert.New(t)
-			asserts.NotNil(newInstance, "Expect the instance to not be empty")
-			asserts.True(
+			assert.NotNil(t, newInstance, "Expect the instance to not be empty")
+			assert.True(
+				t,
 				aggregateType.IsImplementedBy(newInstance),
 				"Expected new instance of it's type",
 			)

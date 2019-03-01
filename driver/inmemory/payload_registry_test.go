@@ -32,16 +32,12 @@ func TestPayloadRegistry(t *testing.T) {
 	}
 
 	registry := &inmemory.PayloadRegistry{}
-	if !assert.NotNil(t, registry) {
-		return
-	}
 
 	t.Run("register payloads", func(t *testing.T) {
-		asserts := assert.New(t)
 		for _, testCase := range testCases {
 			err := registry.RegisterPayload(testCase.payloadType, testCase.payload)
 
-			asserts.NoError(err)
+			assert.NoError(t, err)
 		}
 	})
 
@@ -50,32 +46,24 @@ func TestPayloadRegistry(t *testing.T) {
 			t.Run(tc.title, func(t *testing.T) {
 				name, err := registry.ResolveName(tc.payload)
 
-				asserts := assert.New(t)
-				if asserts.NoError(err) {
-					asserts.Equal(tc.payloadType, name)
-				}
+				assert.Equal(t, tc.payloadType, name)
+				assert.NoError(t, err)
 			})
 		}
 	})
 
 	t.Run("duplicate type registry", func(t *testing.T) {
-		asserts := assert.New(t)
 		for _, testCase := range testCases {
 			err := registry.RegisterPayload(testCase.payloadType, testCase.payload)
 
-			if asserts.Error(err) {
-				asserts.Equal(inmemory.ErrDuplicatePayloadType, err)
-			}
+			assert.Equal(t, inmemory.ErrDuplicatePayloadType, err)
 		}
 	})
 
 	t.Run("unknown type", func(t *testing.T) {
 		name, err := registry.ResolveName(struct{}{})
 
-		asserts := assert.New(t)
-		if asserts.Error(err) {
-			asserts.Equal(inmemory.ErrUnknownPayloadType, err)
-		}
-		asserts.Empty(name)
+		assert.Equal(t, inmemory.ErrUnknownPayloadType, err)
+		assert.Empty(t, name)
 	})
 }

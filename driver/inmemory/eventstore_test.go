@@ -14,6 +14,7 @@ import (
 	"github.com/hellofresh/goengine/mocks"
 	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNewEventStore(t *testing.T) {
@@ -31,28 +32,26 @@ func TestNewEventStore(t *testing.T) {
 }
 
 func TestEventStore_Create(t *testing.T) {
+	ctx := context.Background()
 	logger, loggerHooks := test.NewNullLogger()
 	store := inmemory.NewEventStore(logrus.Wrap(logger))
 
-	ctx := context.Background()
 	err := store.Create(ctx, "event_stream")
 
-	asserts := assert.New(t)
-	asserts.Nil(err)
-	asserts.Len(loggerHooks.Entries, 0)
+	assert.Nil(t, err)
+	assert.Len(t, loggerHooks.Entries, 0)
 
 	t.Run("Cannot create a stream twice", func(t *testing.T) {
 		err := store.Create(ctx, "event_stream")
 
-		asserts := assert.New(t)
-		asserts.Equal(inmemory.ErrStreamExistsAlready, err)
-		asserts.Len(loggerHooks.Entries, 0)
+		assert.Equal(t, inmemory.ErrStreamExistsAlready, err)
+		assert.Len(t, loggerHooks.Entries, 0)
 	})
 }
 
 func TestEventStore_HasStream(t *testing.T) {
 	createThisStream := goengine.StreamName("my_stream")
-	unkownStream := goengine.StreamName("never_stream")
+	unknownStream := goengine.StreamName("never_stream")
 
 	logger, loggerHooks := test.NewNullLogger()
 	store := inmemory.NewEventStore(logrus.Wrap(logger))
@@ -60,12 +59,12 @@ func TestEventStore_HasStream(t *testing.T) {
 
 	asserts := assert.New(t)
 	asserts.False(store.HasStream(ctx, createThisStream))
-	asserts.False(store.HasStream(ctx, unkownStream))
+	asserts.False(store.HasStream(ctx, unknownStream))
 
 	err := store.Create(ctx, createThisStream)
 	asserts.NoError(err)
 	asserts.True(store.HasStream(ctx, createThisStream))
-	asserts.False(store.HasStream(ctx, unkownStream))
+	asserts.False(store.HasStream(ctx, unknownStream))
 
 	asserts.Len(loggerHooks.Entries, 0)
 }
@@ -156,27 +155,18 @@ func TestEventStore_Load(t *testing.T) {
 			store := inmemory.NewEventStore(logrus.Wrap(logger))
 
 			for stream, events := range testStreams {
-				if err := store.Create(ctx, stream); !assert.Nil(t, err) {
-					t.FailNow()
-				}
-
-				if err := store.AppendTo(ctx, stream, events); !assert.Nil(t, err) {
-					t.FailNow()
-				}
+				require.NoError(t, store.Create(ctx, stream))
+				require.NoError(t, store.AppendTo(ctx, stream, events))
 			}
 
 			stream, err := store.Load(ctx, testCase.loadFrom, 1, testCase.loadCount, testCase.matcher)
-			asserts := assert.New(t)
-			if !asserts.Nil(err) {
-				return
-			}
+			require.NoError(t, err)
 			defer stream.Close()
 
 			messages, messageNumbers, err := goengine.ReadEventStream(stream)
-			if !asserts.NoError(err) {
-				asserts.FailNow("no exception was expected while reading the stream")
-			}
 
+			asserts := assert.New(t)
+			asserts.NoError(err)
 			asserts.Equal(testCase.expectedEvents, messages)
 			asserts.Equal(testCase.expectedNumbers, messageNumbers)
 			asserts.Len(loggerHooks.Entries, 0)
@@ -232,9 +222,8 @@ func TestEventStore_AppendTo(t *testing.T) {
 
 			err := store.AppendTo(ctx, stream, nil)
 
-			asserts := assert.New(t)
-			asserts.Equal(inmemory.ErrStreamNotFound, err)
-			asserts.Len(loggerHooks.Entries, 0)
+			assert.Equal(t, inmemory.ErrStreamNotFound, err)
+			assert.Len(t, loggerHooks.Entries, 0)
 		})
 
 		t.Run("Nil message", func(t *testing.T) {
@@ -245,9 +234,8 @@ func TestEventStore_AppendTo(t *testing.T) {
 
 			err := store.AppendTo(ctx, stream, []goengine.Message{nil})
 
-			asserts := assert.New(t)
-			asserts.Equal(inmemory.ErrNilMessage, err)
-			asserts.Len(loggerHooks.Entries, 0)
+			assert.Equal(t, inmemory.ErrNilMessage, err)
+			assert.Len(t, loggerHooks.Entries, 0)
 		})
 
 		t.Run("Nil message reference", func(t *testing.T) {
@@ -260,9 +248,8 @@ func TestEventStore_AppendTo(t *testing.T) {
 				(*mocks.Message)(nil),
 			})
 
-			asserts := assert.New(t)
-			asserts.Equal(inmemory.ErrNilMessage, err)
-			asserts.Len(loggerHooks.Entries, 0)
+			assert.Equal(t, inmemory.ErrNilMessage, err)
+			assert.Len(t, loggerHooks.Entries, 0)
 		})
 	})
 }
@@ -273,9 +260,7 @@ func createEventStoreWithStream(t *testing.T, name goengine.StreamName) (*inmemo
 	store := inmemory.NewEventStore(logrus.Wrap(logger))
 
 	err := store.Create(ctx, name)
-	if !assert.Nil(t, err) {
-		t.FailNow()
-	}
+	require.NoError(t, err)
 
 	return store, loggerHooks
 }

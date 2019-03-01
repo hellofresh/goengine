@@ -49,9 +49,8 @@ func TestIDFromString(t *testing.T) {
 			t.Run(testCase.title, func(t *testing.T) {
 				id, err := aggregate.IDFromString(testCase.input)
 
-				asserts := assert.New(t)
-				asserts.Nil(err)
-				asserts.Equal(testCase.output, id)
+				assert.NoError(t, err)
+				assert.Equal(t, testCase.output, id)
 			})
 		}
 	})
@@ -106,7 +105,7 @@ func TestRecordChange(t *testing.T) {
 		err := aggregate.RecordChange(root, domainEvent)
 
 		// Check that the change was recorded
-		asserts.Empty(err, "No error should be returned")
+		asserts.NoError(err)
 	})
 
 	t.Run("Check required arguments", func(t *testing.T) {

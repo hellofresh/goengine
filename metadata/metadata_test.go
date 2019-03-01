@@ -181,9 +181,8 @@ func TestMetadata_MarshalJSON(t *testing.T) {
 
 			mJSON, err := json.Marshal(m)
 
-			asserts := assert.New(t)
-			asserts.JSONEq(testCase.json, string(mJSON))
-			asserts.Nil(err)
+			assert.JSONEq(t, testCase.json, string(mJSON))
+			assert.NoError(t, err)
 		})
 	}
 }
@@ -197,9 +196,8 @@ func TestJSONMetadata_MarshalJSON(t *testing.T) {
 
 			mJSON, err := json.Marshal(m)
 
-			asserts := assert.New(t)
-			asserts.JSONEq(testCase.json, string(mJSON))
-			asserts.Nil(err)
+			assert.JSONEq(t, testCase.json, string(mJSON))
+			assert.NoError(t, err)
 		})
 	}
 }
@@ -210,10 +208,9 @@ func TestJSONMetadata_UnmarshalJSON(t *testing.T) {
 			var m metadata.JSONMetadata
 			err := json.Unmarshal([]byte(testCase.json), &m)
 
-			asserts := assert.New(t)
 			// Need to use AsMap otherwise we can have inconsistent tests results.
-			asserts.Equal(testCase.metadata().AsMap(), m.Metadata.AsMap())
-			asserts.NoError(err)
+			assert.Equal(t, testCase.metadata().AsMap(), m.Metadata.AsMap())
+			assert.NoError(t, err)
 		})
 	}
 }

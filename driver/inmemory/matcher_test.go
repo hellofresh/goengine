@@ -49,7 +49,7 @@ func TestNewMetadataMatcher(t *testing.T) {
 				matcher, err := inmemory.NewMetadataMatcher(testCase.matcher, log.Wrap(logger))
 
 				asserts := assert.New(t)
-				asserts.Nil(err)
+				asserts.NoError(err)
 				asserts.IsType((*inmemory.MetadataMatcher)(nil), matcher)
 				asserts.Len(loggerHook.Entries, 0)
 			})
@@ -92,10 +92,7 @@ func TestNewMetadataMatcher(t *testing.T) {
 				matcher, err := inmemory.NewMetadataMatcher(testCase.matcher, log.Wrap(logger))
 
 				asserts := assert.New(t)
-				if !asserts.IsType(inmemory.IncompatibleMatcherError{}, err) {
-					return
-				}
-
+				asserts.IsType(inmemory.IncompatibleMatcherError{}, err)
 				asserts.Equal("goengine: incompatible metadata.Matcher\n"+testCase.expectedError, err.Error())
 				asserts.Nil(matcher)
 				asserts.Len(loggerHook.Entries, 0)
@@ -161,13 +158,13 @@ func TestMetadataMatcher_Matches(t *testing.T) {
 
 		for _, testCase := range testCases {
 			t.Run(testCase.title, func(t *testing.T) {
-				asserts := assert.New(t)
 				logger, loggerHook := test.NewNullLogger()
 
 				matcher, err := inmemory.NewMetadataMatcher(testCase.matcher, log.Wrap(logger))
-				if asserts.Nil(err) {
-					asserts.True(matcher.Matches(testCase.data))
-				}
+
+				asserts := assert.New(t)
+				asserts.NoError(err)
+				asserts.True(matcher.Matches(testCase.data))
 				asserts.Len(loggerHook.Entries, 0)
 			})
 		}
@@ -193,13 +190,13 @@ func TestMetadataMatcher_Matches(t *testing.T) {
 
 		for _, testCase := range testCases {
 			t.Run(testCase.title, func(t *testing.T) {
-				asserts := assert.New(t)
 				logger, loggerHook := test.NewNullLogger()
 
 				matcher, err := inmemory.NewMetadataMatcher(testCase.matcher, log.Wrap(logger))
-				if asserts.Nil(err) {
-					asserts.False(matcher.Matches(testCase.data))
-				}
+
+				asserts := assert.New(t)
+				asserts.NoError(err)
+				asserts.False(matcher.Matches(testCase.data))
 				asserts.Len(loggerHook.Entries, 0)
 			})
 		}
@@ -233,31 +230,31 @@ func TestMetadataMatcher_Matches(t *testing.T) {
 
 		for _, testCase := range errorTestCases {
 			t.Run(testCase.title, func(t *testing.T) {
-				asserts := assert.New(t)
 				logger, loggerHook := test.NewNullLogger()
 
 				matcher, err := inmemory.NewMetadataMatcher(testCase.matcher, log.Wrap(logger))
-				if asserts.Nil(err) {
-					asserts.False(matcher.Matches(testCase.data))
 
-					logEntries := loggerHook.AllEntries()
-					if asserts.Len(logEntries, 1) && asserts.Contains(logEntries[0].Data, logrus.ErrorKey) {
-						entry := logEntries[0]
-						asserts.Equal(logrus.WarnLevel, entry.Level)
-						asserts.Equal(testCase.expectedError, entry.Data[logrus.ErrorKey])
-					}
+				asserts := assert.New(t)
+				asserts.NoError(err)
+				asserts.False(matcher.Matches(testCase.data))
+
+				logEntries := loggerHook.AllEntries()
+				if asserts.Len(logEntries, 1) {
+					entry := logEntries[0]
+
+					asserts.Contains(entry.Data, logrus.ErrorKey)
+					asserts.Equal(logrus.WarnLevel, entry.Level)
+					asserts.Equal(testCase.expectedError, entry.Data[logrus.ErrorKey])
 				}
 			})
 		}
 
 		for _, testCase := range errorTestCases {
 			t.Run(testCase.title+"(without logger)", func(t *testing.T) {
-				asserts := assert.New(t)
-
 				matcher, err := inmemory.NewMetadataMatcher(testCase.matcher, nil)
-				if asserts.Nil(err) {
-					asserts.False(matcher.Matches(testCase.data))
-				}
+
+				assert.NoError(t, err)
+				assert.False(t, matcher.Matches(testCase.data))
 			})
 		}
 	})

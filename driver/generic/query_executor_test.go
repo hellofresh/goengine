@@ -8,13 +8,13 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
-
 	"github.com/hellofresh/goengine"
 	"github.com/hellofresh/goengine/driver/generic"
 	"github.com/hellofresh/goengine/driver/inmemory"
 	"github.com/hellofresh/goengine/metadata"
 	"github.com/hellofresh/goengine/mocks"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNewQueryExecutor(t *testing.T) {
@@ -34,9 +34,8 @@ func TestNewQueryExecutor(t *testing.T) {
 
 		executor, err := generic.NewQueryExecutor(store, "test", registry, query, 100)
 
-		asserts := assert.New(t)
-		asserts.NotNil(executor)
-		asserts.NoError(err)
+		assert.NotNil(t, executor)
+		assert.NoError(t, err)
 	})
 
 	t.Run("invalid arguments", func(t *testing.T) {
@@ -118,7 +117,6 @@ func TestQueryExecutor_Run(t *testing.T) {
 			numbers: []int{1, 2, 3},
 		}
 
-		asserts := assert.New(t)
 		eventBatch1, err := inmemory.NewEventStream(
 			[]goengine.Message{
 				mockMessageWithPayload(myEvent{1}, map[string]interface{}{}),
@@ -126,9 +124,7 @@ func TestQueryExecutor_Run(t *testing.T) {
 			},
 			[]int64{1, 2},
 		)
-		if !asserts.NoError(err) {
-			return
-		}
+		require.NoError(t, err)
 
 		eventBatch2, err := inmemory.NewEventStream(
 			[]goengine.Message{
@@ -136,9 +132,7 @@ func TestQueryExecutor_Run(t *testing.T) {
 			},
 			[]int64{3},
 		)
-		if !asserts.NoError(err) {
-			return
-		}
+		require.NoError(t, err)
 
 		var streamName goengine.StreamName = "event_stream"
 
@@ -181,14 +175,12 @@ func TestQueryExecutor_Run(t *testing.T) {
 		}).MinTimes(1)
 
 		executor, err := generic.NewQueryExecutor(store, streamName, registry, query, queryBatchSize)
-		if !asserts.NoError(err) {
-			asserts.FailNow("failed to create executor")
-		}
+		require.NoError(t, err)
 
 		finalState, err := executor.Run(ctx)
 
-		asserts.Equal(expectedState, finalState)
-		asserts.NoError(err)
+		assert.Equal(t, expectedState, finalState)
+		assert.NoError(t, err)
 	})
 }
 

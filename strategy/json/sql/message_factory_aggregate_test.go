@@ -43,20 +43,12 @@ func TestAggregateChangedFactory_CreateFromRows(t *testing.T) {
 			{
 				"create aggregate.Changed messages from rows",
 				func(t *testing.T) []*aggregate.Changed {
-					asserts := assert.New(t)
-
 					// Create expectations
 					expectedMessage1, err := createAggregateChangedMessage(nameChanged{"bob"}, 1)
-					if !asserts.Nil(err) {
-						t.FailNow()
-						return nil
-					}
+					require.NoError(t, err)
 
 					expectedMessage2, err := createAggregateChangedMessage(nameChanged{"alice"}, 2)
-					if !asserts.Nil(err) {
-						t.FailNow()
-						return nil
-					}
+					require.NoError(t, err)
 
 					return []*aggregate.Changed{
 						expectedMessage1,
@@ -73,22 +65,16 @@ func TestAggregateChangedFactory_CreateFromRows(t *testing.T) {
 
 				expectedMessages := testCase.expectedMessages(t)
 
-				asserts := assert.New(t)
-
 				// Mock payload factory and rows
 				var expectedMessageNumbers []int64
 				payloadFactory := mocks.NewMessagePayloadFactory(ctrl)
 				mockRows := sqlmock.NewRows(rowColumns)
 				for i, msg := range expectedMessages {
 					rowPayload, err := json.Marshal(msg.Payload())
-					if !asserts.Nil(err) {
-						return
-					}
+					require.NoError(t, err)
 
 					rowMetadata, err := json.Marshal(msg.Metadata())
-					if !asserts.Nil(err) {
-						return
-					}
+					require.NoError(t, err)
 
 					msgNr := i + 1
 					uuid, _ := msg.UUID().MarshalBinary()
@@ -99,34 +85,31 @@ func TestAggregateChangedFactory_CreateFromRows(t *testing.T) {
 
 				// A little overhead but we need to query in order to get sql.Rows
 				db, dbMock, err := sqlmock.New()
-				if !asserts.Nil(err) {
-					return
-				}
+				require.NoError(t, err)
 				defer db.Close()
 
 				dbMock.ExpectQuery("SELECT").WillReturnRows(mockRows)
 				rows, err := db.Query("SELECT")
-				if !asserts.Nil(err) {
-					return
-				}
+				require.NoError(t, err)
 				defer rows.Close()
 
 				// Create the factory
 				messageFactory, err := sql.NewAggregateChangedFactory(payloadFactory)
-				if !asserts.Nil(err) {
-					return
-				}
+				require.NoError(t, err)
 
 				// Finally recreate the messages
 				stream, err := messageFactory.CreateEventStream(rows)
+
+				asserts := assert.New(t)
 				if !asserts.NoError(err) {
 					return
 				}
 				defer stream.Close()
 
 				messages, messageNumbers, err := goengine.ReadEventStream(stream)
-				require.NoError(t, err)
-				require.NoError(t, stream.Err(), "no exception was expected while reading the stream")
+				if !asserts.NoError(err) || !asserts.NoError(stream.Err()) {
+					return
+				}
 
 				assertEqualMessages(t, expectedMessages, messages)
 				asserts.Equal(expectedMessageNumbers, messageNumbers)
@@ -135,20 +118,18 @@ func TestAggregateChangedFactory_CreateFromRows(t *testing.T) {
 	})
 
 	t.Run("no rows", func(t *testing.T) {
-		asserts := assert.New(t)
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
 		// Create the factory
 		messageFactory, err := sql.NewAggregateChangedFactory(mocks.NewMessagePayloadFactory(ctrl))
-		if !asserts.Nil(err) {
-			return
-		}
+		require.NoError(t, err)
 
 		// Finally recreate the messages
 		msgs, err := messageFactory.CreateEventStream(nil)
 
 		// Check result
+		asserts := assert.New(t)
 		if asserts.Error(err) {
 			arg := err.(goengine.InvalidArgumentError)
 			asserts.Equal("rows", string(arg))
@@ -300,7 +281,6 @@ func TestAggregateChangedFactory_CreateFromRows(t *testing.T) {
 
 		for _, testCase := range testCases {
 			t.Run(testCase.title, func(t *testing.T) {
-				asserts := assert.New(t)
 				ctrl := gomock.NewController(t)
 				defer ctrl.Finish()
 
@@ -308,37 +288,29 @@ func TestAggregateChangedFactory_CreateFromRows(t *testing.T) {
 
 				// A little overhead but we need to query in order to get sql.Rows
 				db, dbMock, err := sqlmock.New()
-				if !asserts.Nil(err) {
-					return
-				}
+				require.NoError(t, err)
 				defer db.Close()
 
 				dbMock.ExpectQuery("SELECT").WillReturnRows(mockRows)
 				rows, err := db.Query("SELECT")
-				if !asserts.Nil(err) {
-					return
-				}
+				require.NoError(t, err)
 				defer rows.Close()
 
 				// Create the factory
 				messageFactory, err := sql.NewAggregateChangedFactory(payloadFactory)
-				if !asserts.Nil(err) {
-					return
-				}
+				require.NoError(t, err)
 
 				// Finally recreate the messages
 				stream, err := messageFactory.CreateEventStream(rows)
+
+				asserts := assert.New(t)
 				if !asserts.NoError(err) {
-					asserts.FailNow("no exception was expected")
+					return
 				}
 				defer stream.Close()
 
 				// Read the stream
 				messages, _, err := goengine.ReadEventStream(stream)
-				if !asserts.NoError(stream.Err()) {
-					asserts.FailNow("no exception was expected while reading the stream")
-				}
-
 				asserts.EqualError(err, testCase.expectedErrorMessage)
 				asserts.Nil(messages)
 			})
@@ -370,9 +342,7 @@ func createAggregateChangedMessage(payload interface{}, version uint) (*aggregat
 
 func assertEqualMessages(t *testing.T, expected []*aggregate.Changed, msgs []goengine.Message) {
 	asserts := assert.New(t)
-	if asserts.Len(msgs, len(expected)) {
-		return
-	}
+	asserts.Len(msgs, len(expected))
 
 	for i, msg := range msgs {
 		expectedMsg := expected[i]
