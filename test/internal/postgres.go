@@ -199,7 +199,7 @@ func (s *PostgresSuite) TearDownTest() {
 func postgresDSN(t *testing.T) string {
 	// Fetch the postgres dsn from the env var
 	osDSN, exists := os.LookupEnv("POSTGRES_DSN")
-	require.True(t, exists, "test.postgres: missing POSTGRES_DSN enviroment variable")
+	require.True(t, exists, "test.postgres: missing POSTGRES_DSN environment variable")
 
 	// Parse the postgres dsn
 	parsedDSN, err := pq.ParseURL(osDSN)
