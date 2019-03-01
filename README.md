@@ -32,6 +32,14 @@ The following features are planned for the future (in no specific order)
 We encourage and support an active, healthy community of contributors — including you! 
 Details are in the [contribution guide](CONTRIBUTING.md) and the [code of conduct](CODE_OF_CONDUCT.md). 
 
+------------------
+<p align="center">
+    <a href="https://hellofresh.com" style="text-decoration:none; margin-right:2rem;">
+    <img height="110" src="https://www.hellofresh.de/images/hellofresh/press/HelloFresh_Logo.png">
+  </a>
+</p>
+
+
 [doc-img]: https://godoc.org/github.com/hellofresh?status.svg
 [doc]: https://godoc.org/github.com/hellofresh/goengine
 [ci-img]: https://travis-ci.org/hellofresh/goengine.svg?branch=master
