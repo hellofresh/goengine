@@ -7,47 +7,50 @@ import (
 	"github.com/hellofresh/goengine/driver/sql/postgres"
 )
 
-const sqlFuncEventStreamNotify = `CREATE FUNCTION public.event_stream_notify ()
-  RETURNS TRIGGER
-LANGUAGE plpgsql AS $$
-DECLARE
-  channel text := TG_ARGV[0];
+const sqlFuncEventStreamNotify = `DO LANGUAGE plpgsql $EXIST$
 BEGIN
-  PERFORM (
-          WITH payload AS
-          (
-              SELECT NEW.no, NEW.event_name, NEW.metadata -> '_aggregate_id' AS aggregate_id
-          )
-          SELECT pg_notify(channel, row_to_json(payload)::text) FROM payload
-          );
-  RETURN NULL;
+  IF (SELECT to_regprocedure('event_stream_notify()') IS NULL) THEN
+    CREATE FUNCTION event_stream_notify ()
+      RETURNS TRIGGER
+    LANGUAGE plpgsql AS $$
+    DECLARE
+      channel text := TG_ARGV[0];
+    BEGIN
+      PERFORM (
+        WITH payload AS
+        (
+          SELECT NEW.no, NEW.event_name, NEW.metadata -> '_aggregate_id' AS aggregate_id
+        )
+        SELECT pg_notify(channel, row_to_json(payload)::text) FROM payload
+      );
+      RETURN NULL;
+    END;
+    $$;
+  END IF;
 END;
-$$;`
+$EXIST$`
 
 // sqlTriggerEventStreamNotify a helper to create the sql on a event store table
 func sqlTriggerEventStreamNotifyTemplate(eventStreamName goengine.StreamName, eventStreamTable string) string {
 	triggerName := fmt.Sprintf("%s_notify", eventStreamTable)
 	/* #nosec */
 	return fmt.Sprintf(
-		`DO LANGUAGE plpgsql $$
+		`DO LANGUAGE plpgsql $EXIST$
 		 BEGIN
 		   IF NOT EXISTS(
-		       SELECT * FROM information_schema.triggers
-		       WHERE
-		           event_object_schema = 'public' AND
-		           event_object_table = %s AND
-		           trigger_schema = 'public' AND
-		           trigger_name = %s
+             SELECT TRUE FROM pg_trigger WHERE
+               tgrelid = %[1]s::regclass AND
+               tgname = %[2]s
 		   )
 		   THEN
-		     CREATE TRIGGER %s
+		     CREATE TRIGGER %[3]s
 		       AFTER INSERT
-		       ON %s
+		       ON %[4]s
 		       FOR EACH ROW
-		     EXECUTE PROCEDURE event_stream_notify(%s);
+		     EXECUTE PROCEDURE event_stream_notify(%[5]s);
 		   END IF;
 		 END;
-		 $$`,
+		 $EXIST$`,
 		postgres.QuoteString(eventStreamTable),
 		postgres.QuoteString(triggerName),
 		postgres.QuoteIdentifier(triggerName),
