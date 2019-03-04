@@ -18,6 +18,17 @@
   version = "v1.1.0"
 
 [[projects]]
+  digest = "1:58c033da727ebd5a6769209e479cac9a6e4dab53c879631af3d8161423099d57"
+  name = "github.com/go-chi/chi"
+  packages = [
+    ".",
+    "middleware",
+  ]
+  pruneopts = "UT"
+  revision = "da24bba8dcd4021cafac38724bf10dccc97c3e36"
+  version = "v4.0.2"
+
+[[projects]]
   digest = "1:552a143cfb2692a4a8cbae568a9b4633ec4e7ce9269cfe74c07ea08ce50d866f"
   name = "github.com/golang/mock"
   packages = [
@@ -156,6 +167,8 @@
   analyzer-version = 1
   input-imports = [
     "github.com/DATA-DOG/go-sqlmock",
+    "github.com/go-chi/chi",
+    "github.com/go-chi/chi/middleware",
     "github.com/golang/mock/gomock",
     "github.com/golang/mock/mockgen",
     "github.com/google/uuid",
@@ -170,6 +183,7 @@
     "github.com/stretchr/testify/require",
     "github.com/stretchr/testify/suite",
     "go.uber.org/zap",
+    "go.uber.org/zap/zapcore",
     "go.uber.org/zap/zaptest/observer",
   ]
   solver-name = "gps-cdcl"
