@@ -31,3 +31,9 @@ issues:
     - path: _test\.go
       linters:
         - errcheck
+
+    # Ignore the streamEvents.Close errcheck warning since we do not want to introduce a logger for repositories just yet
+    - path: aggregate/repository.go
+      text: "Error return value of \\`streamEvents.Close\\` is not checked"
+      linters:
+        - errcheck
