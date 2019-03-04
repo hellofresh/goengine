@@ -119,8 +119,8 @@ func (c *metadataConstraint) Matches(val interface{}) (bool, error) {
 func (e IncompatibleMatcherError) Error() string {
 	msg := bytes.NewBufferString("goengine: incompatible metadata.Matcher")
 	for _, err := range e {
-		msg.WriteRune('\n')
-		msg.WriteString(err.Error())
+		_, _ = msg.WriteRune('\n')
+		_, _ = msg.WriteString(err.Error())
 	}
 
 	return msg.String()

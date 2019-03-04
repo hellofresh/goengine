@@ -254,17 +254,17 @@ func (e *EventStore) prepareInsertValues(streamEvents []goengine.Message, lenCol
 	for i := 0; i < placeholderCount; i++ {
 		if m := i % lenCols; m == 0 {
 			if i != 0 {
-				placeholders.WriteString("),")
+				_, _ = placeholders.WriteString("),")
 			}
-			placeholders.WriteRune('(')
+			_, _ = placeholders.WriteRune('(')
 		} else {
-			placeholders.WriteRune(',')
+			_, _ = placeholders.WriteRune(',')
 		}
 
-		placeholders.WriteRune('$')
-		placeholders.WriteString(strconv.Itoa(i + 1))
+		_, _ = placeholders.WriteRune('$')
+		_, _ = placeholders.WriteString(strconv.Itoa(i + 1))
 	}
-	placeholders.WriteString(")")
+	_, _ = placeholders.WriteString(")")
 	e.preparedInsertPlaceholder[messageCount] = placeholders.String()
 
 	return e.preparedInsertPlaceholder[messageCount]
