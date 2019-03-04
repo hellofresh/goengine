@@ -16,6 +16,11 @@ go get -u github.com/hellofresh/goengine
 Check out our [quick start guide][goengine-book-quick-start] which is part of your [GoEngine docs][goengine-book].
 If you prefer to be closer to the code you can always refer to [GoDoc][doc].
 
+### Example
+
+Don't like to read documentation? 
+That's fine there are some examples in the [example](example/) directory application. There is even a little [bank](example/bank/) application.  
+
 ## RoadMap
 
 The following features are planned for the future (in no specific order)
