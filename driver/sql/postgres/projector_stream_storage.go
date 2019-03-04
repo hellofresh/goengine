@@ -56,7 +56,7 @@ func newStreamProjectionStorage(
 	projectionTableQuoted := QuoteIdentifier(projectionTable)
 	projectionTableStr := QuoteString(projectionTable)
 
-	/* #nosec */
+	/* #nosec G201 */
 	return &streamProjectionStorage{
 		projectionName:         projectionName,
 		projectionStateEncoder: projectionStateEncoder,

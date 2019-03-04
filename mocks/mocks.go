@@ -22,6 +22,7 @@ import (
 
 var _ goengine.Message = &DummyMessage{}
 
+// DummyMessage a simple goengine.Message implementation used for testing
 type DummyMessage struct {
 	uuid      goengine.UUID
 	payload   interface{}
@@ -29,6 +30,7 @@ type DummyMessage struct {
 	createdAt time.Time
 }
 
+// NewDummyMessage returns a new DummyMessage
 func NewDummyMessage(id goengine.UUID, payload interface{}, meta metadata.Metadata, time time.Time) *DummyMessage {
 	return &DummyMessage{
 		id,
@@ -38,22 +40,27 @@ func NewDummyMessage(id goengine.UUID, payload interface{}, meta metadata.Metada
 	}
 }
 
+// UUID returns the identifier of this message
 func (d *DummyMessage) UUID() goengine.UUID {
 	return d.uuid
 }
 
+// CreatedAt returns the created time of the message
 func (d *DummyMessage) CreatedAt() time.Time {
 	return d.createdAt
 }
 
+// Payload returns the payload of the message
 func (d *DummyMessage) Payload() interface{} {
 	return d.payload
 }
 
+// Metadata return the message metadata
 func (d *DummyMessage) Metadata() metadata.Metadata {
 	return d.metadata
 }
 
+// WithMetadata Returns new instance of the message with key and value added to metadata
 func (d *DummyMessage) WithMetadata(key string, value interface{}) goengine.Message {
 	newMessage := *d
 	newMessage.metadata = metadata.WithValue(d.metadata, key, value)

@@ -98,6 +98,7 @@ func (v *valueData) MarshalJSON() ([]byte, error) {
 	return json.Marshal(v.AsMap())
 }
 
+// UnmarshalJSON unmarshals the provided json into a Metadata instance
 func UnmarshalJSON(json []byte) (Metadata, error) {
 	in := jlexer.Lexer{Data: json}
 	metadata := New()

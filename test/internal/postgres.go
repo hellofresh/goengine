@@ -82,7 +82,7 @@ func (c *dbController) disableDatabaseAccess(t *testing.T, databaseName string) 
 	// Terminate existing connections
 	rows, err := c.db.Query("SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = $1", databaseName)
 	require.NoError(t, err)
-	defer rows.Close()
+	require.NoError(t, err, rows.Close())
 }
 
 func (c *dbController) enableDatabaseAccess(t *testing.T, databaseName string) {

@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -196,11 +197,16 @@ func main() {
 		panic(err)
 	}
 
+	/* #nosec G302 */
 	f, err := os.OpenFile(matcherPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
 		panic(err)
 	}
-	defer f.Close()
+	defer func() {
+		if err := f.Close(); err != nil {
+			fmt.Printf("failed to close file: %s\n", err)
+		}
+	}()
 
 	err = tmpl.Execute(f, struct {
 		Types        []reflect.Kind
