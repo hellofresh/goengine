@@ -61,7 +61,7 @@ func newAggregateProjectionStorage(
 	projectionTableStr := QuoteString(projectionTable)
 	eventStoreTableQuoted := QuoteIdentifier(eventStoreTable)
 
-	/* #nosec */
+	/* #nosec G201 */
 	return &aggregateProjectionStorage{
 		projectionStateEncoder: projectionStateEncoder,
 		logger:                 logger,

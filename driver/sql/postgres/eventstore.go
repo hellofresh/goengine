@@ -207,7 +207,7 @@ func (e *EventStore) AppendToWithExecer(ctx context.Context, conn driverSQL.Exec
 
 	result, err := conn.ExecContext(
 		ctx,
-		/* #nosec */
+		/* #nosec G201 */
 		fmt.Sprintf(
 			"INSERT INTO %s (%s) VALUES %s",
 			tableName,
