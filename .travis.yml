@@ -18,13 +18,25 @@ env:
 matrix:
   include:
     - name: "GoLang CI lint"
-      go: 1.11.x
+      go: 1.12.x
+      addons: {}
       install:
         - dep ensure -v
         - curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s -- -b $(go env GOPATH)/bin v1.15.0
       before_script: []
       script:
         - golangci-lint run
+      after_success: []
+    - name: "GoEngine Examples"
+      go: 1.12.x
+      addons: {}
+      before_script: []
+      script:
+        - go run -race ./example/aggregate/
+        - go run -race ./example/repository/
+        - go build ./example/bank/cmd/api/
+        - go build ./example/bank/cmd/report-account/
+        - go build ./example/bank/cmd/report-bank/
       after_success: []
   allow_failures:
     - go: master
@@ -41,8 +53,6 @@ before_script:
 script:
   - go test -tags=unit -race -coverprofile=coverage.txt -covermode=atomic ./...
   - go test -tags=integration -race ./...
-  - go run -race example/aggregate/*.go
-  - go run -race example/repository/*.go
 
 after_success:
   - bash <(curl -s https://codecov.io/bash)
