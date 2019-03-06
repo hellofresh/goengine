@@ -198,7 +198,7 @@ var jsonTestCases = []struct {
 	},
 }
 
-func TestMetadata_MarshalJSON(t *testing.T) {
+func TestMarshalJSON(t *testing.T) {
 	for _, testCase := range jsonTestCases {
 		t.Run(testCase.title, func(t *testing.T) {
 			m := testCase.metadata()
@@ -211,7 +211,7 @@ func TestMetadata_MarshalJSON(t *testing.T) {
 	}
 }
 
-func TestJSONMetadata_UnmarshalJSON(t *testing.T) {
+func TestUnmarshalJSON(t *testing.T) {
 	for _, testCase := range jsonTestCases {
 		t.Run(testCase.title, func(t *testing.T) {
 			m, err := metadata.UnmarshalJSON([]byte(testCase.json))
@@ -224,12 +224,27 @@ func TestJSONMetadata_UnmarshalJSON(t *testing.T) {
 	}
 }
 
-func BenchmarkJSONMetadata_UnmarshalJSON(b *testing.B) {
+func BenchmarkUnmarshalJSON(b *testing.B) {
 	payload := []byte(`{"_aggregate_id": "b9ebca7a-c1eb-40dd-94a4-fac7c5e84fb5", "_aggregate_type": "bank_account", "_aggregate_version": 1}`)
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_, err := metadata.UnmarshalJSON(payload)
+		if err != nil {
+			b.Fail()
+		}
+	}
+}
+
+func BenchmarkMarshalJSON(b *testing.B) {
+	m := metadata.New()
+	m = metadata.WithValue(m, "_aggregate_id", "b9ebca7a-c1eb-40dd-94a4-fac7c5e84fb5")
+	m = metadata.WithValue(m, "_aggregate_type", "bank_account")
+	m = metadata.WithValue(m, "_aggregate_version", 1)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, err := json.Marshal(m)
 		if err != nil {
 			b.Fail()
 		}
