@@ -4,8 +4,10 @@ package metadata_test
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 	"time"
+	"unicode"
 
 	"github.com/hellofresh/goengine/metadata"
 	"github.com/stretchr/testify/assert"
@@ -201,11 +203,18 @@ var jsonTestCases = []struct {
 func TestMarshalJSON(t *testing.T) {
 	for _, testCase := range jsonTestCases {
 		t.Run(testCase.title, func(t *testing.T) {
+			expectedJSON := strings.Map(func(r rune) rune {
+				if unicode.IsSpace(r) {
+					return -1
+				}
+				return r
+			}, testCase.json)
+
 			m := testCase.metadata()
 
 			mJSON, err := json.Marshal(m)
 
-			assert.JSONEq(t, testCase.json, string(mJSON))
+			assert.Equal(t, expectedJSON, string(mJSON))
 			assert.NoError(t, err)
 		})
 	}
@@ -218,7 +227,7 @@ func TestUnmarshalJSON(t *testing.T) {
 
 			// Need to use AsMap otherwise we can have inconsistent tests results.
 			if assert.NoError(t, err) {
-				assert.Equal(t, testCase.metadata().AsMap(), m.AsMap())
+				assert.Equal(t, testCase.metadata(), m)
 			}
 		})
 	}
