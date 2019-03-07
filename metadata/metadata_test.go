@@ -10,6 +10,7 @@ import (
 	"unicode"
 
 	"github.com/hellofresh/goengine/metadata"
+	"github.com/mailru/easyjson"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -253,7 +254,7 @@ func BenchmarkMarshalJSON(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, err := json.Marshal(m)
+		_, err := easyjson.Marshal(m.(easyjson.Marshaler))
 		if err != nil {
 			b.Fail()
 		}

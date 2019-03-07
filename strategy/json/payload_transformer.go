@@ -8,6 +8,7 @@ import (
 
 	"github.com/hellofresh/goengine"
 	reflectUtil "github.com/hellofresh/goengine/internal/reflect"
+	"github.com/hellofresh/goengine/strategy/json/internal"
 )
 
 var (
@@ -66,7 +67,7 @@ func (p *PayloadTransformer) ConvertPayload(payload interface{}) (string, []byte
 		return "", nil, err
 	}
 
-	data, err := json.Marshal(payload)
+	data, err := internal.MarshalJSON(payload)
 	if err != nil {
 		return "", nil, ErrPayloadCannotBeSerialized
 	}

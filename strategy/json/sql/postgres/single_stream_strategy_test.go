@@ -3,7 +3,6 @@
 package postgres_test
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"testing"
@@ -13,6 +12,7 @@ import (
 	"github.com/hellofresh/goengine"
 	"github.com/hellofresh/goengine/metadata"
 	"github.com/hellofresh/goengine/mocks"
+	"github.com/hellofresh/goengine/strategy/json/internal"
 	"github.com/hellofresh/goengine/strategy/json/sql/postgres"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -181,7 +181,7 @@ func TestPrepareData(t *testing.T) {
 
 			pc.EXPECT().ConvertPayload(payload).Return(payloadType, payload, nil).AnyTimes()
 
-			metaJSON, err := json.Marshal(meta)
+			metaJSON, err := internal.MarshalJSON(meta)
 			require.NoError(t, err)
 
 			expectedColumns = append(
