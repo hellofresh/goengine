@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/hellofresh/goengine"
 	"github.com/hellofresh/goengine/aggregate"
 	"github.com/hellofresh/goengine/metadata"
@@ -126,4 +128,23 @@ func TestReconstituteChange(t *testing.T) {
 			})
 		}
 	})
+}
+
+func TestChanged_WithMetadata(t *testing.T) {
+	expectedMetadata := metadata.WithValue(metadata.New(), "test", "value")
+	msg, err := aggregate.ReconstituteChange(
+		aggregate.GenerateID(),
+		goengine.GenerateUUID(),
+		struct{}{},
+		metadata.New(),
+		time.Now(),
+		1,
+	)
+	require.NoError(t, err)
+
+	msgWithTest := msg.WithMetadata("test", "value")
+
+	assert.Equal(t, expectedMetadata, msgWithTest.Metadata())
+	assert.Equal(t, metadata.New(), msg.Metadata(), "Original metadata should not be changed")
+	assert.NotEqual(t, msg, msgWithTest, "Origional changed message should not be changed")
 }
