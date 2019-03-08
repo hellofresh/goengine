@@ -87,9 +87,9 @@ func (p *ProjectionNotification) UnmarshalEasyJSON(in *jlexer.Lexer) {
 		}
 		switch key {
 		case "no":
-			p.No = int64(in.Int64())
+			p.No = in.Int64()
 		case "aggregate_id":
-			p.AggregateID = string(in.String())
+			p.AggregateID = in.String()
 		default:
 			in.SkipRecursive()
 		}
