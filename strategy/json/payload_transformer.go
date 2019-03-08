@@ -8,6 +8,7 @@ import (
 
 	"github.com/hellofresh/goengine"
 	reflectUtil "github.com/hellofresh/goengine/internal/reflect"
+	"github.com/hellofresh/goengine/strategy/json/internal"
 )
 
 var (
@@ -66,7 +67,7 @@ func (p *PayloadTransformer) ConvertPayload(payload interface{}) (string, []byte
 		return "", nil, err
 	}
 
-	data, err := json.Marshal(payload)
+	data, err := internal.MarshalJSON(payload)
 	if err != nil {
 		return "", nil, ErrPayloadCannotBeSerialized
 	}
@@ -145,7 +146,7 @@ func (p *PayloadTransformer) CreatePayload(typeName string, data interface{}) (i
 
 	// Pointer we can handle nicely
 	if payloadType.isPtr {
-		if err := json.Unmarshal(dataBytes, payload); err != nil {
+		if err := internal.UnmarshalJSON(dataBytes, payload); err != nil {
 			return nil, err
 		}
 	}
@@ -153,7 +154,7 @@ func (p *PayloadTransformer) CreatePayload(typeName string, data interface{}) (i
 	// Not a pointer so let's cry and use reflection
 	vp := reflect.New(payloadType.reflectionType)
 	vp.Elem().Set(reflect.ValueOf(payload))
-	if err := json.Unmarshal(dataBytes, vp.Interface()); err != nil {
+	if err := internal.UnmarshalJSON(dataBytes, vp.Interface()); err != nil {
 		return nil, err
 	}
 

@@ -4,10 +4,13 @@ package metadata_test
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 	"time"
+	"unicode"
 
 	"github.com/hellofresh/goengine/metadata"
+	"github.com/mailru/easyjson"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -198,38 +201,60 @@ var jsonTestCases = []struct {
 	},
 }
 
-func TestMetadata_MarshalJSON(t *testing.T) {
+func TestMarshalJSON(t *testing.T) {
 	for _, testCase := range jsonTestCases {
 		t.Run(testCase.title, func(t *testing.T) {
+			expectedJSON := strings.Map(func(r rune) rune {
+				if unicode.IsSpace(r) {
+					return -1
+				}
+				return r
+			}, testCase.json)
+
 			m := testCase.metadata()
 
 			mJSON, err := json.Marshal(m)
 
-			assert.JSONEq(t, testCase.json, string(mJSON))
+			assert.Equal(t, expectedJSON, string(mJSON))
 			assert.NoError(t, err)
 		})
 	}
 }
 
-func TestJSONMetadata_UnmarshalJSON(t *testing.T) {
+func TestUnmarshalJSON(t *testing.T) {
 	for _, testCase := range jsonTestCases {
 		t.Run(testCase.title, func(t *testing.T) {
 			m, err := metadata.UnmarshalJSON([]byte(testCase.json))
 
 			// Need to use AsMap otherwise we can have inconsistent tests results.
 			if assert.NoError(t, err) {
-				assert.Equal(t, testCase.metadata().AsMap(), m.AsMap())
+				assert.Equal(t, testCase.metadata(), m)
 			}
 		})
 	}
 }
 
-func BenchmarkJSONMetadata_UnmarshalJSON(b *testing.B) {
+func BenchmarkUnmarshalJSON(b *testing.B) {
 	payload := []byte(`{"_aggregate_id": "b9ebca7a-c1eb-40dd-94a4-fac7c5e84fb5", "_aggregate_type": "bank_account", "_aggregate_version": 1}`)
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_, err := metadata.UnmarshalJSON(payload)
+		if err != nil {
+			b.Fail()
+		}
+	}
+}
+
+func BenchmarkMarshalJSON(b *testing.B) {
+	m := metadata.New()
+	m = metadata.WithValue(m, "_aggregate_id", "b9ebca7a-c1eb-40dd-94a4-fac7c5e84fb5")
+	m = metadata.WithValue(m, "_aggregate_type", "bank_account")
+	m = metadata.WithValue(m, "_aggregate_version", 1)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, err := easyjson.Marshal(m.(easyjson.Marshaler))
 		if err != nil {
 			b.Fail()
 		}

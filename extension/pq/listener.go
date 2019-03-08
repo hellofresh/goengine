@@ -2,13 +2,13 @@ package pq
 
 import (
 	"context"
-	"encoding/json"
 	"strings"
 	"time"
 
 	"github.com/hellofresh/goengine"
 	"github.com/hellofresh/goengine/driver/sql"
 	"github.com/lib/pq"
+	"github.com/mailru/easyjson"
 )
 
 // Ensure Listener implements sql.Listener
@@ -138,7 +138,7 @@ func (s *Listener) unmarshalNotification(n *pq.Notification) *sql.ProjectionNoti
 	}
 
 	notification := &sql.ProjectionNotification{}
-	if err := json.Unmarshal([]byte(n.Extra), notification); err != nil {
+	if err := easyjson.Unmarshal([]byte(n.Extra), notification); err != nil {
 		logger.WithError(err).Error("received invalid notification data")
 		return nil
 	}

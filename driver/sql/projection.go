@@ -5,6 +5,7 @@ import (
 	"database/sql"
 
 	"github.com/hellofresh/goengine"
+	"github.com/mailru/easyjson/jlexer"
 )
 
 type (
@@ -57,3 +58,45 @@ type (
 	// EventStreamLoader loads a event stream based on the provided notification and state
 	EventStreamLoader func(ctx context.Context, conn *sql.Conn, notification *ProjectionNotification, position int64) (goengine.EventStream, error)
 )
+
+// UnmarshalJSON supports json.Unmarshaler interface
+func (p *ProjectionNotification) UnmarshalJSON(data []byte) error {
+	r := jlexer.Lexer{Data: data}
+	p.UnmarshalEasyJSON(&r)
+	return r.Error()
+}
+
+// UnmarshalEasyJSON supports easyjson.Unmarshaler interface
+func (p *ProjectionNotification) UnmarshalEasyJSON(in *jlexer.Lexer) {
+	isTopLevel := in.IsStart()
+	if in.IsNull() {
+		if isTopLevel {
+			in.Consumed()
+		}
+		in.Skip()
+		return
+	}
+	in.Delim('{')
+	for !in.IsDelim('}') {
+		key := in.UnsafeString()
+		in.WantColon()
+		if in.IsNull() {
+			in.Skip()
+			in.WantComma()
+			continue
+		}
+		switch key {
+		case "no":
+			p.No = in.Int64()
+		case "aggregate_id":
+			p.AggregateID = in.String()
+		default:
+			in.SkipRecursive()
+		}
+		in.WantComma()
+	}
+	in.Delim('}')
+	if isTopLevel {
+		in.Consumed()
+	}
+}

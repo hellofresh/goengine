@@ -1,15 +1,14 @@
 package postgres
 
 import (
-	"encoding/json"
 	"fmt"
 	"regexp"
 	"strings"
 
-	"github.com/hellofresh/goengine/driver/sql/postgres"
-
 	"github.com/hellofresh/goengine"
 	"github.com/hellofresh/goengine/driver/sql"
+	"github.com/hellofresh/goengine/driver/sql/postgres"
+	"github.com/hellofresh/goengine/strategy/json/internal"
 )
 
 var (
@@ -81,7 +80,7 @@ func (s *SingleStreamStrategy) PrepareData(messages []goengine.Message) ([]inter
 			return nil, err
 		}
 
-		meta, err := json.Marshal(msg.Metadata())
+		meta, err := internal.MarshalJSON(msg.Metadata())
 		if err != nil {
 			return nil, err
 		}

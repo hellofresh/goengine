@@ -3,18 +3,17 @@
 package sql_test
 
 import (
-	"encoding/json"
 	"errors"
 	"testing"
 	"time"
 
-	"github.com/golang/mock/gomock"
-
 	sqlmock "github.com/DATA-DOG/go-sqlmock"
+	"github.com/golang/mock/gomock"
 	"github.com/hellofresh/goengine"
 	"github.com/hellofresh/goengine/aggregate"
 	"github.com/hellofresh/goengine/metadata"
 	"github.com/hellofresh/goengine/mocks"
+	"github.com/hellofresh/goengine/strategy/json/internal"
 	"github.com/hellofresh/goengine/strategy/json/sql"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -70,10 +69,10 @@ func TestAggregateChangedFactory_CreateFromRows(t *testing.T) {
 				payloadFactory := mocks.NewMessagePayloadFactory(ctrl)
 				mockRows := sqlmock.NewRows(rowColumns)
 				for i, msg := range expectedMessages {
-					rowPayload, err := json.Marshal(msg.Payload())
+					rowPayload, err := internal.MarshalJSON(msg.Payload())
 					require.NoError(t, err)
 
-					rowMetadata, err := json.Marshal(msg.Metadata())
+					rowMetadata, err := internal.MarshalJSON(msg.Metadata())
 					require.NoError(t, err)
 
 					msgNr := i + 1

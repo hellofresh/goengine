@@ -91,16 +91,14 @@ func (a *Changed) Metadata() metadata.Metadata {
 }
 
 // WithMetadata Returns new instance of the change with key and value added to metadata
-func (a *Changed) WithMetadata(key string, value interface{}) goengine.Message {
-	newAggregateChanged := *a
-	newAggregateChanged.metadata = metadata.WithValue(a.metadata, key, value)
+func (a Changed) WithMetadata(key string, value interface{}) goengine.Message {
+	a.metadata = metadata.WithValue(a.metadata, key, value)
 
-	return &newAggregateChanged
+	return &a
 }
 
-func (a *Changed) withVersion(version uint) *Changed {
-	newAggregateChanged := *a
-	newAggregateChanged.version = version
+func (a Changed) withVersion(version uint) *Changed {
+	a.version = version
 
-	return &newAggregateChanged
+	return &a
 }
