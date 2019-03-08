@@ -65,10 +65,13 @@ func (a *accountHandler) CreateAccount(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *accountHandler) ViewAccount(w http.ResponseWriter, r *http.Request) {
-	bankAccount := a.loadAccount(w, r)
-	if bankAccount == nil {
+	accountID := r.Context().Value(contextKeyBankAccountID).(aggregate.ID)
+	bankAccount, err := a.bankAccountRepo.Get(r.Context(), accountID)
+	if err != nil {
+		a.renderAccountError(w, accountID, err)
 		return
 	}
+
 	body := []byte(
 		fmt.Sprintf(`{"version":%d}`, bankAccount.AggregateVersion()),
 	)
@@ -81,10 +84,7 @@ func (a *accountHandler) ViewAccount(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *accountHandler) AccountAverages(w http.ResponseWriter, r *http.Request) {
-	var (
-		debit  uint
-		credit uint
-	)
+	var debit, credit uint
 	accountID := r.Context().Value(contextKeyBankAccountID).(aggregate.ID)
 	err := a.db.QueryRowContext(r.Context(),
 		"SELECT debit, credit FROM account_averages WHERE accountid=$1",
@@ -113,13 +113,16 @@ func (a *accountHandler) AccountAverages(w http.ResponseWriter, r *http.Request)
 }
 
 func (a *accountHandler) AccountDeposit(w http.ResponseWriter, r *http.Request) {
-	amount, err := a.loadAmountFromPost(w, r)
+	amount, err := a.loadAmountFromPost(r)
 	if err != nil {
+		a.renderAmountError(w, err)
 		return
 	}
 
-	bankAccount := a.loadAccount(w, r)
-	if bankAccount == nil {
+	accountID := r.Context().Value(contextKeyBankAccountID).(aggregate.ID)
+	bankAccount, err := a.bankAccountRepo.Get(r.Context(), accountID)
+	if err != nil {
+		a.renderAccountError(w, accountID, err)
 		return
 	}
 
@@ -146,13 +149,16 @@ func (a *accountHandler) AccountDeposit(w http.ResponseWriter, r *http.Request) 
 }
 
 func (a *accountHandler) AccountWithdraw(w http.ResponseWriter, r *http.Request) {
-	amount, err := a.loadAmountFromPost(w, r)
+	amount, err := a.loadAmountFromPost(r)
 	if err != nil {
+		a.renderAmountError(w, err)
 		return
 	}
 
-	bankAccount := a.loadAccount(w, r)
-	if bankAccount == nil {
+	accountID := r.Context().Value(contextKeyBankAccountID).(aggregate.ID)
+	bankAccount, err := a.bankAccountRepo.Get(r.Context(), accountID)
+	if err != nil {
+		a.renderAccountError(w, accountID, err)
 		return
 	}
 
@@ -204,27 +210,25 @@ func (a *accountHandler) accountIDFromURL(next http.Handler) http.Handler {
 	})
 }
 
-func (a *accountHandler) loadAmountFromPost(w http.ResponseWriter, r *http.Request) (uint, error) {
+func (a *accountHandler) loadAmountFromPost(r *http.Request) (uint, error) {
 	amountStr := r.PostFormValue("amount")
 	amount64, err := strconv.ParseUint(amountStr, 10, 32)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		a.logger.With(
-			zap.Error(err),
-			zap.String("amount", amountStr),
-		).Info("invalid amount to deposit into bank account")
 		return 0, err
 	}
 
 	return uint(amount64), nil
 }
 
-func (a *accountHandler) loadAccount(w http.ResponseWriter, r *http.Request) *domain.BankAccount {
-	accountID := r.Context().Value(contextKeyBankAccountID).(aggregate.ID)
-	bankAccount, err := a.bankAccountRepo.Get(r.Context(), accountID)
+func (a *accountHandler) renderAmountError(w http.ResponseWriter, err error) {
+	w.WriteHeader(http.StatusBadRequest)
+	a.logger.With(
+		zap.Error(err),
+	).Info("invalid amount")
+}
+
+func (a *accountHandler) renderAccountError(w http.ResponseWriter, accountID aggregate.ID, err error) {
 	switch err {
-	case nil:
-		return bankAccount
 	case aggregate.ErrEmptyEventStream:
 		w.WriteHeader(http.StatusNotFound)
 		a.logger.With(zap.Error(err)).Debug("unknown accountID provided")
@@ -235,6 +239,4 @@ func (a *accountHandler) loadAccount(w http.ResponseWriter, r *http.Request) *do
 			zap.String("account_id", string(accountID)),
 		).Error("failed to load bank account")
 	}
-
-	return nil
 }
