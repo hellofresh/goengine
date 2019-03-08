@@ -2,6 +2,8 @@ package aggregate
 
 import (
 	"sync"
+
+	"github.com/hellofresh/goengine"
 )
 
 var (
@@ -49,13 +51,32 @@ func (b *BaseRoot) popRecordedEvents() []*Changed {
 	return pendingEvents
 }
 
-func (b *BaseRoot) replay(aggregate EventApplier, historyEvents []*Changed) {
+func (b *BaseRoot) replay(aggregate EventApplier, streamEvents goengine.EventStream) error {
 	b.Lock()
 	defer b.Unlock()
 
-	for _, pastEvent := range historyEvents {
-		b.version = pastEvent.Version()
+	for streamEvents.Next() {
+		msg, _, err := streamEvents.Message()
+		if err != nil {
+			return err
+		}
 
-		aggregate.Apply(pastEvent)
+		changedEvent, ok := msg.(*Changed)
+		if !ok {
+			return ErrUnexpectedMessageType
+		}
+
+		b.version = changedEvent.Version()
+		aggregate.Apply(changedEvent)
 	}
+
+	if err := streamEvents.Err(); err != nil {
+		return err
+	}
+
+	if b.version == 0 {
+		return ErrEmptyEventStream
+	}
+
+	return nil
 }
