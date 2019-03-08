@@ -95,8 +95,8 @@ func (b *BackgroundProcessor) Start(ctx context.Context, handler ProcessHandler)
 
 	return func() {
 		close(b.done)
-		close(b.queue)
 		wg.Wait()
+		close(b.queue)
 	}
 }
 
@@ -115,20 +115,20 @@ func (b *BackgroundProcessor) Queue(ctx context.Context, notification *sql.Proje
 }
 
 func (b *BackgroundProcessor) startProcessor(ctx context.Context, handler ProcessHandler) {
-	for notification := range b.queue {
+	for {
 		select {
-		default:
-		case <-ctx.Done():
-			// Context is expired
+		case <-b.done:
 			return
-		}
-
-		// Execute the notification
-		if err := handler(ctx, notification, b.Queue); err != nil {
-			b.logger.
-				WithError(err).
-				WithField("notification", notification).
-				Error("the ProcessHandler produced an error")
+		case <-ctx.Done():
+			return
+		case notification := <-b.queue:
+			// Execute the notification
+			if err := handler(ctx, notification, b.Queue); err != nil {
+				b.logger.
+					WithError(err).
+					WithField("notification", notification).
+					Error("the ProcessHandler produced an error")
+			}
 		}
 	}
 }
@@ -150,21 +150,20 @@ func (b *BackgroundProcessor) wrapProcessHandlerForSingleRun(handler ProcessHand
 			defer m.Unlock()
 
 			triggers--
-			if triggers != 0 || done == nil {
+			if triggers != 0 {
 				return
 			}
 
 			// Only close the done channel when the queue is empty or the context is closed
 			select {
+			case <-done:
 			case <-ctx.Done():
 				// Context is expired
 				close(done)
-				done = nil
 			default:
 				// No more queued messages to close the run
 				if len(b.queue) == 0 {
 					close(done)
-					done = nil
 				}
 			}
 		}()
