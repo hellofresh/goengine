@@ -39,7 +39,7 @@ type (
 	}
 
 	eventSourced interface {
-		replay(aggregate EventApplier, historyEvents []*Changed)
+		replay(aggregate EventApplier, historyEvents goengine.EventStream) error
 		recordThat(aggregate EventApplier, event *Changed)
 	}
 )
