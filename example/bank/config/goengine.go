@@ -11,6 +11,7 @@ import (
 	"github.com/hellofresh/goengine/strategy/json/sql/postgres"
 )
 
+// NewGoEngineManager return a confiured SingleStreamManager for the application
 func NewGoEngineManager(postgresDB *sql.DB, logger goengine.Logger) (*postgres.SingleStreamManager, error) {
 	manager, err := postgres.NewSingleStreamManager(postgresDB, logger)
 	if err != nil {
@@ -35,6 +36,7 @@ func NewGoEngineManager(postgresDB *sql.DB, logger goengine.Logger) (*postgres.S
 	return manager, nil
 }
 
+// NewGoEngineListener returns a new goengine db listener
 func NewGoEngineListener(logger goengine.Logger) (*pq.Listener, error) {
 	return pq.NewListener(
 		PostgresDSN,

@@ -12,22 +12,28 @@ import (
 
 var _ goengine.Projection = &BankReportProjection{}
 
+// BankReportProjection the general bank report projection
 type BankReportProjection struct {
 	db *sql.DB
 }
 
+// NewBankReportProjection returns a new BankReportProjection
 func NewBankReportProjection(db *sql.DB) *BankReportProjection {
 	return &BankReportProjection{db: db}
 }
 
+// Name return the name of the projection
 func (*BankReportProjection) Name() string {
 	return "bank_reports"
 }
 
+// FromStream returns the name of the stream that this projection uses
 func (*BankReportProjection) FromStream() goengine.StreamName {
 	return config.EventStoreStreamName
 }
 
+// Init initializes the projection by creating db table for this projection and it's related rows
+// These rows will later be populated by the handlers
 func (p *BankReportProjection) Init(ctx context.Context) (interface{}, error) {
 	_, err := p.db.Exec(`CREATE TABLE bank_reports (name VARCHAR(20) UNIQUE NOT NULL, amount bigint default 0 not null);`)
 	if err != nil {
@@ -43,6 +49,7 @@ func (p *BankReportProjection) Init(ctx context.Context) (interface{}, error) {
 	return nil, err
 }
 
+// Handlers return the handlers for the events we want to project
 func (p *BankReportProjection) Handlers() map[string]goengine.MessageHandler {
 	return map[string]goengine.MessageHandler{
 		domain.BankAccountOpenedName: func(ctx context.Context, _ interface{}, _ goengine.Message) (interface{}, error) {
