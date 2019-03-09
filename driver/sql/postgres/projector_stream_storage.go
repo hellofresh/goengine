@@ -67,12 +67,18 @@ func newStreamProjectionStorage(
 			projectionTableQuoted,
 		),
 		queryAcquireLock: fmt.Sprintf(
-			`SELECT pg_try_advisory_lock(%[2]s::regclass::oid::int, no), locked, position, state FROM %[1]s WHERE name = $1`,
+			`SELECT
+				CASE WHEN locked THEN false 
+					 ELSE pg_try_advisory_lock(%[2]s::regclass::oid::int, no)
+				END AS acquiredLock, locked, position, state FROM %[1]s WHERE name = $1`,
 			projectionTableQuoted,
 			projectionTableStr,
 		),
 		queryAcquirePositionLock: fmt.Sprintf(
-			`SELECT pg_try_advisory_lock(%[2]s::regclass::oid::int, no), locked, position, state FROM %[1]s WHERE name = $1 AND position < $2`,
+			`SELECT
+				CASE WHEN locked THEN false 
+					 ELSE pg_try_advisory_lock(%[2]s::regclass::oid::int, no)
+				END AS acquiredLock, locked, position, state FROM %[1]s WHERE name = $1 AND position < $2`,
 			projectionTableQuoted,
 			projectionTableStr,
 		),
@@ -157,23 +163,12 @@ func (s *streamProjectionStorage) Acquire(
 		return nil, nil, err
 	}
 
-	if !acquiredLock {
-		return nil, nil, driverSQL.ErrProjectionFailedToLock
+	if locked {
+		return nil, nil, driverSQL.ErrProjectionPreviouslyLocked
 	}
 
-	if locked {
-		// The projection was locked by another process that died and for this reason not unlocked
-		// In this case a application needs to decide what to do to avoid invalid projection states
-		if err := s.releaseProjectionConnectionLock(conn); err != nil {
-			s.logger.Error("failed to release lock for a projection with a locked row", func(e goengine.LoggerEntry) {
-				logFields(e)
-				e.Error(err)
-			})
-		} else {
-			s.logger.Debug("released connection lock for a locked projection", logFields)
-		}
-
-		return nil, nil, driverSQL.ErrProjectionPreviouslyLocked
+	if !acquiredLock {
+		return nil, nil, driverSQL.ErrProjectionFailedToLock
 	}
 
 	// Set the projection as row locked

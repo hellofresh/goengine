@@ -98,7 +98,11 @@ func newAggregateProjectionStorage(
 			)
 			SELECT pg_try_advisory_lock(%[2]s::regclass::oid::int, no), locked, failed, position, state FROM new_projection
 			UNION
-			SELECT pg_try_advisory_lock(%[2]s::regclass::oid::int, no), locked, failed, position, state FROM %[1]s WHERE aggregate_id = $1 AND (position < $2 OR failed)`,
+			SELECT 
+				CASE WHEN locked THEN false
+					 WHEN failed THEN false
+     				 ELSE pg_try_advisory_lock(%[2]s::regclass::oid::int, no)
+				END AS acquiredLock, locked, failed, position, state FROM %[1]s WHERE aggregate_id = $1 AND (position < $2 OR failed)`,
 			projectionTableQuoted,
 			projectionTableStr,
 		),
@@ -174,23 +178,12 @@ func (a *aggregateProjectionStorage) Acquire(
 		return nil, nil, err
 	}
 
-	if !acquiredLock {
-		return nil, nil, driverSQL.ErrProjectionFailedToLock
+	if locked || failed {
+		return nil, nil, driverSQL.ErrProjectionPreviouslyLocked
 	}
 
-	if locked || failed {
-		// The projection was locked by another process that died and for this reason not unlocked
-		// In this case a application needs to decide what to do to avoid invalid projection states
-		if err := a.releaseProjectionConnectionLock(conn, aggregateID); err != nil {
-			a.logger.Error("failed to release lock for a projection with a locked row", func(e goengine.LoggerEntry) {
-				logFields(e)
-				e.Error(err)
-			})
-		} else {
-			a.logger.Debug("released connection lock for a locked projection", logFields)
-		}
-
-		return nil, nil, driverSQL.ErrProjectionPreviouslyLocked
+	if !acquiredLock {
+		return nil, nil, driverSQL.ErrProjectionFailedToLock
 	}
 
 	// Set the projection as row locked
