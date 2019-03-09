@@ -68,7 +68,7 @@ func newStreamProjectionStorage(
 		),
 		queryAcquireLock: fmt.Sprintf(
 			`SELECT
-				CASE WHEN locked THEN false 
+				CASE WHEN locked THEN NOT EXISTS (SELECT TRUE FROM pg_locks WHERE locktype='advisory' AND granted='t' AND classid=%[2]s::regclass::oid::int AND objid=%[1]s.no LIMIT 1)
 					 ELSE pg_try_advisory_lock(%[2]s::regclass::oid::int, no)
 				END AS acquiredLock, locked, position, state FROM %[1]s WHERE name = $1`,
 			projectionTableQuoted,
@@ -76,7 +76,7 @@ func newStreamProjectionStorage(
 		),
 		queryAcquirePositionLock: fmt.Sprintf(
 			`SELECT
-				CASE WHEN locked THEN false 
+				CASE WHEN locked THEN NOT EXISTS (SELECT TRUE FROM pg_locks WHERE locktype='advisory' AND granted='t' AND classid=%[2]s::regclass::oid::int AND objid=%[1]s.no LIMIT 1) 
 					 ELSE pg_try_advisory_lock(%[2]s::regclass::oid::int, no)
 				END AS acquiredLock, locked, position, state FROM %[1]s WHERE name = $1 AND position < $2`,
 			projectionTableQuoted,
@@ -163,12 +163,12 @@ func (s *streamProjectionStorage) Acquire(
 		return nil, nil, err
 	}
 
-	if locked {
-		return nil, nil, driverSQL.ErrProjectionPreviouslyLocked
-	}
-
 	if !acquiredLock {
 		return nil, nil, driverSQL.ErrProjectionFailedToLock
+	}
+
+	if locked {
+		return nil, nil, driverSQL.ErrProjectionPreviouslyLocked
 	}
 
 	// Set the projection as row locked

@@ -99,8 +99,8 @@ func newAggregateProjectionStorage(
 			SELECT pg_try_advisory_lock(%[2]s::regclass::oid::int, no), locked, failed, position, state FROM new_projection
 			UNION
 			SELECT 
-				CASE WHEN locked THEN false
-					 WHEN failed THEN false
+				CASE WHEN failed THEN false 
+					 WHEN locked THEN NOT EXISTS (SELECT TRUE FROM pg_locks WHERE locktype='advisory' AND granted='t' AND classid=%[2]s::regclass::oid::int AND objid=%[1]s.no LIMIT 1)
      				 ELSE pg_try_advisory_lock(%[2]s::regclass::oid::int, no)
 				END AS acquiredLock, locked, failed, position, state FROM %[1]s WHERE aggregate_id = $1 AND (position < $2 OR failed)`,
 			projectionTableQuoted,
@@ -178,12 +178,16 @@ func (a *aggregateProjectionStorage) Acquire(
 		return nil, nil, err
 	}
 
-	if locked || failed {
+	if failed {
 		return nil, nil, driverSQL.ErrProjectionPreviouslyLocked
 	}
 
 	if !acquiredLock {
 		return nil, nil, driverSQL.ErrProjectionFailedToLock
+	}
+
+	if locked {
+		return nil, nil, driverSQL.ErrProjectionPreviouslyLocked
 	}
 
 	// Set the projection as row locked
