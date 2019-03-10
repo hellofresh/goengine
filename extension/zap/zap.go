@@ -14,42 +14,65 @@ func Wrap(logger *zap.Logger) goengine.Logger {
 	return &wrapper{logger}
 }
 
-// Error writes a log with log level error
-func (w wrapper) Error(msg string) {
-	w.logger.Error(msg)
+func (w wrapper) Error(msg string, fields func(goengine.LoggerEntry)) {
+	if ce := w.logger.Check(zap.ErrorLevel, msg); ce != nil {
+		ce.Write(fieldsToZapFields(fields)...)
+	}
 }
 
-// Warn writes a log with log level warning
-func (w wrapper) Warn(msg string) {
-	w.logger.Warn(msg)
+func (w wrapper) Warn(msg string, fields func(goengine.LoggerEntry)) {
+	if ce := w.logger.Check(zap.WarnLevel, msg); ce != nil {
+		ce.Write(fieldsToZapFields(fields)...)
+	}
 }
 
-// Info writes a log with log level info
-func (w wrapper) Info(msg string) {
-	w.logger.Info(msg)
+func (w wrapper) Info(msg string, fields func(goengine.LoggerEntry)) {
+	if ce := w.logger.Check(zap.InfoLevel, msg); ce != nil {
+		ce.Write(fieldsToZapFields(fields)...)
+	}
 }
 
-// Debug writes a log with log level debug
-func (w wrapper) Debug(msg string) {
-	w.logger.Debug(msg)
+func (w wrapper) Debug(msg string, fields func(goengine.LoggerEntry)) {
+	if ce := w.logger.Check(zap.DebugLevel, msg); ce != nil {
+		ce.Write(fieldsToZapFields(fields)...)
+	}
 }
 
-// WithField Adds a field to the log entry
-func (w wrapper) WithField(key string, val interface{}) goengine.Logger {
-	return wrapper{logger: w.logger.With(zap.Any(key, val))}
-}
-
-//WithFields Adds a set of fields to the log entry
-func (w wrapper) WithFields(fields goengine.Fields) goengine.Logger {
-	zapFields := make([]zap.Field, 0, len(fields))
-	for k, v := range fields {
-		zapFields = append(zapFields, zap.Any(k, v))
+func (w *wrapper) WithFields(fields func(goengine.LoggerEntry)) goengine.Logger {
+	if fields == nil {
+		return w
 	}
 
-	return wrapper{logger: w.logger.With(zapFields...)}
+	return &wrapper{logger: w.logger.With(fieldsToZapFields(fields)...)}
 }
 
-// WithError Add an error as single field to the log entry
-func (w wrapper) WithError(err error) goengine.Logger {
-	return wrapper{logger: w.logger.With(zap.Error(err))}
+func fieldsToZapFields(fields func(goengine.LoggerEntry)) []zap.Field {
+	if fields == nil {
+		return make([]zap.Field, 0)
+	}
+
+	// TODO use some sort of pool
+	e := &entry{fields: []zap.Field{}}
+	fields(e)
+	return e.fields
+}
+
+type entry struct {
+	fields []zap.Field
+}
+
+func (e *entry) Int(k string, v int) {
+	e.fields = append(e.fields, zap.Int(k, v))
+}
+
+func (e *entry) String(k, v string) {
+	e.fields = append(e.fields, zap.String(k, v))
+}
+
+func (e *entry) Error(err error) {
+	e.fields = append(e.fields, zap.Error(err))
+}
+
+func (e *entry) Any(k string, v interface{}) {
+	e.fields = append(e.fields, zap.Any(k, v))
 }
