@@ -108,7 +108,8 @@ func (s *streamProjectionStorage) PersistState(conn driverSQL.Execer, notificati
 		return err
 	}
 	s.logger.Debug("updated projection state", func(e goengine.LoggerEntry) {
-		e.Any("notification", notification)
+		e.Int64("notification.no", notification.No)
+		e.String("notification.aggregate_id", notification.AggregateID)
 		e.Any("state", state)
 	})
 
@@ -121,7 +122,8 @@ func (s *streamProjectionStorage) Acquire(
 	notification *driverSQL.ProjectionNotification,
 ) (func(), *driverSQL.ProjectionRawState, error) {
 	logFields := func(e goengine.LoggerEntry) {
-		e.Any("notification", notification)
+		e.Int64("notification.no", notification.No)
+		e.String("notification.aggregate_id", notification.AggregateID)
 	}
 
 	var res *sql.Row

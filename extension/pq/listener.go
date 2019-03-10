@@ -153,7 +153,8 @@ func (s *Listener) unmarshalNotification(n *pq.Notification) *sql.ProjectionNoti
 
 	s.logger.Debug("received notification", func(e goengine.LoggerEntry) {
 		e.Any("pq_notification", n)
-		e.Any("notification", notification)
+		e.Int64("notification.no", notification.No)
+		e.String("notification.aggregate_id", notification.AggregateID)
 	})
 
 	return notification

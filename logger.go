@@ -15,6 +15,7 @@ type (
 	// This entry can be enhanced with more date.
 	LoggerEntry interface {
 		Int(k string, v int)
+		Int64(s string, v int64)
 		String(k, v string)
 		Error(err error)
 		Any(k string, v interface{})

@@ -65,6 +65,10 @@ func (e *entry) Int(k string, v int) {
 	e.fields = append(e.fields, zap.Int(k, v))
 }
 
+func (e *entry) Int64(k string, v int64) {
+	e.fields = append(e.fields, zap.Int64(k, v))
+}
+
 func (e *entry) String(k, v string) {
 	e.fields = append(e.fields, zap.String(k, v))
 }

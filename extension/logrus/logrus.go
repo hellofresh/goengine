@@ -95,6 +95,10 @@ func (e entry) Int(k string, v int) {
 	e[k] = v
 }
 
+func (e entry) Int64(k string, v int64) {
+	e[k] = v
+}
+
 func (e entry) String(k, v string) {
 	e[k] = v
 }

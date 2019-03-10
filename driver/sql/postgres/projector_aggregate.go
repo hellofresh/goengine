@@ -162,7 +162,8 @@ func (a *AggregateProjector) processNotification(
 	// Resolve the action to take based on the error that occurred
 	logFields := func(e goengine.LoggerEntry) {
 		e.Error(err)
-		e.Any("notification", notification)
+		e.Int64("notification.no", notification.No)
+		e.String("notification.aggregate_id", notification.AggregateID)
 	}
 	switch resolveErrorAction(a.projectionErrorHandler, notification, err) {
 	case errorFail:
@@ -231,13 +232,15 @@ func (a *AggregateProjector) triggerOutOfSyncProjections(ctx context.Context, qu
 		if err := queue(ctx, notification); err != nil {
 			a.logger.Error("failed to queue notification", func(e goengine.LoggerEntry) {
 				e.Error(err)
-				e.Any("notification", notification)
+				e.Int64("notification.no", notification.No)
+				e.String("notification.aggregate_id", notification.AggregateID)
 			})
 			return err
 		}
 
 		a.logger.Debug("send catchup", func(e goengine.LoggerEntry) {
-			e.Any("notification", notification)
+			e.Int64("notification.no", notification.No)
+			e.String("notification.aggregate_id", notification.AggregateID)
 		})
 	}
 

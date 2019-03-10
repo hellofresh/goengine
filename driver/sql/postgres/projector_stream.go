@@ -148,7 +148,8 @@ func (s *StreamProjector) processNotification(
 		// Resolve the action to take based on the error that occurred
 		logFields := func(e goengine.LoggerEntry) {
 			e.Error(err)
-			e.Any("notification", notification)
+			e.Int64("notification.no", notification.No)
+			e.String("notification.aggregate_id", notification.AggregateID)
 		}
 		switch resolveErrorAction(s.projectionErrorHandler, notification, err) {
 		case errorRetry:
