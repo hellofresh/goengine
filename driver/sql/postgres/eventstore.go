@@ -97,10 +97,10 @@ func (e *EventStore) Create(ctx context.Context, streamName goengine.StreamName)
 		}
 
 		if errRollback := tx.Rollback(); errRollback != nil {
-			e.logger.
-				WithError(errRollback).
-				WithField("query", q).
-				Error("could not rollback transaction")
+			e.logger.Error("could not rollback transaction", func(e goengine.LoggerEntry) {
+				e.Error(errRollback)
+				e.String("query", q)
+			})
 		}
 
 		return err
@@ -217,24 +217,21 @@ func (e *EventStore) AppendToWithExecer(ctx context.Context, conn driverSQL.Exec
 		data...,
 	)
 	if err != nil {
-		e.logger.
-			WithError(err).
-			WithFields(goengine.Fields{
-				"streamName":   streamName,
-				"streamEvents": streamEvents,
-			}).
-			Warn("failed to insert messages into the event stream")
+		e.logger.Warn("failed to insert messages into the event stream", func(e goengine.LoggerEntry) {
+			e.Error(err)
+			e.String("streamName", string(streamName))
+			e.Any("streamEvents", streamEvents)
+		})
 
 		return err
 	}
 
-	e.logger.
-		WithFields(goengine.Fields{
-			"streamName":   streamName,
-			"streamEvents": streamEvents,
-			"result":       result,
-		}).
-		Debug("inserted messages into the event stream")
+	e.logger.Debug("inserted messages into the event stream", func(e goengine.LoggerEntry) {
+		e.Error(err)
+		e.String("streamName", string(streamName))
+		e.Any("streamEvents", streamEvents)
+		e.Any("result", result)
+	})
 
 	return nil
 }
@@ -306,10 +303,10 @@ func (e *EventStore) tableExists(ctx context.Context, tableName string) bool {
 	).Scan(&exists)
 
 	if err != nil {
-		e.logger.
-			WithError(err).
-			WithField("table", tableName).
-			Warn("error on reading from information_schema")
+		e.logger.Warn("error on reading from information_schema", func(e goengine.LoggerEntry) {
+			e.Error(err)
+			e.String("table", tableName)
+		})
 
 		return false
 	}

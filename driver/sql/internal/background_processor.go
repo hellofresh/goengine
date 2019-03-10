@@ -124,10 +124,10 @@ func (b *BackgroundProcessor) startProcessor(ctx context.Context, handler Proces
 		case notification := <-b.queue:
 			// Execute the notification
 			if err := handler(ctx, notification, b.Queue); err != nil {
-				b.logger.
-					WithError(err).
-					WithField("notification", notification).
-					Error("the ProcessHandler produced an error")
+				b.logger.Error("the ProcessHandler produced an error", func(e goengine.LoggerEntry) {
+					e.Error(err)
+					e.Any("notification", notification)
+				})
 			}
 		}
 	}
