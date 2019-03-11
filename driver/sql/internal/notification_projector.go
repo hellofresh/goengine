@@ -85,7 +85,9 @@ func (s *NotificationProjector) Execute(ctx context.Context, notification *drive
 	}
 	defer func() {
 		if err := projectConn.Close(); err != nil {
-			s.logger.WithError(err).Warn("failed to db close project connection")
+			s.logger.Warn("failed to db close project connection", func(e goengine.LoggerEntry) {
+				e.Error(err)
+			})
 		}
 	}()
 
@@ -95,7 +97,9 @@ func (s *NotificationProjector) Execute(ctx context.Context, notification *drive
 	}
 	defer func() {
 		if err := streamConn.Close(); err != nil {
-			s.logger.WithError(err).Warn("failed to db close stream connection")
+			s.logger.Warn("failed to db close stream connection", func(e goengine.LoggerEntry) {
+				e.Error(err)
+			})
 		}
 	}()
 
@@ -110,8 +114,6 @@ func (s *NotificationProjector) project(
 	streamConn *sql.Conn,
 	notification *driverSQL.ProjectionNotification,
 ) error {
-	logger := s.logger.WithField("notification", notification)
-
 	// Acquire the projection
 	releaseLock, rawState, err := s.storage.Acquire(ctx, conn, notification)
 	if err != nil {
@@ -126,7 +128,10 @@ func (s *NotificationProjector) project(
 	}
 	defer func() {
 		if err := eventStream.Close(); err != nil {
-			logger.WithError(err).Warn("failed to close the event stream")
+			s.logger.Warn("failed to close the event stream", func(e goengine.LoggerEntry) {
+				e.Any("notification", notification)
+				e.Error(err)
+			})
 		}
 	}()
 
@@ -167,9 +172,10 @@ func (s *NotificationProjector) projectStream(
 		// Resolve the payload event name
 		eventName, err := s.resolver.ResolveName(msg.Payload())
 		if err != nil {
-			s.logger.
-				WithField("payload", msg.Payload()).
-				Warn("skipping event: unable to resolve payload name")
+			s.logger.Warn("skipping event: unable to resolve payload name", func(e goengine.LoggerEntry) {
+				e.Error(err)
+				e.Any("payload", msg.Payload())
+			})
 			continue
 		}
 

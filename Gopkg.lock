@@ -117,7 +117,7 @@
   version = "v1.1.0"
 
 [[projects]]
-  digest = "1:c52caf7bd44f92e54627a31b85baf06a68333a196b3d8d241480a774733dcf8b"
+  digest = "1:adccce69c151272d5053505aee552c6a1ac4e7bf6d18f0206ed7453187f6284d"
   name = "go.uber.org/zap"
   packages = [
     ".",
@@ -126,6 +126,7 @@
     "internal/color",
     "internal/exit",
     "zapcore",
+    "zaptest/observer",
   ]
   pruneopts = "UT"
   revision = "ff33455a0e382e8a81d14dd7c922020b6b5e7982"
@@ -161,6 +162,7 @@
     "github.com/lib/pq",
     "github.com/mailru/easyjson",
     "github.com/mailru/easyjson/jlexer",
+    "github.com/mailru/easyjson/jwriter",
     "github.com/pkg/errors",
     "github.com/sirupsen/logrus",
     "github.com/sirupsen/logrus/hooks/test",
@@ -168,6 +170,7 @@
     "github.com/stretchr/testify/require",
     "github.com/stretchr/testify/suite",
     "go.uber.org/zap",
+    "go.uber.org/zap/zaptest/observer",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1

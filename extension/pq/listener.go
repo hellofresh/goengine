@@ -70,7 +70,9 @@ func (s *Listener) Listen(ctx context.Context, exec sql.ProjectionTrigger) error
 	listener := pq.NewListener(s.dbDSN, s.minReconnectInterval, s.maxReconnectInterval, s.listenerStateCallback)
 	defer func() {
 		if err := listener.Close(); err != nil {
-			s.logger.WithError(err).Warn("failed to close database Listener")
+			s.logger.Warn("failed to close database Listener", func(e goengine.LoggerEntry) {
+				e.Error(err)
+			})
 		}
 	}()
 
@@ -96,7 +98,7 @@ func (s *Listener) Listen(ctx context.Context, exec sql.ProjectionTrigger) error
 				return err
 			}
 		case <-ctx.Done():
-			s.logger.Debug("context closed stopping projection")
+			s.logger.Debug("context closed stopping projection", nil)
 			return nil
 		}
 	}
@@ -105,45 +107,55 @@ func (s *Listener) Listen(ctx context.Context, exec sql.ProjectionTrigger) error
 // listenerStateCallback a callback used for getting state changes from a pq.Listener
 // This callback will also close the related db connection pool used to query/persist projection data
 func (s *Listener) listenerStateCallback(event pq.ListenerEventType, err error) {
-	logger := s.logger.WithField("listener_event", event)
-	if err != nil {
-		logger = logger.WithError(err)
+	logFields := func(e goengine.LoggerEntry) {
+		e.Int("listener_event", int(event))
+		if err != nil {
+			e.Error(err)
+		}
 	}
 
 	switch event {
 	case pq.ListenerEventConnected:
-		logger.Debug("connection Listener: connected")
+		s.logger.Debug("connection Listener: connected", logFields)
 	case pq.ListenerEventConnectionAttemptFailed:
-		logger.Debug("connection Listener: failed to connect")
+		s.logger.Debug("connection Listener: failed to connect", logFields)
 	case pq.ListenerEventDisconnected:
-		logger.Debug("connection Listener: disconnected")
+		s.logger.Debug("connection Listener: disconnected", logFields)
 	case pq.ListenerEventReconnected:
-		logger.Debug("connection Listener: reconnected")
+		s.logger.Debug("connection Listener: reconnected", logFields)
 	default:
-		logger.Warn("connection Listener: unknown event")
+		s.logger.Warn("connection Listener: unknown event", logFields)
 	}
 }
 
 // unmarshalNotification takes a postgres notification and unmarshal it into a eventStoreNotification
 func (s *Listener) unmarshalNotification(n *pq.Notification) *sql.ProjectionNotification {
 	if n == nil {
-		s.logger.Info("received nil notification")
+		s.logger.Info("received nil notification", nil)
 		return nil
 	}
 
-	logger := s.logger.WithField("pq_notification", n)
 	if n.Extra == "" {
-		logger.Error("received notification without extra data")
+		s.logger.Error("received notification without extra data", func(e goengine.LoggerEntry) {
+			e.Any("pq_notification", n)
+		})
 		return nil
 	}
 
 	notification := &sql.ProjectionNotification{}
 	if err := easyjson.Unmarshal([]byte(n.Extra), notification); err != nil {
-		logger.WithError(err).Error("received invalid notification data")
+		s.logger.Error("received invalid notification data", func(e goengine.LoggerEntry) {
+			e.Any("pq_notification", n)
+			e.Error(err)
+		})
 		return nil
 	}
 
-	logger.WithField("notification", notification).Debug("received notification")
+	s.logger.Debug("received notification", func(e goengine.LoggerEntry) {
+		e.Any("pq_notification", n)
+		e.Int64("notification.no", notification.No)
+		e.String("notification.aggregate_id", notification.AggregateID)
+	})
 
 	return notification
 }

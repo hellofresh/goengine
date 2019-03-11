@@ -60,7 +60,9 @@ func NewAggregateProjector(
 	if logger == nil {
 		logger = goengine.NopLogger
 	}
-	logger = logger.WithField("projection", projection)
+	logger = logger.WithFields(func(e goengine.LoggerEntry) {
+		e.String("projection", projection.Name())
+	})
 
 	processor, err := internal.NewBackgroundProcessor(10, 32, logger)
 	if err != nil {
@@ -158,20 +160,24 @@ func (a *AggregateProjector) processNotification(
 	}
 
 	// Resolve the action to take based on the error that occurred
-	logger := a.logger.WithError(err).WithField("notification", notification)
+	logFields := func(e goengine.LoggerEntry) {
+		e.Error(err)
+		e.Int64("notification.no", notification.No)
+		e.String("notification.aggregate_id", notification.AggregateID)
+	}
 	switch resolveErrorAction(a.projectionErrorHandler, notification, err) {
 	case errorFail:
-		logger.Debug("ProcessHandler->ErrorHandler: marking projection as failed")
+		a.logger.Debug("ProcessHandler->ErrorHandler: marking projection as failed", logFields)
 		return a.markProjectionAsFailed(ctx, notification)
 	case errorIgnore:
-		logger.Debug("ProcessHandler->ErrorHandler: ignoring error")
+		a.logger.Debug("ProcessHandler->ErrorHandler: ignoring error", logFields)
 		return nil
 	case errorRetry:
-		logger.Debug("ProcessHandler->ErrorHandler: re-queueing notification")
+		a.logger.Debug("ProcessHandler->ErrorHandler: re-queueing notification", logFields)
 		return queue(ctx, notification)
 	}
 
-	logger.Debug("ProcessHandler->ErrorHandler: error fallthrough")
+	a.logger.Debug("ProcessHandler->ErrorHandler: error fallthrough", logFields)
 	return err
 }
 
@@ -183,7 +189,9 @@ func (a *AggregateProjector) triggerOutOfSyncProjections(ctx context.Context, qu
 	}
 	defer func() {
 		if err := conn.Close(); err != nil {
-			a.logger.WithError(err).Warn("failed to db close LoadOutOfSync connection")
+			a.logger.Warn("failed to db close LoadOutOfSync connection", func(e goengine.LoggerEntry) {
+				e.Error(err)
+			})
 		}
 	}()
 
@@ -193,7 +201,9 @@ func (a *AggregateProjector) triggerOutOfSyncProjections(ctx context.Context, qu
 	}
 	defer func() {
 		if err := rows.Close(); err != nil {
-			a.logger.WithError(err).Error("failed to close LoadOutOfSync rows")
+			a.logger.Error("failed to close LoadOutOfSync rows", func(e goengine.LoggerEntry) {
+				e.Error(err)
+			})
 		}
 	}()
 
@@ -219,13 +229,19 @@ func (a *AggregateProjector) triggerOutOfSyncProjections(ctx context.Context, qu
 			AggregateID: aggregateID,
 		}
 
-		logger := a.logger.WithField("notification", notification)
 		if err := queue(ctx, notification); err != nil {
-			logger.WithError(err).Error("failed to queue notification")
+			a.logger.Error("failed to queue notification", func(e goengine.LoggerEntry) {
+				e.Error(err)
+				e.Int64("notification.no", notification.No)
+				e.String("notification.aggregate_id", notification.AggregateID)
+			})
 			return err
 		}
 
-		a.logger.Debug("send catchup")
+		a.logger.Debug("send catchup", func(e goengine.LoggerEntry) {
+			e.Int64("notification.no", notification.No)
+			e.String("notification.aggregate_id", notification.AggregateID)
+		})
 	}
 
 	return rows.Close()
@@ -239,7 +255,9 @@ func (a *AggregateProjector) markProjectionAsFailed(ctx context.Context, notific
 
 	defer func() {
 		if err := conn.Close(); err != nil {
-			a.logger.WithError(err).Warn("failed to db close failure connection")
+			a.logger.Warn("failed to db close failure connection", func(e goengine.LoggerEntry) {
+				e.Error(err)
+			})
 		}
 	}()
 

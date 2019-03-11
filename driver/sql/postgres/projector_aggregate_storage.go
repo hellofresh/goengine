@@ -129,10 +129,11 @@ func (a *aggregateProjectionStorage) PersistState(conn driverSQL.Execer, notific
 		return err
 	}
 
-	a.logger.WithFields(goengine.Fields{
-		"notification": notification,
-		"state":        state,
-	}).Debug("updated projection state")
+	a.logger.Debug("updated projection state", func(e goengine.LoggerEntry) {
+		e.Int64("notification.no", notification.No)
+		e.String("notification.aggregate_id", notification.AggregateID)
+		e.Any("state", state)
+	})
 	return nil
 }
 
@@ -149,7 +150,10 @@ func (a *aggregateProjectionStorage) Acquire(
 	conn *sql.Conn,
 	notification *driverSQL.ProjectionNotification,
 ) (func(), *driverSQL.ProjectionRawState, error) {
-	logger := a.logger.WithField("notification", notification)
+	logFields := func(e goengine.LoggerEntry) {
+		e.Int64("notification.no", notification.No)
+		e.String("notification.aggregate_id", notification.AggregateID)
+	}
 	aggregateID := notification.AggregateID
 
 	res := conn.QueryRowContext(ctx, a.queryAcquireLock, aggregateID, notification.No)
@@ -178,9 +182,12 @@ func (a *aggregateProjectionStorage) Acquire(
 		// The projection was locked by another process that died and for this reason not unlocked
 		// In this case a application needs to decide what to do to avoid invalid projection states
 		if err := a.releaseProjectionConnectionLock(conn, aggregateID); err != nil {
-			logger.WithError(err).Error("failed to release lock for a projection with a locked row")
+			a.logger.Error("failed to release lock for a projection with a locked row", func(e goengine.LoggerEntry) {
+				logFields(e)
+				e.Error(err)
+			})
 		} else {
-			logger.Debug("released connection lock for a locked projection")
+			a.logger.Debug("released connection lock for a locked projection", logFields)
 		}
 
 		return nil, nil, driverSQL.ErrProjectionPreviouslyLocked
@@ -190,20 +197,26 @@ func (a *aggregateProjectionStorage) Acquire(
 	_, err := conn.ExecContext(ctx, a.querySetRowLocked, aggregateID, true)
 	if err != nil {
 		if releaseErr := a.releaseProjection(conn, aggregateID); releaseErr != nil {
-			logger.WithError(releaseErr).Error("failed to release lock while setting projection rows as locked")
+			a.logger.Error("failed to release lock while setting projection rows as locked", func(e goengine.LoggerEntry) {
+				logFields(e)
+				e.Error(releaseErr)
+			})
 		} else {
-			logger.Debug("failed to set projection as locked")
+			a.logger.Debug("failed to set projection as locked", logFields)
 		}
 
 		return nil, nil, err
 	}
-	logger.Debug("acquired projection lock")
+	a.logger.Debug("acquired projection lock", logFields)
 
 	return func() {
 		if err := a.releaseProjection(conn, aggregateID); err != nil {
-			logger.WithError(err).Error("failed to release projection lock")
+			a.logger.Error("failed to release projection lock", func(e goengine.LoggerEntry) {
+				logFields(e)
+				e.Error(err)
+			})
 		} else {
-			logger.Debug("released projection lock")
+			a.logger.Debug("released projection lock", logFields)
 		}
 	}, &driverSQL.ProjectionRawState{ProjectionState: rawState, Position: position}, nil
 }

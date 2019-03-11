@@ -54,7 +54,9 @@ func NewStreamProjector(
 	if logger == nil {
 		logger = goengine.NopLogger
 	}
-	logger = logger.WithField("projection", projection)
+	logger = logger.WithFields(func(e goengine.LoggerEntry) {
+		e.String("projection", projection.Name())
+	})
 
 	var (
 		stateDecoder driverSQL.ProjectionStateDecoder
@@ -144,16 +146,20 @@ func (s *StreamProjector) processNotification(
 		}
 
 		// Resolve the action to take based on the error that occurred
-		logger := s.logger.WithError(err).WithField("notification", notification)
+		logFields := func(e goengine.LoggerEntry) {
+			e.Error(err)
+			e.Int64("notification.no", notification.No)
+			e.String("notification.aggregate_id", notification.AggregateID)
+		}
 		switch resolveErrorAction(s.projectionErrorHandler, notification, err) {
 		case errorRetry:
-			logger.Debug("Trigger->ErrorHandler: retrying notification")
+			s.logger.Debug("Trigger->ErrorHandler: retrying notification", logFields)
 			continue
 		case errorIgnore:
-			logger.Debug("Trigger->ErrorHandler: ignoring error")
+			s.logger.Debug("Trigger->ErrorHandler: ignoring error", logFields)
 			return nil
 		case errorFail, errorFallthrough:
-			logger.Debug("Trigger->ErrorHandler: error fallthrough")
+			s.logger.Debug("Trigger->ErrorHandler: error fallthrough", logFields)
 			return err
 		}
 	}

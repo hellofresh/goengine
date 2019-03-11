@@ -107,12 +107,15 @@ func (s *streamProjectionStorage) PersistState(conn driverSQL.Execer, notificati
 	if err != nil {
 		return err
 	}
-	s.logger.
-		WithFields(goengine.Fields{
-			"notification": notification,
-			"state":        state,
-		}).
-		Debug("updated projection state")
+	s.logger.Debug("updated projection state", func(e goengine.LoggerEntry) {
+		if notification == nil {
+			e.Any("notification", nil)
+		} else {
+			e.Int64("notification.no", notification.No)
+			e.String("notification.aggregate_id", notification.AggregateID)
+		}
+		e.Any("state", state)
+	})
 
 	return nil
 }
@@ -122,13 +125,21 @@ func (s *streamProjectionStorage) Acquire(
 	conn *sql.Conn,
 	notification *driverSQL.ProjectionNotification,
 ) (func(), *driverSQL.ProjectionRawState, error) {
-	logger := s.logger.WithField("notification", notification)
-
-	var res *sql.Row
+	var (
+		res       *sql.Row
+		logFields func(e goengine.LoggerEntry)
+	)
 	if notification == nil {
 		res = conn.QueryRowContext(ctx, s.queryAcquireLock, s.projectionName)
+		logFields = func(e goengine.LoggerEntry) {
+			e.Any("notification", nil)
+		}
 	} else {
 		res = conn.QueryRowContext(ctx, s.queryAcquirePositionLock, s.projectionName, notification.No)
+		logFields = func(e goengine.LoggerEntry) {
+			e.Int64("notification.no", notification.No)
+			e.String("notification.aggregate_id", notification.AggregateID)
+		}
 	}
 
 	var (
@@ -154,9 +165,12 @@ func (s *streamProjectionStorage) Acquire(
 		// The projection was locked by another process that died and for this reason not unlocked
 		// In this case a application needs to decide what to do to avoid invalid projection states
 		if err := s.releaseProjectionConnectionLock(conn); err != nil {
-			logger.WithError(err).Error("failed to release lock for a projection with a locked row")
+			s.logger.Error("failed to release lock for a projection with a locked row", func(e goengine.LoggerEntry) {
+				logFields(e)
+				e.Error(err)
+			})
 		} else {
-			logger.Debug("released connection lock for a locked projection")
+			s.logger.Debug("released connection lock for a locked projection", logFields)
 		}
 
 		return nil, nil, driverSQL.ErrProjectionPreviouslyLocked
@@ -166,21 +180,27 @@ func (s *streamProjectionStorage) Acquire(
 	_, err := conn.ExecContext(ctx, s.querySetRowLocked, s.projectionName, true)
 	if err != nil {
 		if releaseErr := s.releaseProjectionLock(conn); releaseErr != nil {
-			logger.WithError(releaseErr).Error("failed to release lock while setting projection row as locked")
+			s.logger.Error("failed to release lock while setting projection row as locked", func(e goengine.LoggerEntry) {
+				logFields(e)
+				e.Error(releaseErr)
+			})
 		} else {
-			logger.Debug("failed to set projection as locked")
+			s.logger.Debug("failed to set projection as locked", logFields)
 		}
 
 		return nil, nil, err
 	}
 
-	logger.Debug("acquired projection lock")
+	s.logger.Debug("acquired projection lock", logFields)
 
 	return func() {
 		if err := s.releaseProjectionLock(conn); err != nil {
-			logger.WithError(err).Error("failed to release projection")
+			s.logger.Error("failed to release projection", func(e goengine.LoggerEntry) {
+				logFields(e)
+				e.Error(err)
+			})
 		} else {
-			logger.Debug("released projection lock")
+			s.logger.Debug("released projection lock", logFields)
 		}
 	}, &driverSQL.ProjectionRawState{Position: position, ProjectionState: rawState}, nil
 }

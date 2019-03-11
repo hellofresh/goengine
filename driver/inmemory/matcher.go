@@ -84,10 +84,10 @@ func (m *MetadataMatcher) Matches(metadata metadata.Metadata) bool {
 		valid, err := c.Matches(metadata.Value(c.field))
 		if err != nil {
 			if m.logger != nil {
-				m.logger.
-					WithError(err).
-					WithField("field", c.field).
-					Warn("metadata constraint failed with error")
+				m.logger.Warn("metadata constraint failed with error", func(e goengine.LoggerEntry) {
+					e.Error(err)
+					e.String("field", c.field)
+				})
 			}
 			return false
 		}

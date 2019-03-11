@@ -42,9 +42,9 @@ func (e *ConjoinedEventStore) AppendTo(ctx context.Context, streamName goengine.
 	}
 	defer func() {
 		if err := tx.Rollback(); err != nil && err != sql.ErrTxDone {
-			e.logger.
-				WithError(err).
-				Error("could not rollback transaction")
+			e.logger.Error("could not rollback transaction", func(e goengine.LoggerEntry) {
+				e.Error(err)
+			})
 		}
 	}()
 
@@ -58,9 +58,10 @@ func (e *ConjoinedEventStore) AppendTo(ctx context.Context, streamName goengine.
 		// Resolve the payload event name
 		eventName, err := e.resolver.ResolveName(msg.Payload())
 		if err != nil {
-			e.logger.
-				WithField("payload", msg.Payload()).
-				Warn("skipping event: unable to resolve payload name")
+			e.logger.Warn("skipping event: unable to resolve payload name", func(e goengine.LoggerEntry) {
+				e.Error(err)
+				e.Any("payload", msg.Payload())
+			})
 			continue
 		}
 
