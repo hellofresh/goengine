@@ -90,15 +90,17 @@ func newAggregateProjectionStorage(
 		// The reason for using `INSERT SELECT` instead of `INSERT VALUES ON CONFLICT DO NOTHING` is that `ON CONFLICT` will
 		// increase the `no SERIAL` value.
 		queryAcquireLock: fmt.Sprintf(
-			`WITH new_projection AS (
+			`WITH projection AS (
+				SELECT no, locked, failed, position, state FROM %[1]s WHERE aggregate_id = $1
+			), new_projection AS (
 			  INSERT INTO %[1]s (aggregate_id, state) SELECT $1, 'null' WHERE NOT EXISTS (
-		    	SELECT * FROM %[1]s WHERE aggregate_id = $1 LIMIT 1
+		    	 SELECT projection.no FROM projection
 			  ) ON CONFLICT DO NOTHING
 			  RETURNING *
 			)
 			SELECT pg_try_advisory_lock(%[2]s::regclass::oid::int, no), locked, failed, position, state FROM new_projection
 			UNION
-			SELECT pg_try_advisory_lock(%[2]s::regclass::oid::int, no), locked, failed, position, state FROM %[1]s WHERE aggregate_id = $1 AND (position < $2 OR failed)`,
+			SELECT pg_try_advisory_lock(%[2]s::regclass::oid::int, no), locked, failed, position, state FROM projection WHERE (position < $2 OR failed)`,
 			projectionTableQuoted,
 			projectionTableStr,
 		),
