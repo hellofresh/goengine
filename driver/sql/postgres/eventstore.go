@@ -85,6 +85,11 @@ func (e *EventStore) Create(ctx context.Context, streamName goengine.StreamName)
 		return ErrNoCreateTableQueries
 	}
 
+	if len(queries) == 1 {
+		_, err := e.db.ExecContext(ctx, queries[0])
+		return err
+	}
+
 	tx, err := e.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
