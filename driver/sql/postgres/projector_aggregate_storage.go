@@ -161,13 +161,12 @@ func (a *aggregateProjectionStorage) Acquire(
 	res := conn.QueryRowContext(ctx, a.queryAcquireLock, aggregateID, notification.No)
 
 	var (
-		acquiredLock bool
-		locked       bool
-		failed       bool
-		rawState     []byte
-		position     int64
+		acquiredLock    bool
+		locked          bool
+		failed          bool
+		projectionState driverSQL.ProjectionRawState
 	)
-	if err := res.Scan(&acquiredLock, &locked, &failed, &position, &rawState); err != nil {
+	if err := res.Scan(&acquiredLock, &locked, &failed, &projectionState.Position, &projectionState.ProjectionState); err != nil {
 		// No rows are returned when the projector is already at the notification position
 		if err == sql.ErrNoRows {
 			return nil, nil, driverSQL.ErrNoProjectionRequired
@@ -220,7 +219,7 @@ func (a *aggregateProjectionStorage) Acquire(
 		} else {
 			a.logger.Debug("released projection lock", logFields)
 		}
-	}, &driverSQL.ProjectionRawState{ProjectionState: rawState, Position: position}, nil
+	}, &projectionState, nil
 }
 
 func (a *aggregateProjectionStorage) releaseProjection(conn *sql.Conn, aggregateID string) error {
