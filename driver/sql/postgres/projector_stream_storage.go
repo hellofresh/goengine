@@ -143,12 +143,11 @@ func (s *streamProjectionStorage) Acquire(
 	}
 
 	var (
-		acquiredLock bool
-		locked       bool
-		rawState     []byte
-		position     int64
+		acquiredLock    bool
+		locked          bool
+		projectionState driverSQL.ProjectionRawState
 	)
-	if err := res.Scan(&acquiredLock, &locked, &position, &rawState); err != nil {
+	if err := res.Scan(&acquiredLock, &locked, &projectionState.Position, &projectionState.ProjectionState); err != nil {
 		// No rows are returned when the projector is already at the notification position
 		if err == sql.ErrNoRows {
 			return nil, nil, driverSQL.ErrNoProjectionRequired
@@ -202,7 +201,7 @@ func (s *streamProjectionStorage) Acquire(
 		} else {
 			s.logger.Debug("released projection lock", logFields)
 		}
-	}, &driverSQL.ProjectionRawState{Position: position, ProjectionState: rawState}, nil
+	}, &projectionState, nil
 }
 
 func (s *streamProjectionStorage) releaseProjectionLock(conn *sql.Conn) error {
