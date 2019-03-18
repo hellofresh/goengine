@@ -16,7 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestAggregateProjectionStorage_PersistState(t *testing.T) {
+func TestAdvisoryLockAggregateProjectionStorage_PersistState(t *testing.T) {
 	mockedProjectionState := "I'm a projection state"
 	notification := &driverSQL.ProjectionNotification{
 		No:          1,
@@ -39,7 +39,7 @@ func TestAggregateProjectionStorage_PersistState(t *testing.T) {
 		conn, err := db.Conn(context.Background())
 		require.NoError(t, err)
 
-		storage, err := NewAggregateProjectionStorage("store_table", "projection_table", stateEncoder, goengine.NopLogger)
+		storage, err := NewAdvisoryLockAggregateProjectionStorage("store_table", "projection_table", stateEncoder, goengine.NopLogger)
 		require.NoError(t, err)
 
 		dbMock.ExpectExec("^UPDATE \"projection_table\" SET").
@@ -60,7 +60,7 @@ func TestAggregateProjectionStorage_PersistState(t *testing.T) {
 		conn, err := db.Conn(context.Background())
 		require.NoError(t, err)
 
-		storage, err := NewAggregateProjectionStorage("store_table", "projection_table", nil, goengine.NopLogger)
+		storage, err := NewAdvisoryLockAggregateProjectionStorage("store_table", "projection_table", nil, goengine.NopLogger)
 		require.NoError(t, err)
 
 		dbMock.ExpectExec("^UPDATE \"projection_table\" SET").
@@ -80,7 +80,7 @@ func TestAggregateProjectionStorage_PersistState(t *testing.T) {
 		conn, err := db.Conn(context.Background())
 		require.NoError(t, err)
 
-		storage, err := NewAggregateProjectionStorage("store_table", "projection_table", stateEncoder, goengine.NopLogger)
+		storage, err := NewAdvisoryLockAggregateProjectionStorage("store_table", "projection_table", stateEncoder, goengine.NopLogger)
 		require.NoError(t, err)
 
 		err = storage.PersistState(conn, notification, projectionState)

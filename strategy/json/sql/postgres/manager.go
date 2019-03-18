@@ -128,7 +128,7 @@ func (m *SingleStreamManager) NewAggregateProjector(
 		stateEncoder = saga.EncodeState
 	}
 
-	projectorStorage, err := postgres.NewAggregateProjectionStorage(eventStoreTable, projectionTable, stateEncoder, m.logger)
+	projectorStorage, err := postgres.NewAdvisoryLockAggregateProjectionStorage(eventStoreTable, projectionTable, stateEncoder, m.logger)
 	if err != nil {
 		return nil, err
 	}
