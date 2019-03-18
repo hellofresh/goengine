@@ -7,21 +7,9 @@ import (
 	"strings"
 
 	"github.com/hellofresh/goengine"
-	"github.com/hellofresh/goengine/aggregate"
 	driverSQL "github.com/hellofresh/goengine/driver/sql"
-	"github.com/hellofresh/goengine/metadata"
 	"github.com/pkg/errors"
 )
-
-func AggregateProjectionEventStreamLoader(eventStore driverSQL.ReadOnlyEventStore, streamName goengine.StreamName, aggregateTypeName string) driverSQL.EventStreamLoader {
-	return func(ctx context.Context, conn *sql.Conn, notification *driverSQL.ProjectionNotification, position int64) (goengine.EventStream, error) {
-		matcher := metadata.NewMatcher()
-		matcher = metadata.WithConstraint(matcher, aggregate.IDKey, metadata.Equals, notification.AggregateID)
-		matcher = metadata.WithConstraint(matcher, aggregate.TypeKey, metadata.Equals, aggregateTypeName)
-
-		return eventStore.LoadWithConnection(ctx, conn, streamName, position+1, nil, matcher)
-	}
-}
 
 var _ driverSQL.ProjectionStorage = &AggregateProjectionStorage{}
 

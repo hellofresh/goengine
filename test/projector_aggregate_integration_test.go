@@ -85,7 +85,7 @@ func (s *aggregateProjectorTestSuite) TestRunAndListen() {
 
 	project, err := driverSQL.NewAggregateProjector(
 		s.DB(),
-		postgres.AggregateProjectionEventStreamLoader(s.eventStore, projection.FromStream(), accountAggregateTypeName),
+		driverSQL.AggregateProjectionEventStreamLoader(s.eventStore, projection.FromStream(), accountAggregateTypeName),
 		s.payloadTransformer,
 		projection,
 		projectorStorage,
@@ -179,7 +179,7 @@ func (s *aggregateProjectorTestSuite) TestRunAndListen() {
 
 		project, err := driverSQL.NewAggregateProjector(
 			s.DB(),
-			postgres.AggregateProjectionEventStreamLoader(s.eventStore, projection.FromStream(), accountAggregateTypeName),
+			driverSQL.AggregateProjectionEventStreamLoader(s.eventStore, projection.FromStream(), accountAggregateTypeName),
 			s.payloadTransformer,
 			projection,
 			projectorStorage,
@@ -233,7 +233,7 @@ func (s *aggregateProjectorTestSuite) TestRun() {
 
 	project, err := driverSQL.NewAggregateProjector(
 		s.DB(),
-		postgres.AggregateProjectionEventStreamLoader(s.eventStore, projection.FromStream(), accountAggregateTypeName),
+		driverSQL.AggregateProjectionEventStreamLoader(s.eventStore, projection.FromStream(), accountAggregateTypeName),
 		s.payloadTransformer,
 		projection,
 		projectorStorage,

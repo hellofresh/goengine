@@ -88,7 +88,7 @@ func (s *streamProjectorTestSuite) TestRunAndListen() {
 
 	project, err := driverSQL.NewStreamProjector(
 		s.DB(),
-		postgres.StreamProjectionEventStreamLoader(s.eventStore, projection.FromStream()),
+		driverSQL.StreamProjectionEventStreamLoader(s.eventStore, projection.FromStream()),
 		s.payloadTransformer,
 		projection,
 		projectorStorage,
@@ -160,7 +160,7 @@ func (s *streamProjectorTestSuite) TestRunAndListen() {
 
 		project, err := driverSQL.NewStreamProjector(
 			s.DB(),
-			postgres.StreamProjectionEventStreamLoader(s.eventStore, projection.FromStream()),
+			driverSQL.StreamProjectionEventStreamLoader(s.eventStore, projection.FromStream()),
 			s.payloadTransformer,
 			projection,
 			projectorStorage,
@@ -212,7 +212,7 @@ func (s *streamProjectorTestSuite) TestRun() {
 
 	project, err := driverSQL.NewStreamProjector(
 		s.DB(),
-		postgres.StreamProjectionEventStreamLoader(s.eventStore, projection.FromStream()),
+		driverSQL.StreamProjectionEventStreamLoader(s.eventStore, projection.FromStream()),
 		s.payloadTransformer,
 		projection,
 		projectorStorage,

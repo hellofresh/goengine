@@ -11,12 +11,6 @@ import (
 	driverSQL "github.com/hellofresh/goengine/driver/sql"
 )
 
-func StreamProjectionEventStreamLoader(eventStore driverSQL.ReadOnlyEventStore, streamName goengine.StreamName) driverSQL.EventStreamLoader {
-	return func(ctx context.Context, conn *sql.Conn, notification *driverSQL.ProjectionNotification, position int64) (goengine.EventStream, error) {
-		return eventStore.LoadWithConnection(ctx, conn, streamName, position+1, nil, nil)
-	}
-}
-
 var _ driverSQL.ProjectionStorage = &StreamProjectionStorage{}
 
 type StreamProjectionStorage struct {
