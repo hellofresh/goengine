@@ -12,7 +12,7 @@ import (
 type AggregateProjector struct {
 	sync.Mutex
 
-	backgroundProcessor *BackgroundProcessor
+	backgroundProcessor *projectionNotificationProcessor
 	executor            *notificationProjector
 	storage             AggregateProjectorStorage
 
@@ -55,7 +55,7 @@ func NewAggregateProjector(
 		e.String("projection", projection.Name())
 	})
 
-	processor, err := NewBackgroundProcessor(10, 32, logger)
+	processor, err := newBackgroundProcessor(10, 32, logger)
 	if err != nil {
 		return nil, err
 	}
