@@ -8,11 +8,11 @@ import (
 	"github.com/pkg/errors"
 )
 
-// Ensure the NotificationProjector.Execute is a ProjectionTrigger
-var _ ProjectionTrigger = (&NotificationProjector{}).Execute
+// Ensure the notificationProjector.Execute is a ProjectionTrigger
+var _ ProjectionTrigger = (&notificationProjector{}).Execute
 
-// NotificationProjector contains the logic for transforming a notification into a set of events and projecting them.
-type NotificationProjector struct {
+// notificationProjector contains the logic for transforming a notification into a set of events and projecting them.
+type notificationProjector struct {
 	db *sql.DB
 
 	storage ProjectionStorage
@@ -27,8 +27,8 @@ type NotificationProjector struct {
 	logger goengine.Logger
 }
 
-// NewNotificationProjector returns a new NotificationProjector
-func NewNotificationProjector(
+// newNotificationProjector returns a new notificationProjector
+func newNotificationProjector(
 	db *sql.DB,
 	storage ProjectionStorage,
 	projectionStateInit ProjectionStateInitializer,
@@ -37,7 +37,7 @@ func NewNotificationProjector(
 	eventLoader EventStreamLoader,
 	resolver goengine.MessagePayloadResolver,
 	logger goengine.Logger,
-) (*NotificationProjector, error) {
+) (*notificationProjector, error) {
 	switch {
 	case db == nil:
 		return nil, goengine.InvalidArgumentError("db")
@@ -57,7 +57,7 @@ func NewNotificationProjector(
 		logger = goengine.NopLogger
 	}
 
-	return &NotificationProjector{
+	return &notificationProjector{
 		db:                    db,
 		storage:               storage,
 		projectionStateInit:   projectionStateInit,
@@ -70,7 +70,7 @@ func NewNotificationProjector(
 }
 
 // Execute triggers the projections for the notification
-func (s *NotificationProjector) Execute(ctx context.Context, notification *ProjectionNotification) error {
+func (s *notificationProjector) Execute(ctx context.Context, notification *ProjectionNotification) error {
 	// Check if the context is expired
 	select {
 	default:
@@ -107,7 +107,7 @@ func (s *NotificationProjector) Execute(ctx context.Context, notification *Proje
 
 // project acquires the needed projection based on the notification, unmarshal the state of the projection,
 // loads the event stream and projects it.
-func (s *NotificationProjector) project(
+func (s *notificationProjector) project(
 	ctx context.Context,
 	conn *sql.Conn,
 	streamConn *sql.Conn,
@@ -143,7 +143,7 @@ func (s *NotificationProjector) project(
 }
 
 // projectStream will project the events in the event stream and persist the state after the projection
-func (s *NotificationProjector) projectStream(
+func (s *notificationProjector) projectStream(
 	ctx context.Context,
 	conn Execer,
 	notification *ProjectionNotification,
@@ -209,7 +209,7 @@ func (s *NotificationProjector) projectStream(
 	return stream.Err()
 }
 
-func (s *NotificationProjector) acquireProjectState(ctx context.Context, rawState *ProjectionRawState) (ProjectionState, error) {
+func (s *notificationProjector) acquireProjectState(ctx context.Context, rawState *ProjectionRawState) (ProjectionState, error) {
 	state := ProjectionState{
 		Position: rawState.Position,
 	}
