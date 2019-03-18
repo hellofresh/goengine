@@ -84,12 +84,14 @@ func (m *SingleStreamManager) NewStreamProjector(
 		return nil, err
 	}
 
-	var stateEncoder driverSQL.ProjectionStateEncoder
-	if saga, ok := projection.(goengine.ProjectionSaga); ok {
-		stateEncoder = saga.EncodeState
+	var stateMarshaling driverSQL.ProjectionStateSerialization
+	if saga, ok := projection.(driverSQL.ProjectionStateSerialization); ok {
+		stateMarshaling = saga
+	} else {
+		stateMarshaling = driverSQL.NopProjectionStateSerialization{projection}
 	}
 
-	projectorStorage, err := postgres.NewAdvisoryLockStreamProjectionStorage(projection.Name(), projectionTable, stateEncoder, m.logger)
+	projectorStorage, err := postgres.NewAdvisoryLockStreamProjectionStorage(projection.Name(), projectionTable, stateMarshaling, m.logger)
 	if err != nil {
 		return nil, err
 	}
@@ -123,12 +125,14 @@ func (m *SingleStreamManager) NewAggregateProjector(
 		return nil, err
 	}
 
-	var stateEncoder driverSQL.ProjectionStateEncoder
-	if saga, ok := projection.(goengine.ProjectionSaga); ok {
-		stateEncoder = saga.EncodeState
+	var stateMarshaling driverSQL.ProjectionStateSerialization
+	if saga, ok := projection.(driverSQL.ProjectionStateSerialization); ok {
+		stateMarshaling = saga
+	} else {
+		stateMarshaling = driverSQL.NopProjectionStateSerialization{projection}
 	}
 
-	projectorStorage, err := postgres.NewAdvisoryLockAggregateProjectionStorage(eventStoreTable, projectionTable, stateEncoder, m.logger)
+	projectorStorage, err := postgres.NewAdvisoryLockAggregateProjectionStorage(eventStoreTable, projectionTable, stateMarshaling, m.logger)
 	if err != nil {
 		return nil, err
 	}

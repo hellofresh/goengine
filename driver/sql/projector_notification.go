@@ -15,12 +15,8 @@ var _ ProjectionTrigger = (&notificationProjector{}).Execute
 type notificationProjector struct {
 	db *sql.DB
 
-	storage ProjectionStorage
-
-	projectionStateInit   ProjectionStateInitializer
-	projectionStateDecode ProjectionStateDecoder
-	handlers              map[string]goengine.MessageHandler
-
+	storage     ProjectorStorage
+	handlers    map[string]goengine.MessageHandler
 	eventLoader EventStreamLoader
 	resolver    goengine.MessagePayloadResolver
 
@@ -30,9 +26,7 @@ type notificationProjector struct {
 // newNotificationProjector returns a new notificationProjector
 func newNotificationProjector(
 	db *sql.DB,
-	storage ProjectionStorage,
-	projectionStateInit ProjectionStateInitializer,
-	projectionStateDecode ProjectionStateDecoder,
+	storage ProjectorStorage,
 	eventHandlers map[string]goengine.MessageHandler,
 	eventLoader EventStreamLoader,
 	resolver goengine.MessagePayloadResolver,
@@ -43,8 +37,6 @@ func newNotificationProjector(
 		return nil, goengine.InvalidArgumentError("db")
 	case storage == nil:
 		return nil, goengine.InvalidArgumentError("storage")
-	case projectionStateInit == nil:
-		return nil, goengine.InvalidArgumentError("projectionStateInit")
 	case len(eventHandlers) == 0:
 		return nil, goengine.InvalidArgumentError("eventHandlers")
 	case eventLoader == nil:
@@ -58,14 +50,12 @@ func newNotificationProjector(
 	}
 
 	return &notificationProjector{
-		db:                    db,
-		storage:               storage,
-		projectionStateInit:   projectionStateInit,
-		projectionStateDecode: projectionStateDecode,
-		handlers:              wrapProjectionHandlers(eventHandlers),
-		eventLoader:           eventLoader,
-		resolver:              resolver,
-		logger:                logger,
+		db:          db,
+		storage:     storage,
+		handlers:    wrapProjectionHandlers(eventHandlers),
+		eventLoader: eventLoader,
+		resolver:    resolver,
+		logger:      logger,
 	}, nil
 }
 
@@ -114,14 +104,22 @@ func (s *notificationProjector) project(
 	notification *ProjectionNotification,
 ) error {
 	// Acquire the projection
-	releaseLock, rawState, err := s.storage.Acquire(ctx, conn, notification)
+	transaction, position, err := s.storage.Acquire(ctx, conn, notification)
 	if err != nil {
 		return err
 	}
-	defer releaseLock()
+	defer func() {
+		if err := transaction.Close(); err != nil {
+			s.logger.Warn("failed to close the projector transaction", func(e goengine.LoggerEntry) {
+				e.Error(err)
+				e.Int64("notification.no", notification.No)
+				e.String("notification.aggregate_id", notification.AggregateID)
+			})
+		}
+	}()
 
 	// Load the event stream
-	eventStream, err := s.eventLoader(ctx, streamConn, notification, rawState.Position)
+	eventStream, err := s.eventLoader(ctx, streamConn, notification, position)
 	if err != nil {
 		return err
 	}
@@ -142,25 +140,20 @@ func (s *notificationProjector) project(
 	}
 
 	// project event stream
-	if err := s.projectStream(ctx, conn, notification, rawState, handlerStream); err != nil {
+	if err := s.projectStream(ctx, transaction, handlerStream); err != nil {
 		return err
 	}
 
 	return eventStream.Close()
 }
-
-// projectStream will project the events in the event stream and persist the state after the projection
 func (s *notificationProjector) projectStream(
 	ctx context.Context,
-	conn Execer,
-	notification *ProjectionNotification,
-	rawState *ProjectionRawState,
+	tx ProjectorTransaction,
 	stream *eventStreamHandlerIterator,
 ) error {
 	var (
-		err           error
-		state         ProjectionState
-		stateAcquired bool
+		err   error
+		state ProjectionState
 	)
 	for stream.Next() {
 		// Check if the context is expired
@@ -171,12 +164,9 @@ func (s *notificationProjector) projectStream(
 		}
 
 		// Acquire the state if we have none
-		if !stateAcquired {
-			state, err = s.acquireProjectState(ctx, rawState)
-			if err != nil {
-				return err
-			}
-			stateAcquired = true
+		state, err = tx.AcquireState(ctx)
+		if err != nil {
+			return err
 		}
 
 		// Execute the handler
@@ -187,30 +177,12 @@ func (s *notificationProjector) projectStream(
 		}
 
 		// Persist state and position changes
-		if err := s.storage.PersistState(conn, notification, state); err != nil {
+		if err = tx.CommitState(state); err != nil {
 			return err
 		}
 	}
 
 	return stream.Err()
-}
-
-func (s *notificationProjector) acquireProjectState(ctx context.Context, rawState *ProjectionRawState) (ProjectionState, error) {
-	state := ProjectionState{
-		Position: rawState.Position,
-	}
-
-	// Decode or initialize projection state
-	var err error
-	if rawState.Position == 0 {
-		// This is the fist time the projection runs so initialize the state
-		state.ProjectionState, err = s.projectionStateInit(ctx)
-	} else if s.projectionStateDecode != nil {
-		// Unmarshal the projection state
-		state.ProjectionState, err = s.projectionStateDecode(rawState.ProjectionState)
-	}
-
-	return state, err
 }
 
 // wrapProjectionHandlers wraps the projection handlers so that any error or panic is caught and returned

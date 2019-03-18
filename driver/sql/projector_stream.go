@@ -55,16 +55,9 @@ func NewStreamProjector(
 		e.String("projection", projection.Name())
 	})
 
-	var stateDecoder ProjectionStateDecoder
-	if saga, ok := projection.(goengine.ProjectionSaga); ok {
-		stateDecoder = saga.DecodeState
-	}
-
 	executor, err := newNotificationProjector(
 		db,
 		projectorStorage,
-		projection.Init,
-		stateDecoder,
 		projection.Handlers(),
 		eventLoader,
 		resolver,
@@ -136,8 +129,12 @@ func (s *StreamProjector) processNotification(
 		// Resolve the action to take based on the error that occurred
 		logFields := func(e goengine.LoggerEntry) {
 			e.Error(err)
-			e.Int64("notification.no", notification.No)
-			e.String("notification.aggregate_id", notification.AggregateID)
+			if notification == nil {
+				e.Any("notification", notification)
+			} else {
+				e.Int64("notification.no", notification.No)
+				e.String("notification.aggregate_id", notification.AggregateID)
+			}
 		}
 		switch resolveErrorAction(s.projectionErrorHandler, notification, err) {
 		case errorRetry:
