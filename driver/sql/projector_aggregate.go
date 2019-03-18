@@ -63,16 +63,9 @@ func NewAggregateProjector(
 		return nil, err
 	}
 
-	var stateDecoder ProjectionStateDecoder
-	if saga, ok := projection.(goengine.ProjectionSaga); ok {
-		stateDecoder = saga.DecodeState
-	}
-
 	executor, err := newNotificationProjector(
 		db,
 		projectorStorage,
-		projection.Init,
-		stateDecoder,
 		projection.Handlers(),
 		eventLoader,
 		resolver,

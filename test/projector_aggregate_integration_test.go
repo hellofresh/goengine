@@ -80,7 +80,7 @@ func (s *aggregateProjectorTestSuite) TestRunAndListen() {
 	)
 	s.Require().NoError(err)
 
-	projectorStorage, err := postgres.NewAdvisoryLockAggregateProjectionStorage(s.eventStoreTable, "agg_projections", projection.EncodeState, s.GetLogger())
+	projectorStorage, err := postgres.NewAdvisoryLockAggregateProjectionStorage(s.eventStoreTable, "agg_projections", projection, s.GetLogger())
 	s.Require().NoError(err, "failed to create projector storage")
 
 	project, err := driverSQL.NewAggregateProjector(
@@ -174,7 +174,7 @@ func (s *aggregateProjectorTestSuite) TestRunAndListen() {
 	s.Run("projection should not rerun events", func() {
 		projection := &DepositedProjection{}
 
-		projectorStorage, err := postgres.NewAdvisoryLockAggregateProjectionStorage(s.eventStoreTable, "agg_projections", projection.EncodeState, s.GetLogger())
+		projectorStorage, err := postgres.NewAdvisoryLockAggregateProjectionStorage(s.eventStoreTable, "agg_projections", projection, s.GetLogger())
 		s.Require().NoError(err, "failed to create projector storage")
 
 		project, err := driverSQL.NewAggregateProjector(
@@ -228,7 +228,7 @@ func (s *aggregateProjectorTestSuite) TestRun() {
 
 	projection := &DepositedProjection{}
 
-	projectorStorage, err := postgres.NewAdvisoryLockAggregateProjectionStorage(s.eventStoreTable, "agg_projections", projection.EncodeState, s.GetLogger())
+	projectorStorage, err := postgres.NewAdvisoryLockAggregateProjectionStorage(s.eventStoreTable, "agg_projections", projection, s.GetLogger())
 	s.Require().NoError(err, "failed to create projector storage")
 
 	project, err := driverSQL.NewAggregateProjector(

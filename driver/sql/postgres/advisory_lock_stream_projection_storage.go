@@ -11,11 +11,12 @@ import (
 	driverSQL "github.com/hellofresh/goengine/driver/sql"
 )
 
-var _ driverSQL.ProjectionStorage = &AdvisoryLockStreamProjectionStorage{}
+var _ driverSQL.StreamProjectorStorage = &AdvisoryLockStreamProjectionStorage{}
 
+// AdvisoryLockStreamProjectionStorage is a StreamProjectorStorage that uses a advisory locks to lock a projection
 type AdvisoryLockStreamProjectionStorage struct {
-	projectionName         string
-	projectionStateEncoder driverSQL.ProjectionStateEncoder
+	projectionName               string
+	projectionStateSerialization driverSQL.ProjectionStateSerialization
 
 	logger goengine.Logger
 
@@ -27,10 +28,11 @@ type AdvisoryLockStreamProjectionStorage struct {
 	querySetRowLocked        string
 }
 
+// NewAdvisoryLockStreamProjectionStorage returns a new AdvisoryLockStreamProjectionStorage
 func NewAdvisoryLockStreamProjectionStorage(
 	projectionName,
 	projectionTable string,
-	projectionStateEncoder driverSQL.ProjectionStateEncoder,
+	projectionStateSerialization driverSQL.ProjectionStateSerialization,
 	logger goengine.Logger,
 ) (*AdvisoryLockStreamProjectionStorage, error) {
 	switch {
@@ -38,13 +40,12 @@ func NewAdvisoryLockStreamProjectionStorage(
 		return nil, goengine.InvalidArgumentError("projectionName")
 	case strings.TrimSpace(projectionTable) == "":
 		return nil, goengine.InvalidArgumentError("projectionTable")
+	case projectionStateSerialization == nil:
+		return nil, goengine.InvalidArgumentError("projectionStateSerialization")
 	}
 
 	if logger == nil {
 		logger = goengine.NopLogger
-	}
-	if projectionStateEncoder == nil {
-		projectionStateEncoder = defaultProjectionStateEncoder
 	}
 
 	projectionTableQuoted := QuoteIdentifier(projectionTable)
@@ -52,9 +53,9 @@ func NewAdvisoryLockStreamProjectionStorage(
 
 	/* #nosec G201 */
 	return &AdvisoryLockStreamProjectionStorage{
-		projectionName:         projectionName,
-		projectionStateEncoder: projectionStateEncoder,
-		logger:                 logger,
+		projectionName:               projectionName,
+		projectionStateSerialization: projectionStateSerialization,
+		logger:                       logger,
 
 		queryCreateProjection: fmt.Sprintf(
 			`INSERT INTO %s (name) VALUES ($1) ON CONFLICT DO NOTHING`,
@@ -76,7 +77,7 @@ func NewAdvisoryLockStreamProjectionStorage(
 			projectionTableStr,
 		),
 		queryPersistState: fmt.Sprintf(
-			`UPDATE %[1]s SET position = $1, state = $2 WHERE name = $3`,
+			`UPDATE %[1]s SET position = $2, state = $3 WHERE name = $1`,
 			projectionTableQuoted,
 		),
 		querySetRowLocked: fmt.Sprintf(
@@ -86,39 +87,19 @@ func NewAdvisoryLockStreamProjectionStorage(
 	}, nil
 }
 
+// CreateProjection creates the row in the projection table for the stream projection
 func (s *AdvisoryLockStreamProjectionStorage) CreateProjection(ctx context.Context, conn driverSQL.Execer) error {
 	_, err := conn.ExecContext(ctx, s.queryCreateProjection, s.projectionName)
 	return err
 }
 
-func (s *AdvisoryLockStreamProjectionStorage) PersistState(conn driverSQL.Execer, notification *driverSQL.ProjectionNotification, state driverSQL.ProjectionState) error {
-	encodedState, err := s.projectionStateEncoder(state.ProjectionState)
-	if err != nil {
-		return err
-	}
-
-	_, err = conn.ExecContext(context.Background(), s.queryPersistState, state.Position, encodedState, s.projectionName)
-	if err != nil {
-		return err
-	}
-	s.logger.Debug("updated projection state", func(e goengine.LoggerEntry) {
-		if notification == nil {
-			e.Any("notification", nil)
-		} else {
-			e.Int64("notification.no", notification.No)
-			e.String("notification.aggregate_id", notification.AggregateID)
-		}
-		e.Any("state", state)
-	})
-
-	return nil
-}
-
+// Acquire returns a driverSQL.ProjectorTransaction and the position of the projection within the event stream when a
+// lock is acquire for the specified aggregate_id. Otherwise an error is returned indicating why the lock could not be acquired.
 func (s *AdvisoryLockStreamProjectionStorage) Acquire(
 	ctx context.Context,
 	conn *sql.Conn,
 	notification *driverSQL.ProjectionNotification,
-) (func(), *driverSQL.ProjectionRawState, error) {
+) (driverSQL.ProjectorTransaction, int64, error) {
 	var (
 		res       *sql.Row
 		logFields func(e goengine.LoggerEntry)
@@ -144,14 +125,14 @@ func (s *AdvisoryLockStreamProjectionStorage) Acquire(
 	if err := res.Scan(&acquiredLock, &locked, &projectionState.Position, &projectionState.ProjectionState); err != nil {
 		// No rows are returned when the projector is already at the notification position
 		if err == sql.ErrNoRows {
-			return nil, nil, driverSQL.ErrNoProjectionRequired
+			return nil, 0, driverSQL.ErrNoProjectionRequired
 		}
 
-		return nil, nil, err
+		return nil, 0, err
 	}
 
 	if !acquiredLock {
-		return nil, nil, driverSQL.ErrProjectionFailedToLock
+		return nil, 0, driverSQL.ErrProjectionFailedToLock
 	}
 
 	if locked {
@@ -166,46 +147,23 @@ func (s *AdvisoryLockStreamProjectionStorage) Acquire(
 			s.logger.Debug("released connection lock for a locked projection", logFields)
 		}
 
-		return nil, nil, driverSQL.ErrProjectionPreviouslyLocked
-	}
-
-	// Set the projection as row locked
-	_, err := conn.ExecContext(ctx, s.querySetRowLocked, s.projectionName, true)
-	if err != nil {
-		if releaseErr := s.releaseProjectionLock(conn); releaseErr != nil {
-			s.logger.Error("failed to release lock while setting projection row as locked", func(e goengine.LoggerEntry) {
-				logFields(e)
-				e.Error(releaseErr)
-			})
-		} else {
-			s.logger.Debug("failed to set projection as locked", logFields)
-		}
-
-		return nil, nil, err
+		return nil, 0, driverSQL.ErrProjectionPreviouslyLocked
 	}
 
 	s.logger.Debug("acquired projection lock", logFields)
 
-	return func() {
-		if err := s.releaseProjectionLock(conn); err != nil {
-			s.logger.Error("failed to release projection", func(e goengine.LoggerEntry) {
-				logFields(e)
-				e.Error(err)
-			})
-		} else {
-			s.logger.Debug("released projection lock", logFields)
-		}
-	}, &projectionState, nil
-}
+	return &advisoryLockProjectorTransaction{
+		conn:              conn,
+		queryPersistState: s.queryPersistState,
+		queryReleaseLock:  s.queryReleaseLock,
+		querySetRowLocked: s.querySetRowLocked,
 
-func (s *AdvisoryLockStreamProjectionStorage) releaseProjectionLock(conn *sql.Conn) error {
-	// Set the projection as row unlocked
-	_, err := conn.ExecContext(context.Background(), s.querySetRowLocked, s.projectionName, false)
-	if err != nil {
-		return err
-	}
+		stateSerialization: s.projectionStateSerialization,
+		rawState:           &projectionState,
 
-	return s.releaseProjectionConnectionLock(conn)
+		projectionID: s.projectionName,
+		logger:       s.logger,
+	}, projectionState.Position, nil
 }
 
 func (s *AdvisoryLockStreamProjectionStorage) releaseProjectionConnectionLock(conn *sql.Conn) error {
