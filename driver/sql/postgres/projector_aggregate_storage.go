@@ -23,9 +23,9 @@ func aggregateProjectionEventStreamLoader(eventStore driverSQL.ReadOnlyEventStor
 	}
 }
 
-var _ driverSQL.ProjectionStorage = &aggregateProjectionStorage{}
+var _ driverSQL.ProjectionStorage = &AggregateProjectionStorage{}
 
-type aggregateProjectionStorage struct {
+type AggregateProjectionStorage struct {
 	projectionStateEncoder driverSQL.ProjectionStateEncoder
 
 	logger goengine.Logger
@@ -38,12 +38,12 @@ type aggregateProjectionStorage struct {
 	querySetRowLocked         string
 }
 
-func newAggregateProjectionStorage(
+func NewAggregateProjectionStorage(
 	eventStoreTable,
 	projectionTable string,
 	projectionStateEncoder driverSQL.ProjectionStateEncoder,
 	logger goengine.Logger,
-) (*aggregateProjectionStorage, error) {
+) (*AggregateProjectionStorage, error) {
 	switch {
 	case strings.TrimSpace(projectionTable) == "":
 		return nil, goengine.InvalidArgumentError("projectionTable")
@@ -62,7 +62,7 @@ func newAggregateProjectionStorage(
 	eventStoreTableQuoted := QuoteIdentifier(eventStoreTable)
 
 	/* #nosec G201 */
-	return &aggregateProjectionStorage{
+	return &AggregateProjectionStorage{
 		projectionStateEncoder: projectionStateEncoder,
 		logger:                 logger,
 
@@ -116,11 +116,11 @@ func newAggregateProjectionStorage(
 	}, nil
 }
 
-func (a *aggregateProjectionStorage) LoadOutOfSync(ctx context.Context, conn driverSQL.Queryer) (*sql.Rows, error) {
+func (a *AggregateProjectionStorage) LoadOutOfSync(ctx context.Context, conn driverSQL.Queryer) (*sql.Rows, error) {
 	return conn.QueryContext(ctx, a.queryOutOfSyncProjections)
 }
 
-func (a *aggregateProjectionStorage) PersistState(conn driverSQL.Execer, notification *driverSQL.ProjectionNotification, state driverSQL.ProjectionState) error {
+func (a *AggregateProjectionStorage) PersistState(conn driverSQL.Execer, notification *driverSQL.ProjectionNotification, state driverSQL.ProjectionState) error {
 	encodedState, err := a.projectionStateEncoder(state.ProjectionState)
 	if err != nil {
 		return err
@@ -139,7 +139,7 @@ func (a *aggregateProjectionStorage) PersistState(conn driverSQL.Execer, notific
 	return nil
 }
 
-func (a *aggregateProjectionStorage) PersistFailure(conn driverSQL.Execer, notification *driverSQL.ProjectionNotification) error {
+func (a *AggregateProjectionStorage) PersistFailure(conn driverSQL.Execer, notification *driverSQL.ProjectionNotification) error {
 	if _, err := conn.ExecContext(context.Background(), a.queryPersistFailure, notification.AggregateID); err != nil {
 		return err
 	}
@@ -147,7 +147,7 @@ func (a *aggregateProjectionStorage) PersistFailure(conn driverSQL.Execer, notif
 	return nil
 }
 
-func (a *aggregateProjectionStorage) Acquire(
+func (a *AggregateProjectionStorage) Acquire(
 	ctx context.Context,
 	conn *sql.Conn,
 	notification *driverSQL.ProjectionNotification,
@@ -222,7 +222,7 @@ func (a *aggregateProjectionStorage) Acquire(
 	}, &projectionState, nil
 }
 
-func (a *aggregateProjectionStorage) releaseProjection(conn *sql.Conn, aggregateID string) error {
+func (a *AggregateProjectionStorage) releaseProjection(conn *sql.Conn, aggregateID string) error {
 	// Set the projection as row unlocked
 	_, err := conn.ExecContext(context.Background(), a.querySetRowLocked, aggregateID, false)
 	if err != nil {
@@ -232,7 +232,7 @@ func (a *aggregateProjectionStorage) releaseProjection(conn *sql.Conn, aggregate
 	return a.releaseProjectionConnectionLock(conn, aggregateID)
 }
 
-func (a *aggregateProjectionStorage) releaseProjectionConnectionLock(conn *sql.Conn, aggregateID string) error {
+func (a *AggregateProjectionStorage) releaseProjectionConnectionLock(conn *sql.Conn, aggregateID string) error {
 	res := conn.QueryRowContext(context.Background(), a.queryReleaseLock, aggregateID)
 
 	var unlocked bool

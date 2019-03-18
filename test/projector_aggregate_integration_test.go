@@ -80,14 +80,16 @@ func (s *aggregateProjectorTestSuite) TestRunAndListen() {
 	)
 	s.Require().NoError(err)
 
+	projectorStorage, err := postgres.NewAggregateProjectionStorage(s.eventStoreTable, "agg_projections", projection.EncodeState, s.GetLogger())
+	s.Require().NoError(err, "failed to create projector storage")
+
 	project, err := postgres.NewAggregateProjector(
 		s.DB(),
 		s.eventStore,
-		s.eventStoreTable,
 		s.payloadTransformer,
 		accountAggregateTypeName,
 		projection,
-		"agg_projections",
+		projectorStorage,
 		func(error, *driverSQL.ProjectionNotification) driverSQL.ProjectionErrorAction {
 			return driverSQL.ProjectionFail
 		},
@@ -171,14 +173,18 @@ func (s *aggregateProjectorTestSuite) TestRunAndListen() {
 	projectorCancel()
 
 	s.Run("projection should not rerun events", func() {
+		projection := &DepositedProjection{}
+
+		projectorStorage, err := postgres.NewAggregateProjectionStorage(s.eventStoreTable, "agg_projections", projection.EncodeState, s.GetLogger())
+		s.Require().NoError(err, "failed to create projector storage")
+
 		project, err := postgres.NewAggregateProjector(
 			s.DB(),
 			s.eventStore,
-			s.eventStoreTable,
 			s.payloadTransformer,
 			accountAggregateTypeName,
-			&DepositedProjection{},
-			"agg_projections",
+			projection,
+			projectorStorage,
 			func(error, *driverSQL.ProjectionNotification) driverSQL.ProjectionErrorAction {
 				return driverSQL.ProjectionFail
 			},
@@ -222,14 +228,18 @@ func (s *aggregateProjectorTestSuite) TestRun() {
 
 	var err error
 
+	projection := &DepositedProjection{}
+
+	projectorStorage, err := postgres.NewAggregateProjectionStorage(s.eventStoreTable, "agg_projections", projection.EncodeState, s.GetLogger())
+	s.Require().NoError(err, "failed to create projector storage")
+
 	project, err := postgres.NewAggregateProjector(
 		s.DB(),
 		s.eventStore,
-		s.eventStoreTable,
 		s.payloadTransformer,
 		accountAggregateTypeName,
-		&DepositedProjection{},
-		"agg_projections",
+		projection,
+		projectorStorage,
 		func(error, *sql.ProjectionNotification) driverSQL.ProjectionErrorAction {
 			return driverSQL.ProjectionFail
 		},
