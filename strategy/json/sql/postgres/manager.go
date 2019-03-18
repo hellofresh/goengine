@@ -88,6 +88,7 @@ func (m *SingleStreamManager) NewStreamProjector(
 		projection.Name(),
 		projectionTable,
 		driverSQL.GetProjectionStateSerialization(projection),
+		true,
 		m.logger,
 	)
 	if err != nil {
@@ -127,6 +128,7 @@ func (m *SingleStreamManager) NewAggregateProjector(
 		eventStoreTable,
 		projectionTable,
 		driverSQL.GetProjectionStateSerialization(projection),
+		true,
 		m.logger,
 	)
 	if err != nil {

@@ -17,6 +17,7 @@ var _ driverSQL.StreamProjectorStorage = &AdvisoryLockStreamProjectionStorage{}
 type AdvisoryLockStreamProjectionStorage struct {
 	projectionName               string
 	projectionStateSerialization driverSQL.ProjectionStateSerialization
+	useLockField                 bool
 
 	logger goengine.Logger
 
@@ -33,6 +34,7 @@ func NewAdvisoryLockStreamProjectionStorage(
 	projectionName,
 	projectionTable string,
 	projectionStateSerialization driverSQL.ProjectionStateSerialization,
+	useLockField bool,
 	logger goengine.Logger,
 ) (*AdvisoryLockStreamProjectionStorage, error) {
 	switch {
@@ -55,6 +57,7 @@ func NewAdvisoryLockStreamProjectionStorage(
 	return &AdvisoryLockStreamProjectionStorage{
 		projectionName:               projectionName,
 		projectionStateSerialization: projectionStateSerialization,
+		useLockField:                 useLockField,
 		logger:                       logger,
 
 		queryCreateProjection: fmt.Sprintf(
@@ -152,18 +155,26 @@ func (s *AdvisoryLockStreamProjectionStorage) Acquire(
 
 	s.logger.Debug("acquired projection lock", logFields)
 
-	return &advisoryLockProjectorTransaction{
+	tx := advisoryLockProjectorTransaction{
 		conn:              conn,
 		queryPersistState: s.queryPersistState,
 		queryReleaseLock:  s.queryReleaseLock,
-		querySetRowLocked: s.querySetRowLocked,
 
 		stateSerialization: s.projectionStateSerialization,
 		rawState:           &projectionState,
 
 		projectionID: s.projectionName,
 		logger:       s.logger,
-	}, projectionState.Position, nil
+	}
+
+	if s.useLockField {
+		return &advisoryLockWithUpdateProjectorTransaction{
+			advisoryLockProjectorTransaction: tx,
+			querySetRowLocked:                s.querySetRowLocked,
+		}, projectionState.Position, nil
+	}
+
+	return &tx, projectionState.Position, nil
 }
 
 func (s *AdvisoryLockStreamProjectionStorage) releaseProjectionConnectionLock(conn *sql.Conn) error {

@@ -14,7 +14,6 @@ var _ driverSQL.ProjectorTransaction = &advisoryLockProjectorTransaction{}
 type advisoryLockProjectorTransaction struct {
 	conn              *sql.Conn
 	queryPersistState string
-	querySetRowLocked string
 	queryReleaseLock  string
 
 	stateSerialization driverSQL.ProjectionStateSerialization
@@ -34,12 +33,6 @@ func (t *advisoryLockProjectorTransaction) AcquireState(ctx context.Context) (dr
 	var err error
 	state := driverSQL.ProjectionState{
 		Position: t.rawState.Position,
-	}
-
-	// Set the projection as row locked
-	_, err = t.conn.ExecContext(ctx, t.querySetRowLocked, t.projectionID, true)
-	if err != nil {
-		return state, err
 	}
 
 	// Decode or initialize projection state
@@ -84,12 +77,6 @@ func (t *advisoryLockProjectorTransaction) CommitState(newState driverSQL.Projec
 }
 
 func (t *advisoryLockProjectorTransaction) Close() error {
-	// Set the projection as row unlocked
-	_, err := t.conn.ExecContext(context.Background(), t.querySetRowLocked, t.projectionID, false)
-	if err != nil {
-		return err
-	}
-
 	res := t.conn.QueryRowContext(context.Background(), t.queryReleaseLock, t.projectionID)
 
 	var unlocked bool
@@ -106,4 +93,36 @@ func (t *advisoryLockProjectorTransaction) Close() error {
 	})
 
 	return nil
+}
+
+type advisoryLockWithUpdateProjectorTransaction struct {
+	advisoryLockProjectorTransaction
+
+	querySetRowLocked string
+}
+
+func (t *advisoryLockWithUpdateProjectorTransaction) AcquireState(ctx context.Context) (driverSQL.ProjectionState, error) {
+	if t.rawState == nil {
+		return t.projectionState, nil
+	}
+
+	// Set the projection as row locked
+	_, err := t.conn.ExecContext(ctx, t.querySetRowLocked, t.projectionID, true)
+	if err != nil {
+		return driverSQL.ProjectionState{
+			Position: t.rawState.Position,
+		}, err
+	}
+
+	return t.advisoryLockProjectorTransaction.AcquireState(ctx)
+}
+
+func (t *advisoryLockWithUpdateProjectorTransaction) Close() error {
+	// Set the projection as row unlocked
+	_, err := t.conn.ExecContext(context.Background(), t.querySetRowLocked, t.projectionID, false)
+	if err != nil {
+		return err
+	}
+
+	return t.advisoryLockProjectorTransaction.Close()
 }

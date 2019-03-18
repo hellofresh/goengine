@@ -16,6 +16,7 @@ var _ driverSQL.AggregateProjectorStorage = &AdvisoryLockAggregateProjectionStor
 // AdvisoryLockAggregateProjectionStorage is a AggregateProjectorStorage that uses a advisory locks to lock a projection
 type AdvisoryLockAggregateProjectionStorage struct {
 	stateSerialization driverSQL.ProjectionStateSerialization
+	useLockField       bool
 
 	logger goengine.Logger
 
@@ -32,6 +33,7 @@ func NewAdvisoryLockAggregateProjectionStorage(
 	eventStoreTable,
 	projectionTable string,
 	projectionStateSerialization driverSQL.ProjectionStateSerialization,
+	useLockField bool,
 	logger goengine.Logger,
 ) (*AdvisoryLockAggregateProjectionStorage, error) {
 	switch {
@@ -53,6 +55,7 @@ func NewAdvisoryLockAggregateProjectionStorage(
 	/* #nosec G201 */
 	return &AdvisoryLockAggregateProjectionStorage{
 		stateSerialization: projectionStateSerialization,
+		useLockField:       useLockField,
 		logger:             logger,
 
 		queryOutOfSyncProjections: fmt.Sprintf(
@@ -167,18 +170,26 @@ func (a *AdvisoryLockAggregateProjectionStorage) Acquire(
 
 	a.logger.Debug("acquired projection lock", logFields)
 
-	return &advisoryLockProjectorTransaction{
+	tx := advisoryLockProjectorTransaction{
 		conn:              conn,
 		queryPersistState: a.queryPersistState,
 		queryReleaseLock:  a.queryReleaseLock,
-		querySetRowLocked: a.querySetRowLocked,
 
 		stateSerialization: a.stateSerialization,
 		rawState:           &projectionState,
 
 		projectionID: aggregateID,
 		logger:       a.logger,
-	}, projectionState.Position, nil
+	}
+
+	if a.useLockField {
+		return &advisoryLockWithUpdateProjectorTransaction{
+			advisoryLockProjectorTransaction: tx,
+			querySetRowLocked:                a.querySetRowLocked,
+		}, projectionState.Position, nil
+	}
+
+	return &tx, projectionState.Position, nil
 }
 
 func (a *AdvisoryLockAggregateProjectionStorage) releaseProjectionConnectionLock(conn *sql.Conn, aggregateID string) error {
