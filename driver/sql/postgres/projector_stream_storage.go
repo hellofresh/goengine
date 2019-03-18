@@ -17,9 +17,9 @@ func streamProjectionEventStreamLoader(eventStore driverSQL.ReadOnlyEventStore, 
 	}
 }
 
-var _ driverSQL.ProjectionStorage = &streamProjectionStorage{}
+var _ driverSQL.ProjectionStorage = &StreamProjectionStorage{}
 
-type streamProjectionStorage struct {
+type StreamProjectionStorage struct {
 	projectionName         string
 	projectionStateEncoder driverSQL.ProjectionStateEncoder
 
@@ -33,12 +33,12 @@ type streamProjectionStorage struct {
 	querySetRowLocked        string
 }
 
-func newStreamProjectionStorage(
+func NewStreamProjectionStorage(
 	projectionName,
 	projectionTable string,
 	projectionStateEncoder driverSQL.ProjectionStateEncoder,
 	logger goengine.Logger,
-) (*streamProjectionStorage, error) {
+) (*StreamProjectionStorage, error) {
 	switch {
 	case strings.TrimSpace(projectionName) == "":
 		return nil, goengine.InvalidArgumentError("projectionName")
@@ -57,7 +57,7 @@ func newStreamProjectionStorage(
 	projectionTableStr := QuoteString(projectionTable)
 
 	/* #nosec G201 */
-	return &streamProjectionStorage{
+	return &StreamProjectionStorage{
 		projectionName:         projectionName,
 		projectionStateEncoder: projectionStateEncoder,
 		logger:                 logger,
@@ -92,12 +92,12 @@ func newStreamProjectionStorage(
 	}, nil
 }
 
-func (s *streamProjectionStorage) CreateProjection(ctx context.Context, conn driverSQL.Execer) error {
+func (s *StreamProjectionStorage) CreateProjection(ctx context.Context, conn driverSQL.Execer) error {
 	_, err := conn.ExecContext(ctx, s.queryCreateProjection, s.projectionName)
 	return err
 }
 
-func (s *streamProjectionStorage) PersistState(conn driverSQL.Execer, notification *driverSQL.ProjectionNotification, state driverSQL.ProjectionState) error {
+func (s *StreamProjectionStorage) PersistState(conn driverSQL.Execer, notification *driverSQL.ProjectionNotification, state driverSQL.ProjectionState) error {
 	encodedState, err := s.projectionStateEncoder(state.ProjectionState)
 	if err != nil {
 		return err
@@ -120,7 +120,7 @@ func (s *streamProjectionStorage) PersistState(conn driverSQL.Execer, notificati
 	return nil
 }
 
-func (s *streamProjectionStorage) Acquire(
+func (s *StreamProjectionStorage) Acquire(
 	ctx context.Context,
 	conn *sql.Conn,
 	notification *driverSQL.ProjectionNotification,
@@ -204,7 +204,7 @@ func (s *streamProjectionStorage) Acquire(
 	}, &projectionState, nil
 }
 
-func (s *streamProjectionStorage) releaseProjectionLock(conn *sql.Conn) error {
+func (s *StreamProjectionStorage) releaseProjectionLock(conn *sql.Conn) error {
 	// Set the projection as row unlocked
 	_, err := conn.ExecContext(context.Background(), s.querySetRowLocked, s.projectionName, false)
 	if err != nil {
@@ -214,7 +214,7 @@ func (s *streamProjectionStorage) releaseProjectionLock(conn *sql.Conn) error {
 	return s.releaseProjectionConnectionLock(conn)
 }
 
-func (s *streamProjectionStorage) releaseProjectionConnectionLock(conn *sql.Conn) error {
+func (s *StreamProjectionStorage) releaseProjectionConnectionLock(conn *sql.Conn) error {
 	res := conn.QueryRowContext(context.Background(), s.queryReleaseLock, s.projectionName)
 
 	var unlocked bool

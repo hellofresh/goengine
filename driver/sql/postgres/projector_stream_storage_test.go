@@ -39,7 +39,7 @@ func TestStreamProjectionStorage_PersistState(t *testing.T) {
 		conn, err := db.Conn(context.Background())
 		require.NoError(t, err)
 
-		storage, err := newStreamProjectionStorage("my_projection", "projection_table", stateEncoder, goengine.NopLogger)
+		storage, err := NewStreamProjectionStorage("my_projection", "projection_table", stateEncoder, goengine.NopLogger)
 		require.NoError(t, err)
 
 		dbMock.ExpectExec("^UPDATE \"projection_table\" SET").
@@ -60,7 +60,7 @@ func TestStreamProjectionStorage_PersistState(t *testing.T) {
 		conn, err := db.Conn(context.Background())
 		require.NoError(t, err)
 
-		storage, err := newStreamProjectionStorage("my_projection", "projection_table", nil, goengine.NopLogger)
+		storage, err := NewStreamProjectionStorage("my_projection", "projection_table", nil, goengine.NopLogger)
 		require.NoError(t, err)
 
 		dbMock.ExpectExec("^UPDATE \"projection_table\" SET").
@@ -80,7 +80,7 @@ func TestStreamProjectionStorage_PersistState(t *testing.T) {
 		conn, err := db.Conn(context.Background())
 		require.NoError(t, err)
 
-		storage, err := newStreamProjectionStorage("my_projection", "projection_table", stateEncoder, goengine.NopLogger)
+		storage, err := NewStreamProjectionStorage("my_projection", "projection_table", stateEncoder, goengine.NopLogger)
 		require.NoError(t, err)
 
 		err = storage.PersistState(conn, notification, projectionState)

@@ -14,7 +14,7 @@ import (
 	"github.com/hellofresh/goengine/aggregate"
 	driverSQL "github.com/hellofresh/goengine/driver/sql"
 	"github.com/hellofresh/goengine/driver/sql/postgres"
-	pq "github.com/hellofresh/goengine/extension/pq"
+	"github.com/hellofresh/goengine/extension/pq"
 	strategyPostgres "github.com/hellofresh/goengine/strategy/json/sql/postgres"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
@@ -83,12 +83,15 @@ func (s *streamProjectorTestSuite) TestRunAndListen() {
 	)
 	s.Require().NoError(err)
 
+	projectorStorage, err := postgres.NewStreamProjectionStorage(projection.Name(), "projections", projection.EncodeState, s.GetLogger())
+	s.Require().NoError(err, "failed to create projector storage")
+
 	project, err := postgres.NewStreamProjector(
 		s.DB(),
 		s.eventStore,
 		s.payloadTransformer,
 		projection,
-		"projections",
+		projectorStorage,
 		func(error, *driverSQL.ProjectionNotification) driverSQL.ProjectionErrorAction {
 			return driverSQL.ProjectionFail
 		},
@@ -150,12 +153,17 @@ func (s *streamProjectorTestSuite) TestRunAndListen() {
 	projectorCancel()
 
 	s.Run("projection should not rerun events", func() {
+		projection := &DepositedProjection{}
+
+		projectorStorage, err := postgres.NewStreamProjectionStorage(projection.Name(), "projections", projection.EncodeState, s.GetLogger())
+		s.Require().NoError(err, "failed to create projector storage")
+
 		project, err := postgres.NewStreamProjector(
 			s.DB(),
 			s.eventStore,
 			s.payloadTransformer,
-			&DepositedProjection{},
-			"projections",
+			projection,
+			projectorStorage,
 			func(error, *driverSQL.ProjectionNotification) driverSQL.ProjectionErrorAction {
 				return driverSQL.ProjectionFail
 			},
@@ -197,12 +205,17 @@ func (s *streamProjectorTestSuite) TestRun() {
 		AccountDeposited{Amount: 1},
 	})
 
+	projection := &DepositedProjection{}
+
+	projectorStorage, err := postgres.NewStreamProjectionStorage(projection.Name(), "projections", projection.EncodeState, s.GetLogger())
+	s.Require().NoError(err, "failed to create projector storage")
+
 	project, err := postgres.NewStreamProjector(
 		s.DB(),
 		s.eventStore,
 		s.payloadTransformer,
-		&DepositedProjection{},
-		"projections",
+		projection,
+		projectorStorage,
 		func(error, *driverSQL.ProjectionNotification) driverSQL.ProjectionErrorAction {
 			return driverSQL.ProjectionFail
 		},
