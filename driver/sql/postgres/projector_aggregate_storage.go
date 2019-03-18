@@ -139,8 +139,8 @@ func (a *aggregateProjectionStorage) PersistState(conn driverSQL.Execer, notific
 	return nil
 }
 
-func (a *aggregateProjectionStorage) PersistFailure(ctx context.Context, conn driverSQL.Execer, notification *driverSQL.ProjectionNotification) error {
-	if _, err := conn.ExecContext(ctx, a.queryPersistFailure, notification.AggregateID); err != nil {
+func (a *aggregateProjectionStorage) PersistFailure(conn driverSQL.Execer, notification *driverSQL.ProjectionNotification) error {
+	if _, err := conn.ExecContext(context.Background(), a.queryPersistFailure, notification.AggregateID); err != nil {
 		return err
 	}
 

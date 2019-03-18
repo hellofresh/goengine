@@ -17,7 +17,7 @@ type AggregateProjector struct {
 
 	backgroundProcessor *internal.BackgroundProcessor
 	executor            *internal.NotificationProjector
-	storage             *aggregateProjectionStorage
+	storage             driverSQL.AggregateProjectorStorage
 
 	projectionErrorHandler driverSQL.ProjectionErrorCallback
 
@@ -168,7 +168,7 @@ func (a *AggregateProjector) processNotification(
 	switch resolveErrorAction(a.projectionErrorHandler, notification, err) {
 	case errorFail:
 		a.logger.Debug("ProcessHandler->ErrorHandler: marking projection as failed", logFields)
-		return a.markProjectionAsFailed(ctx, notification)
+		return a.markProjectionAsFailed(notification)
 	case errorIgnore:
 		a.logger.Debug("ProcessHandler->ErrorHandler: ignoring error", logFields)
 		return nil
@@ -247,7 +247,8 @@ func (a *AggregateProjector) triggerOutOfSyncProjections(ctx context.Context, qu
 	return rows.Close()
 }
 
-func (a *AggregateProjector) markProjectionAsFailed(ctx context.Context, notification *driverSQL.ProjectionNotification) error {
+func (a *AggregateProjector) markProjectionAsFailed(notification *driverSQL.ProjectionNotification) error {
+	ctx := context.Background()
 	conn, err := internal.AcquireConn(ctx, a.db)
 	if err != nil {
 		return err
@@ -261,5 +262,5 @@ func (a *AggregateProjector) markProjectionAsFailed(ctx context.Context, notific
 		}
 	}()
 
-	return a.storage.PersistFailure(ctx, conn, notification)
+	return a.storage.PersistFailure(conn, notification)
 }

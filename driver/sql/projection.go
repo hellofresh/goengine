@@ -57,6 +57,22 @@ type (
 
 	// EventStreamLoader loads a event stream based on the provided notification and state
 	EventStreamLoader func(ctx context.Context, conn *sql.Conn, notification *ProjectionNotification, position int64) (goengine.EventStream, error)
+
+	// AggregateProjectorStorage the storage interface that will persist and load the projection state
+	AggregateProjectorStorage interface {
+		ProjectionStorage
+
+		LoadOutOfSync(ctx context.Context, conn Queryer) (*sql.Rows, error)
+
+		PersistFailure(conn Execer, notification *ProjectionNotification) error
+	}
+
+	// StreamProjectorStorage the storage interface that will persist and load the projection state
+	StreamProjectorStorage interface {
+		ProjectionStorage
+
+		CreateProjection(ctx context.Context, conn Execer) error
+	}
 )
 
 // UnmarshalJSON supports json.Unmarshaler interface
