@@ -96,7 +96,7 @@ func (m *SingleStreamManager) NewStreamProjector(
 
 	return postgres.NewStreamProjector(
 		m.db,
-		eventStore,
+		postgres.StreamProjectionEventStreamLoader(eventStore, projection.FromStream()),
 		m.payloadTransformer,
 		projection,
 		projectorStorage,
