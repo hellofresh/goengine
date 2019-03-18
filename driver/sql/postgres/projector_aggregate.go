@@ -3,7 +3,6 @@ package postgres
 import (
 	"context"
 	"database/sql"
-	"strings"
 	"sync"
 
 	"github.com/hellofresh/goengine"
@@ -30,11 +29,10 @@ type AggregateProjector struct {
 func NewAggregateProjector(
 	db *sql.DB,
 	eventStore driverSQL.ReadOnlyEventStore,
-	eventStoreTable string,
 	resolver goengine.MessagePayloadResolver,
 	aggregateTypeName string,
 	projection goengine.Projection,
-	projectionTable string,
+	projectorStorage driverSQL.AggregateProjectorStorage,
 	projectionErrorHandler driverSQL.ProjectionErrorCallback,
 	logger goengine.Logger,
 ) (*AggregateProjector, error) {
@@ -43,14 +41,12 @@ func NewAggregateProjector(
 		return nil, goengine.InvalidArgumentError("db")
 	case eventStore == nil:
 		return nil, goengine.InvalidArgumentError("eventStore")
-	case strings.TrimSpace(eventStoreTable) == "":
-		return nil, goengine.InvalidArgumentError("eventStoreTable")
 	case resolver == nil:
 		return nil, goengine.InvalidArgumentError("resolver")
 	case projection == nil:
 		return nil, goengine.InvalidArgumentError("projection")
-	case strings.TrimSpace(projectionTable) == "":
-		return nil, goengine.InvalidArgumentError("projectionTable")
+	case projectorStorage == nil:
+		return nil, goengine.InvalidArgumentError("projectorStorage")
 	case aggregateTypeName == "":
 		return nil, goengine.InvalidArgumentError("aggregateTypeName")
 	case projectionErrorHandler == nil:
@@ -69,23 +65,14 @@ func NewAggregateProjector(
 		return nil, err
 	}
 
-	var (
-		stateDecoder driverSQL.ProjectionStateDecoder
-		stateEncoder driverSQL.ProjectionStateEncoder
-	)
+	var stateDecoder driverSQL.ProjectionStateDecoder
 	if saga, ok := projection.(goengine.ProjectionSaga); ok {
 		stateDecoder = saga.DecodeState
-		stateEncoder = saga.EncodeState
-	}
-
-	storage, err := newAggregateProjectionStorage(eventStoreTable, projectionTable, stateEncoder, logger)
-	if err != nil {
-		return nil, err
 	}
 
 	executor, err := internal.NewNotificationProjector(
 		db,
-		storage,
+		projectorStorage,
 		projection.Init,
 		stateDecoder,
 		projection.Handlers(),
@@ -100,7 +87,7 @@ func NewAggregateProjector(
 	return &AggregateProjector{
 		backgroundProcessor:    processor,
 		executor:               executor,
-		storage:                storage,
+		storage:                projectorStorage,
 		projectionErrorHandler: projectionErrorHandler,
 
 		db: db,
