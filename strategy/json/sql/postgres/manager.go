@@ -89,7 +89,7 @@ func (m *SingleStreamManager) NewStreamProjector(
 		stateEncoder = saga.EncodeState
 	}
 
-	projectorStorage, err := postgres.NewStreamProjectionStorage(projection.Name(), projectionTable, stateEncoder, m.logger)
+	projectorStorage, err := postgres.NewAdvisoryLockStreamProjectionStorage(projection.Name(), projectionTable, stateEncoder, m.logger)
 	if err != nil {
 		return nil, err
 	}
