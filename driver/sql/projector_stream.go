@@ -15,7 +15,7 @@ type StreamProjector struct {
 	sync.Mutex
 
 	db       *sql.DB
-	executor *NotificationProjector
+	executor *notificationProjector
 	storage  StreamProjectorStorage
 
 	projectionErrorHandler ProjectionErrorCallback
@@ -60,7 +60,7 @@ func NewStreamProjector(
 		stateDecoder = saga.DecodeState
 	}
 
-	executor, err := NewNotificationProjector(
+	executor, err := newNotificationProjector(
 		db,
 		projectorStorage,
 		projection.Init,

@@ -13,7 +13,7 @@ type AggregateProjector struct {
 	sync.Mutex
 
 	backgroundProcessor *BackgroundProcessor
-	executor            *NotificationProjector
+	executor            *notificationProjector
 	storage             AggregateProjectorStorage
 
 	projectionErrorHandler ProjectionErrorCallback
@@ -65,7 +65,7 @@ func NewAggregateProjector(
 		stateDecoder = saga.DecodeState
 	}
 
-	executor, err := NewNotificationProjector(
+	executor, err := newNotificationProjector(
 		db,
 		projectorStorage,
 		projection.Init,
