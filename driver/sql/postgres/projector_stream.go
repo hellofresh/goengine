@@ -19,7 +19,7 @@ type StreamProjector struct {
 
 	db       *sql.DB
 	executor *internalSQL.NotificationProjector
-	storage  *streamProjectionStorage
+	storage  driverSQL.StreamProjectorStorage
 
 	projectionErrorHandler driverSQL.ProjectionErrorCallback
 
