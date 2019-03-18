@@ -47,4 +47,4 @@
 
 [[constraint]]
   name = "go.mongodb.org/mongo-driver"
-  version = "v1.0.0-rc1"
+  version = "v1.0.0"
