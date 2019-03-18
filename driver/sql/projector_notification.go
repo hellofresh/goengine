@@ -134,8 +134,15 @@ func (s *notificationProjector) project(
 		}
 	}()
 
+	// Wrap the eventStream
+	handlerStream := &eventStreamHandlerIterator{
+		stream:   eventStream,
+		handlers: s.handlers,
+		resolver: s.resolver,
+	}
+
 	// project event stream
-	if err := s.projectStream(ctx, conn, notification, rawState, eventStream); err != nil {
+	if err := s.projectStream(ctx, conn, notification, rawState, handlerStream); err != nil {
 		return err
 	}
 
@@ -148,9 +155,10 @@ func (s *notificationProjector) projectStream(
 	conn Execer,
 	notification *ProjectionNotification,
 	rawState *ProjectionRawState,
-	stream goengine.EventStream,
+	stream *eventStreamHandlerIterator,
 ) error {
 	var (
+		err           error
 		state         ProjectionState
 		stateAcquired bool
 	)
@@ -160,28 +168,6 @@ func (s *notificationProjector) projectStream(
 		default:
 		case <-ctx.Done():
 			return nil
-		}
-
-		// Get the message
-		msg, msgNumber, err := stream.Message()
-		if err != nil {
-			return err
-		}
-
-		// Resolve the payload event name
-		eventName, err := s.resolver.ResolveName(msg.Payload())
-		if err != nil {
-			s.logger.Warn("skipping event: unable to resolve payload name", func(e goengine.LoggerEntry) {
-				e.Error(err)
-				e.Any("payload", msg.Payload())
-			})
-			continue
-		}
-
-		// Resolve the payload handler using the event name
-		handler, found := s.handlers[eventName]
-		if !found {
-			continue
 		}
 
 		// Acquire the state if we have none
@@ -194,8 +180,8 @@ func (s *notificationProjector) projectStream(
 		}
 
 		// Execute the handler
-		state.Position = msgNumber
-		state.ProjectionState, err = handler(ctx, state.ProjectionState, msg)
+		state.Position = stream.MessageNumber()
+		state.ProjectionState, err = stream.Project(ctx, state.ProjectionState)
 		if err != nil {
 			return err
 		}
@@ -269,4 +255,67 @@ func wrapProjectionHandlerToTrapError(handler goengine.MessageHandler) goengine.
 
 		return
 	}
+}
+
+// eventStreamHandlerIterator is a iterator used to project a support message
+type eventStreamHandlerIterator struct {
+	stream   goengine.EventStream
+	handlers map[string]goengine.MessageHandler
+	resolver goengine.MessagePayloadResolver
+
+	message   goengine.Message
+	position  int64
+	eventName string
+	err       error
+}
+
+func (s *eventStreamHandlerIterator) Next() bool {
+	for {
+		if !s.stream.Next() {
+			return false
+		}
+
+		s.message, s.position, s.err = s.stream.Message()
+		if s.err != nil {
+			return false
+		}
+
+		// Resolve the payload event name
+		s.eventName, s.err = s.resolver.ResolveName(s.message.Payload())
+		if s.err != nil {
+			return false
+		}
+
+		// Check if the event name has a payload handler
+		if _, found := s.handlers[s.eventName]; found {
+			return true
+		}
+	}
+}
+
+func (s *eventStreamHandlerIterator) MessageNumber() int64 {
+	return s.position
+}
+
+func (s *eventStreamHandlerIterator) Project(ctx context.Context, state interface{}) (interface{}, error) {
+	return s.handlers[s.eventName](ctx, state, s.message)
+}
+
+func (s *eventStreamHandlerIterator) Err() error {
+	if s.err != nil {
+		return s.err
+	}
+
+	return s.stream.Err()
+}
+
+func (s *eventStreamHandlerIterator) Close() error {
+	err := s.stream.Close()
+
+	s.handlers = nil
+	s.resolver = nil
+	s.message = nil
+	s.stream = nil
+
+	return err
 }
