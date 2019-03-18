@@ -1,4 +1,4 @@
-package postgres
+package sql
 
 import (
 	"context"
@@ -6,19 +6,17 @@ import (
 	"sync"
 
 	"github.com/hellofresh/goengine"
-	driverSQL "github.com/hellofresh/goengine/driver/sql"
-	"github.com/hellofresh/goengine/driver/sql/internal"
 )
 
 // AggregateProjector is a postgres projector used to execute a projection per aggregate instance against an event stream
 type AggregateProjector struct {
 	sync.Mutex
 
-	backgroundProcessor *internal.BackgroundProcessor
-	executor            *internal.NotificationProjector
-	storage             driverSQL.AggregateProjectorStorage
+	backgroundProcessor *BackgroundProcessor
+	executor            *NotificationProjector
+	storage             AggregateProjectorStorage
 
-	projectionErrorHandler driverSQL.ProjectionErrorCallback
+	projectionErrorHandler ProjectionErrorCallback
 
 	db *sql.DB
 
@@ -28,11 +26,11 @@ type AggregateProjector struct {
 // NewAggregateProjector creates a new projector for a projection
 func NewAggregateProjector(
 	db *sql.DB,
-	eventLoader driverSQL.EventStreamLoader,
+	eventLoader EventStreamLoader,
 	resolver goengine.MessagePayloadResolver,
 	projection goengine.Projection,
-	projectorStorage driverSQL.AggregateProjectorStorage,
-	projectionErrorHandler driverSQL.ProjectionErrorCallback,
+	projectorStorage AggregateProjectorStorage,
+	projectionErrorHandler ProjectionErrorCallback,
 	logger goengine.Logger,
 ) (*AggregateProjector, error) {
 	switch {
@@ -57,17 +55,17 @@ func NewAggregateProjector(
 		e.String("projection", projection.Name())
 	})
 
-	processor, err := internal.NewBackgroundProcessor(10, 32, logger)
+	processor, err := NewBackgroundProcessor(10, 32, logger)
 	if err != nil {
 		return nil, err
 	}
 
-	var stateDecoder driverSQL.ProjectionStateDecoder
+	var stateDecoder ProjectionStateDecoder
 	if saga, ok := projection.(goengine.ProjectionSaga); ok {
 		stateDecoder = saga.DecodeState
 	}
 
-	executor, err := internal.NewNotificationProjector(
+	executor, err := NewNotificationProjector(
 		db,
 		projectorStorage,
 		projection.Init,
@@ -109,7 +107,7 @@ func (a *AggregateProjector) Run(ctx context.Context) error {
 }
 
 // RunAndListen executes the projection and listens to any changes to the event store
-func (a *AggregateProjector) RunAndListen(ctx context.Context, listener driverSQL.Listener) error {
+func (a *AggregateProjector) RunAndListen(ctx context.Context, listener Listener) error {
 	a.Lock()
 	defer a.Unlock()
 
@@ -128,8 +126,8 @@ func (a *AggregateProjector) RunAndListen(ctx context.Context, listener driverSQ
 
 func (a *AggregateProjector) processNotification(
 	ctx context.Context,
-	notification *driverSQL.ProjectionNotification,
-	queue driverSQL.ProjectionTrigger,
+	notification *ProjectionNotification,
+	queue ProjectionTrigger,
 ) error {
 	var err error
 	if notification != nil {
@@ -165,9 +163,9 @@ func (a *AggregateProjector) processNotification(
 	return err
 }
 
-func (a *AggregateProjector) triggerOutOfSyncProjections(ctx context.Context, queue driverSQL.ProjectionTrigger) error {
+func (a *AggregateProjector) triggerOutOfSyncProjections(ctx context.Context, queue ProjectionTrigger) error {
 	// A nil notification was received this mean that we need to find and trigger any missed notifications
-	conn, err := internal.AcquireConn(ctx, a.db)
+	conn, err := AcquireConn(ctx, a.db)
 	if err != nil {
 		return err
 	}
@@ -208,7 +206,7 @@ func (a *AggregateProjector) triggerOutOfSyncProjections(ctx context.Context, qu
 			return err
 		}
 
-		notification := &driverSQL.ProjectionNotification{
+		notification := &ProjectionNotification{
 			No:          position,
 			AggregateID: aggregateID,
 		}
@@ -231,9 +229,9 @@ func (a *AggregateProjector) triggerOutOfSyncProjections(ctx context.Context, qu
 	return rows.Close()
 }
 
-func (a *AggregateProjector) markProjectionAsFailed(notification *driverSQL.ProjectionNotification) error {
+func (a *AggregateProjector) markProjectionAsFailed(notification *ProjectionNotification) error {
 	ctx := context.Background()
-	conn, err := internal.AcquireConn(ctx, a.db)
+	conn, err := AcquireConn(ctx, a.db)
 	if err != nil {
 		return err
 	}

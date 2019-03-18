@@ -83,7 +83,7 @@ func (s *aggregateProjectorTestSuite) TestRunAndListen() {
 	projectorStorage, err := postgres.NewAggregateProjectionStorage(s.eventStoreTable, "agg_projections", projection.EncodeState, s.GetLogger())
 	s.Require().NoError(err, "failed to create projector storage")
 
-	project, err := postgres.NewAggregateProjector(
+	project, err := driverSQL.NewAggregateProjector(
 		s.DB(),
 		postgres.AggregateProjectionEventStreamLoader(s.eventStore, projection.FromStream(), accountAggregateTypeName),
 		s.payloadTransformer,
@@ -177,7 +177,7 @@ func (s *aggregateProjectorTestSuite) TestRunAndListen() {
 		projectorStorage, err := postgres.NewAggregateProjectionStorage(s.eventStoreTable, "agg_projections", projection.EncodeState, s.GetLogger())
 		s.Require().NoError(err, "failed to create projector storage")
 
-		project, err := postgres.NewAggregateProjector(
+		project, err := driverSQL.NewAggregateProjector(
 			s.DB(),
 			postgres.AggregateProjectionEventStreamLoader(s.eventStore, projection.FromStream(), accountAggregateTypeName),
 			s.payloadTransformer,
@@ -231,7 +231,7 @@ func (s *aggregateProjectorTestSuite) TestRun() {
 	projectorStorage, err := postgres.NewAggregateProjectionStorage(s.eventStoreTable, "agg_projections", projection.EncodeState, s.GetLogger())
 	s.Require().NoError(err, "failed to create projector storage")
 
-	project, err := postgres.NewAggregateProjector(
+	project, err := driverSQL.NewAggregateProjector(
 		s.DB(),
 		postgres.AggregateProjectionEventStreamLoader(s.eventStore, projection.FromStream(), accountAggregateTypeName),
 		s.payloadTransformer,

@@ -78,7 +78,7 @@ func (m *SingleStreamManager) NewStreamProjector(
 	projectionTable string,
 	projection goengine.Projection,
 	projectionErrorHandler driverSQL.ProjectionErrorCallback,
-) (*postgres.StreamProjector, error) {
+) (*driverSQL.StreamProjector, error) {
 	eventStore, err := m.NewEventStore()
 	if err != nil {
 		return nil, err
@@ -94,7 +94,7 @@ func (m *SingleStreamManager) NewStreamProjector(
 		return nil, err
 	}
 
-	return postgres.NewStreamProjector(
+	return driverSQL.NewStreamProjector(
 		m.db,
 		postgres.StreamProjectionEventStreamLoader(eventStore, projection.FromStream()),
 		m.payloadTransformer,
@@ -112,7 +112,7 @@ func (m *SingleStreamManager) NewAggregateProjector(
 	projectionTable string,
 	projection goengine.Projection,
 	projectionErrorHandler driverSQL.ProjectionErrorCallback,
-) (*postgres.AggregateProjector, error) {
+) (*driverSQL.AggregateProjector, error) {
 	eventStore, err := m.NewEventStore()
 	if err != nil {
 		return nil, err
@@ -133,7 +133,7 @@ func (m *SingleStreamManager) NewAggregateProjector(
 		return nil, err
 	}
 
-	return postgres.NewAggregateProjector(
+	return driverSQL.NewAggregateProjector(
 		m.db,
 		postgres.AggregateProjectionEventStreamLoader(eventStore, projection.FromStream(), aggregateTypeName),
 		m.payloadTransformer,

@@ -86,7 +86,7 @@ func (s *streamProjectorTestSuite) TestRunAndListen() {
 	projectorStorage, err := postgres.NewStreamProjectionStorage(projection.Name(), "projections", projection.EncodeState, s.GetLogger())
 	s.Require().NoError(err, "failed to create projector storage")
 
-	project, err := postgres.NewStreamProjector(
+	project, err := driverSQL.NewStreamProjector(
 		s.DB(),
 		postgres.StreamProjectionEventStreamLoader(s.eventStore, projection.FromStream()),
 		s.payloadTransformer,
@@ -158,7 +158,7 @@ func (s *streamProjectorTestSuite) TestRunAndListen() {
 		projectorStorage, err := postgres.NewStreamProjectionStorage(projection.Name(), "projections", projection.EncodeState, s.GetLogger())
 		s.Require().NoError(err, "failed to create projector storage")
 
-		project, err := postgres.NewStreamProjector(
+		project, err := driverSQL.NewStreamProjector(
 			s.DB(),
 			postgres.StreamProjectionEventStreamLoader(s.eventStore, projection.FromStream()),
 			s.payloadTransformer,
@@ -210,7 +210,7 @@ func (s *streamProjectorTestSuite) TestRun() {
 	projectorStorage, err := postgres.NewStreamProjectionStorage(projection.Name(), "projections", projection.EncodeState, s.GetLogger())
 	s.Require().NoError(err, "failed to create projector storage")
 
-	project, err := postgres.NewStreamProjector(
+	project, err := driverSQL.NewStreamProjector(
 		s.DB(),
 		postgres.StreamProjectionEventStreamLoader(s.eventStore, projection.FromStream()),
 		s.payloadTransformer,

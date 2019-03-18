@@ -1,4 +1,4 @@
-package internal
+package sql
 
 import (
 	"context"
@@ -6,7 +6,6 @@ import (
 	"sync"
 
 	"github.com/hellofresh/goengine"
-	"github.com/hellofresh/goengine/driver/sql"
 	"github.com/pkg/errors"
 )
 
@@ -15,14 +14,14 @@ var (
 	ErrBackgroundWorkStopped = errors.New("goengine: unable to queue notification because the processor was stopped")
 
 	// Ensure the BackgroundProcessor.Queue is a ProjectionTrigger
-	_ sql.ProjectionTrigger = (&BackgroundProcessor{}).Queue
+	_ ProjectionTrigger = (&BackgroundProcessor{}).Queue
 )
 
 type (
 	// BackgroundProcessor provides a way to Trigger a notification using a set of background processes.
 	BackgroundProcessor struct {
 		done            chan struct{}
-		queue           chan *sql.ProjectionNotification
+		queue           chan *ProjectionNotification
 		queueProcessors int
 		queueBuffer     int
 
@@ -31,7 +30,7 @@ type (
 
 	// ProcessHandler is a func used to trigger a notification but with the addition of providing a Trigger func so
 	// the original notification can trigger other notifications
-	ProcessHandler func(context.Context, *sql.ProjectionNotification, sql.ProjectionTrigger) error
+	ProcessHandler func(context.Context, *ProjectionNotification, ProjectionTrigger) error
 )
 
 // NewBackgroundProcessor create a new BackgroundProcessor
@@ -54,7 +53,7 @@ func NewBackgroundProcessor(queueProcessors, queueBuffer int, logger goengine.Lo
 }
 
 // Execute starts the background worker and wait for the notification to be executed
-func (b *BackgroundProcessor) Execute(ctx context.Context, handler ProcessHandler, notification *sql.ProjectionNotification) error {
+func (b *BackgroundProcessor) Execute(ctx context.Context, handler ProcessHandler, notification *ProjectionNotification) error {
 	// Wrap the processNotification in order to know that the first trigger finished
 	handler, handlerDone := b.wrapProcessHandlerForSingleRun(handler)
 
@@ -79,7 +78,7 @@ func (b *BackgroundProcessor) Execute(ctx context.Context, handler ProcessHandle
 // Start starts the background processes that will call the ProcessHandler based on the notification queued by Exec
 func (b *BackgroundProcessor) Start(ctx context.Context, handler ProcessHandler) func() {
 	b.done = make(chan struct{})
-	b.queue = make(chan *sql.ProjectionNotification, b.queueBuffer)
+	b.queue = make(chan *ProjectionNotification, b.queueBuffer)
 
 	var wg sync.WaitGroup
 	wg.Add(b.queueProcessors)
@@ -101,7 +100,7 @@ func (b *BackgroundProcessor) Start(ctx context.Context, handler ProcessHandler)
 }
 
 // Queue puts the notification on the queue to be processed
-func (b *BackgroundProcessor) Queue(ctx context.Context, notification *sql.ProjectionNotification) error {
+func (b *BackgroundProcessor) Queue(ctx context.Context, notification *ProjectionNotification) error {
 	select {
 	default:
 	case <-ctx.Done():
@@ -140,7 +139,7 @@ func (b *BackgroundProcessor) wrapProcessHandlerForSingleRun(handler ProcessHand
 
 	var m sync.Mutex
 	var triggers int32
-	return func(ctx context.Context, notification *sql.ProjectionNotification, trigger sql.ProjectionTrigger) error {
+	return func(ctx context.Context, notification *ProjectionNotification, trigger ProjectionTrigger) error {
 		m.Lock()
 		triggers++
 		m.Unlock()
