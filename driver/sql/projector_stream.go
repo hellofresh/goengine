@@ -1,4 +1,4 @@
-package postgres
+package sql
 
 import (
 	"context"
@@ -7,8 +7,6 @@ import (
 	"sync"
 
 	"github.com/hellofresh/goengine"
-	driverSQL "github.com/hellofresh/goengine/driver/sql"
-	internalSQL "github.com/hellofresh/goengine/driver/sql/internal"
 	"github.com/pkg/errors"
 )
 
@@ -17,10 +15,10 @@ type StreamProjector struct {
 	sync.Mutex
 
 	db       *sql.DB
-	executor *internalSQL.NotificationProjector
-	storage  driverSQL.StreamProjectorStorage
+	executor *NotificationProjector
+	storage  StreamProjectorStorage
 
-	projectionErrorHandler driverSQL.ProjectionErrorCallback
+	projectionErrorHandler ProjectionErrorCallback
 
 	logger goengine.Logger
 }
@@ -28,11 +26,11 @@ type StreamProjector struct {
 // NewStreamProjector creates a new projector for a projection
 func NewStreamProjector(
 	db *sql.DB,
-	eventLoader driverSQL.EventStreamLoader,
+	eventLoader EventStreamLoader,
 	resolver goengine.MessagePayloadResolver,
 	projection goengine.Projection,
-	projectorStorage driverSQL.StreamProjectorStorage,
-	projectionErrorHandler driverSQL.ProjectionErrorCallback,
+	projectorStorage StreamProjectorStorage,
+	projectionErrorHandler ProjectionErrorCallback,
 	logger goengine.Logger,
 ) (*StreamProjector, error) {
 	switch {
@@ -57,12 +55,12 @@ func NewStreamProjector(
 		e.String("projection", projection.Name())
 	})
 
-	var stateDecoder driverSQL.ProjectionStateDecoder
+	var stateDecoder ProjectionStateDecoder
 	if saga, ok := projection.(goengine.ProjectionSaga); ok {
 		stateDecoder = saga.DecodeState
 	}
 
-	executor, err := internalSQL.NewNotificationProjector(
+	executor, err := NewNotificationProjector(
 		db,
 		projectorStorage,
 		projection.Init,
@@ -105,7 +103,7 @@ func (s *StreamProjector) Run(ctx context.Context) error {
 }
 
 // RunAndListen executes the projection and listens to any changes to the event store
-func (s *StreamProjector) RunAndListen(ctx context.Context, listener driverSQL.Listener) error {
+func (s *StreamProjector) RunAndListen(ctx context.Context, listener Listener) error {
 	s.Lock()
 	defer s.Unlock()
 
@@ -125,7 +123,7 @@ func (s *StreamProjector) RunAndListen(ctx context.Context, listener driverSQL.L
 
 func (s *StreamProjector) processNotification(
 	ctx context.Context,
-	notification *driverSQL.ProjectionNotification,
+	notification *ProjectionNotification,
 ) error {
 	for i := 0; i < math.MaxInt16; i++ {
 		err := s.executor.Execute(ctx, notification)

@@ -1,28 +1,27 @@
-package internal
+package sql
 
 import (
 	"context"
 	"database/sql"
 
 	"github.com/hellofresh/goengine"
-	driverSQL "github.com/hellofresh/goengine/driver/sql"
 	"github.com/pkg/errors"
 )
 
 // Ensure the NotificationProjector.Execute is a ProjectionTrigger
-var _ driverSQL.ProjectionTrigger = (&NotificationProjector{}).Execute
+var _ ProjectionTrigger = (&NotificationProjector{}).Execute
 
 // NotificationProjector contains the logic for transforming a notification into a set of events and projecting them.
 type NotificationProjector struct {
 	db *sql.DB
 
-	storage driverSQL.ProjectionStorage
+	storage ProjectionStorage
 
-	projectionStateInit   driverSQL.ProjectionStateInitializer
-	projectionStateDecode driverSQL.ProjectionStateDecoder
+	projectionStateInit   ProjectionStateInitializer
+	projectionStateDecode ProjectionStateDecoder
 	handlers              map[string]goengine.MessageHandler
 
-	eventLoader driverSQL.EventStreamLoader
+	eventLoader EventStreamLoader
 	resolver    goengine.MessagePayloadResolver
 
 	logger goengine.Logger
@@ -31,11 +30,11 @@ type NotificationProjector struct {
 // NewNotificationProjector returns a new NotificationProjector
 func NewNotificationProjector(
 	db *sql.DB,
-	storage driverSQL.ProjectionStorage,
-	projectionStateInit driverSQL.ProjectionStateInitializer,
-	projectionStateDecode driverSQL.ProjectionStateDecoder,
+	storage ProjectionStorage,
+	projectionStateInit ProjectionStateInitializer,
+	projectionStateDecode ProjectionStateDecoder,
 	eventHandlers map[string]goengine.MessageHandler,
-	eventLoader driverSQL.EventStreamLoader,
+	eventLoader EventStreamLoader,
 	resolver goengine.MessagePayloadResolver,
 	logger goengine.Logger,
 ) (*NotificationProjector, error) {
@@ -71,7 +70,7 @@ func NewNotificationProjector(
 }
 
 // Execute triggers the projections for the notification
-func (s *NotificationProjector) Execute(ctx context.Context, notification *driverSQL.ProjectionNotification) error {
+func (s *NotificationProjector) Execute(ctx context.Context, notification *ProjectionNotification) error {
 	// Check if the context is expired
 	select {
 	default:
@@ -112,7 +111,7 @@ func (s *NotificationProjector) project(
 	ctx context.Context,
 	conn *sql.Conn,
 	streamConn *sql.Conn,
-	notification *driverSQL.ProjectionNotification,
+	notification *ProjectionNotification,
 ) error {
 	// Acquire the projection
 	releaseLock, rawState, err := s.storage.Acquire(ctx, conn, notification)
@@ -146,13 +145,13 @@ func (s *NotificationProjector) project(
 // projectStream will project the events in the event stream and persist the state after the projection
 func (s *NotificationProjector) projectStream(
 	ctx context.Context,
-	conn driverSQL.Execer,
-	notification *driverSQL.ProjectionNotification,
-	rawState *driverSQL.ProjectionRawState,
+	conn Execer,
+	notification *ProjectionNotification,
+	rawState *ProjectionRawState,
 	stream goengine.EventStream,
 ) error {
 	var (
-		state         driverSQL.ProjectionState
+		state         ProjectionState
 		stateAcquired bool
 	)
 	for stream.Next() {
@@ -210,8 +209,8 @@ func (s *NotificationProjector) projectStream(
 	return stream.Err()
 }
 
-func (s *NotificationProjector) acquireProjectState(ctx context.Context, rawState *driverSQL.ProjectionRawState) (driverSQL.ProjectionState, error) {
-	state := driverSQL.ProjectionState{
+func (s *NotificationProjector) acquireProjectState(ctx context.Context, rawState *ProjectionRawState) (ProjectionState, error) {
+	state := ProjectionState{
 		Position: rawState.Position,
 	}
 
@@ -259,13 +258,13 @@ func wrapProjectionHandlerToTrapError(handler goengine.MessageHandler) goengine.
 				err = errors.Errorf("unknown panic: (%T) %v", x, x)
 			}
 
-			handlerErr = driverSQL.NewProjectionHandlerError(err)
+			handlerErr = NewProjectionHandlerError(err)
 		}()
 
 		var err error
 		returnState, err = handler(ctx, state, message)
 		if err != nil {
-			handlerErr = driverSQL.NewProjectionHandlerError(err)
+			handlerErr = NewProjectionHandlerError(err)
 		}
 
 		return
