@@ -28,9 +28,8 @@ type AggregateProjector struct {
 // NewAggregateProjector creates a new projector for a projection
 func NewAggregateProjector(
 	db *sql.DB,
-	eventStore driverSQL.ReadOnlyEventStore,
+	eventLoader driverSQL.EventStreamLoader,
 	resolver goengine.MessagePayloadResolver,
-	aggregateTypeName string,
 	projection goengine.Projection,
 	projectorStorage driverSQL.AggregateProjectorStorage,
 	projectionErrorHandler driverSQL.ProjectionErrorCallback,
@@ -39,16 +38,14 @@ func NewAggregateProjector(
 	switch {
 	case db == nil:
 		return nil, goengine.InvalidArgumentError("db")
-	case eventStore == nil:
-		return nil, goengine.InvalidArgumentError("eventStore")
+	case eventLoader == nil:
+		return nil, goengine.InvalidArgumentError("eventLoader")
 	case resolver == nil:
 		return nil, goengine.InvalidArgumentError("resolver")
 	case projection == nil:
 		return nil, goengine.InvalidArgumentError("projection")
 	case projectorStorage == nil:
 		return nil, goengine.InvalidArgumentError("projectorStorage")
-	case aggregateTypeName == "":
-		return nil, goengine.InvalidArgumentError("aggregateTypeName")
 	case projectionErrorHandler == nil:
 		return nil, goengine.InvalidArgumentError("projectionErrorHandler")
 	}
@@ -76,7 +73,7 @@ func NewAggregateProjector(
 		projection.Init,
 		stateDecoder,
 		projection.Handlers(),
-		aggregateProjectionEventStreamLoader(eventStore, projection.FromStream(), aggregateTypeName),
+		eventLoader,
 		resolver,
 		logger,
 	)

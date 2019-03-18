@@ -135,9 +135,8 @@ func (m *SingleStreamManager) NewAggregateProjector(
 
 	return postgres.NewAggregateProjector(
 		m.db,
-		eventStore,
+		postgres.AggregateProjectionEventStreamLoader(eventStore, projection.FromStream(), aggregateTypeName),
 		m.payloadTransformer,
-		aggregateTypeName,
 		projection,
 		projectorStorage,
 		projectionErrorHandler,
