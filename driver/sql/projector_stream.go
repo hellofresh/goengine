@@ -157,3 +157,10 @@ func (s *StreamProjector) processNotification(
 		math.MaxInt16,
 	)
 }
+
+// StreamProjectionEventStreamLoader returns a EventStreamLoader for the StreamProjector
+func StreamProjectionEventStreamLoader(eventStore ReadOnlyEventStore, streamName goengine.StreamName) EventStreamLoader {
+	return func(ctx context.Context, conn *sql.Conn, notification *ProjectionNotification, position int64) (goengine.EventStream, error) {
+		return eventStore.LoadWithConnection(ctx, conn, streamName, position+1, nil, nil)
+	}
+}

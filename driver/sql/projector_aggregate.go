@@ -5,6 +5,9 @@ import (
 	"database/sql"
 	"sync"
 
+	"github.com/hellofresh/goengine/aggregate"
+	"github.com/hellofresh/goengine/metadata"
+
 	"github.com/hellofresh/goengine"
 )
 
@@ -245,4 +248,15 @@ func (a *AggregateProjector) markProjectionAsFailed(notification *ProjectionNoti
 	}()
 
 	return a.storage.PersistFailure(conn, notification)
+}
+
+// AggregateProjectionEventStreamLoader returns a EventStreamLoader for the AggregateProjector
+func AggregateProjectionEventStreamLoader(eventStore ReadOnlyEventStore, streamName goengine.StreamName, aggregateTypeName string) EventStreamLoader {
+	return func(ctx context.Context, conn *sql.Conn, notification *ProjectionNotification, position int64) (goengine.EventStream, error) {
+		matcher := metadata.NewMatcher()
+		matcher = metadata.WithConstraint(matcher, aggregate.IDKey, metadata.Equals, notification.AggregateID)
+		matcher = metadata.WithConstraint(matcher, aggregate.TypeKey, metadata.Equals, aggregateTypeName)
+
+		return eventStore.LoadWithConnection(ctx, conn, streamName, position+1, nil, matcher)
+	}
 }

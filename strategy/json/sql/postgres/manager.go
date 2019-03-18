@@ -96,7 +96,7 @@ func (m *SingleStreamManager) NewStreamProjector(
 
 	return driverSQL.NewStreamProjector(
 		m.db,
-		postgres.StreamProjectionEventStreamLoader(eventStore, projection.FromStream()),
+		driverSQL.StreamProjectionEventStreamLoader(eventStore, projection.FromStream()),
 		m.payloadTransformer,
 		projection,
 		projectorStorage,
@@ -135,7 +135,7 @@ func (m *SingleStreamManager) NewAggregateProjector(
 
 	return driverSQL.NewAggregateProjector(
 		m.db,
-		postgres.AggregateProjectionEventStreamLoader(eventStore, projection.FromStream(), aggregateTypeName),
+		driverSQL.AggregateProjectionEventStreamLoader(eventStore, projection.FromStream(), aggregateTypeName),
 		m.payloadTransformer,
 		projection,
 		projectorStorage,
