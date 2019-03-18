@@ -84,12 +84,22 @@ func (m *SingleStreamManager) NewStreamProjector(
 		return nil, err
 	}
 
+	var stateEncoder driverSQL.ProjectionStateEncoder
+	if saga, ok := projection.(goengine.ProjectionSaga); ok {
+		stateEncoder = saga.EncodeState
+	}
+
+	projectorStorage, err := postgres.NewStreamProjectionStorage(projection.Name(), projectionTable, stateEncoder, m.logger)
+	if err != nil {
+		return nil, err
+	}
+
 	return postgres.NewStreamProjector(
 		m.db,
 		eventStore,
 		m.payloadTransformer,
 		projection,
-		projectionTable,
+		projectorStorage,
 		projectionErrorHandler,
 		m.logger,
 	)
@@ -113,9 +123,7 @@ func (m *SingleStreamManager) NewAggregateProjector(
 		return nil, err
 	}
 
-	var (
-		stateEncoder driverSQL.ProjectionStateEncoder
-	)
+	var stateEncoder driverSQL.ProjectionStateEncoder
 	if saga, ok := projection.(goengine.ProjectionSaga); ok {
 		stateEncoder = saga.EncodeState
 	}

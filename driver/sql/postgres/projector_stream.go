@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"math"
-	"strings"
 	"sync"
 
 	"github.com/hellofresh/goengine"
@@ -32,7 +31,7 @@ func NewStreamProjector(
 	eventStore driverSQL.ReadOnlyEventStore,
 	resolver goengine.MessagePayloadResolver,
 	projection goengine.Projection,
-	projectionTable string,
+	projectorStorage driverSQL.StreamProjectorStorage,
 	projectionErrorHandler driverSQL.ProjectionErrorCallback,
 	logger goengine.Logger,
 ) (*StreamProjector, error) {
@@ -45,8 +44,8 @@ func NewStreamProjector(
 		return nil, goengine.InvalidArgumentError("resolver")
 	case projection == nil:
 		return nil, goengine.InvalidArgumentError("projection")
-	case strings.TrimSpace(projectionTable) == "":
-		return nil, goengine.InvalidArgumentError("projectionTable")
+	case projectorStorage == nil:
+		return nil, goengine.InvalidArgumentError("projectorStorage")
 	case projectionErrorHandler == nil:
 		return nil, goengine.InvalidArgumentError("projectionErrorHandler")
 	}
@@ -58,23 +57,14 @@ func NewStreamProjector(
 		e.String("projection", projection.Name())
 	})
 
-	var (
-		stateDecoder driverSQL.ProjectionStateDecoder
-		stateEncoder driverSQL.ProjectionStateEncoder
-	)
+	var stateDecoder driverSQL.ProjectionStateDecoder
 	if saga, ok := projection.(goengine.ProjectionSaga); ok {
 		stateDecoder = saga.DecodeState
-		stateEncoder = saga.EncodeState
-	}
-
-	storage, err := newStreamProjectionStorage(projection.Name(), projectionTable, stateEncoder, logger)
-	if err != nil {
-		return nil, err
 	}
 
 	executor, err := internalSQL.NewNotificationProjector(
 		db,
-		storage,
+		projectorStorage,
 		projection.Init,
 		stateDecoder,
 		projection.Handlers(),
@@ -89,7 +79,7 @@ func NewStreamProjector(
 	return &StreamProjector{
 		db:                     db,
 		executor:               executor,
-		storage:                storage,
+		storage:                projectorStorage,
 		projectionErrorHandler: projectionErrorHandler,
 		logger:                 logger,
 	}, nil
