@@ -35,5 +35,5 @@ tools: tools.golint
 tools.golint:
 	@command -v golint >/dev/null ; if [ $$? -ne 0 ]; then \
 		echo "--> installing golint"; \
-		go get github.com/golang/lint/golint; \
+		go get golang.org/x/lint/golint; \
 	fi
