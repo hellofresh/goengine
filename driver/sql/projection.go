@@ -126,19 +126,28 @@ func (p *ProjectionNotification) UnmarshalEasyJSON(in *jlexer.Lexer) {
 	}
 }
 
-var _ ProjectionStateSerialization = NopProjectionStateSerialization{}
+// GetProjectionStateSerialization returns a ProjectionStateSerialization based on the provided projection
+func GetProjectionStateSerialization(projection goengine.Projection) ProjectionStateSerialization {
+	if saga, ok := projection.(ProjectionStateSerialization); ok {
+		return saga
+	}
 
-type NopProjectionStateSerialization struct {
+	return nopProjectionStateSerialization{
+		Projection: projection,
+	}
+}
+
+type nopProjectionStateSerialization struct {
 	goengine.Projection
 }
 
 // DecodeState reconstitute the projection state based on the provided state data
-func (NopProjectionStateSerialization) DecodeState(data []byte) (interface{}, error) {
+func (nopProjectionStateSerialization) DecodeState(data []byte) (interface{}, error) {
 	return nil, nil
 }
 
 // EncodeState encode the given object for storage
-func (NopProjectionStateSerialization) EncodeState(obj interface{}) ([]byte, error) {
+func (nopProjectionStateSerialization) EncodeState(obj interface{}) ([]byte, error) {
 	if obj == nil {
 		return []byte{'{', '}'}, nil
 	}

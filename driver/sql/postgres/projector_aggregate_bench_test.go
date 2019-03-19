@@ -149,7 +149,7 @@ func setup(
 	projectorStorage, err := createStorage(
 		eventStoreTable,
 		projectionTable,
-		driverSQL.NopProjectionStateSerialization{projection},
+		driverSQL.GetProjectionStateSerialization(projection),
 		goengine.NopLogger,
 	)
 	require.NoError(b, err, "failed to create projector storage")
