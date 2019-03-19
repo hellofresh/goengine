@@ -28,7 +28,7 @@ func TestAdvisoryLockStreamProjectionStorage_CreateProjection(t *testing.T) {
 	require.NoError(t, err)
 
 	// Test no error
-	ctx := context.Background()
+	ctx := context.WithValue(context.Background(), "no error", true)
 	mockDB := sql.NewExecer(ctrl)
 	mockDB.EXPECT().ExecContext(ctx, gomock.AssignableToTypeOf(""), "my_projection").Times(1).Return(nil, nil)
 
@@ -38,7 +38,7 @@ func TestAdvisoryLockStreamProjectionStorage_CreateProjection(t *testing.T) {
 	// Test DB error
 	expectedErr := errors.New("test error")
 
-	ctx = context.Background()
+	ctx = context.WithValue(context.Background(), "no error", false)
 	mockDB = sql.NewExecer(ctrl)
 	mockDB.EXPECT().ExecContext(ctx, gomock.AssignableToTypeOf(""), "my_projection").Times(1).Return(nil, expectedErr)
 
