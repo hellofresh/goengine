@@ -24,12 +24,7 @@ type skipLockProjectorTransaction struct {
 	logger goengine.Logger
 }
 
-func (t *skipLockProjectorTransaction) AcquireState(ctx context.Context) (driverSQL.ProjectionState, error) {
-	var (
-		err      error
-		rawState driverSQL.ProjectionRawState
-	)
-	state := driverSQL.ProjectionState{}
+func (t *skipLockProjectorTransaction) AcquireState(ctx context.Context) (state driverSQL.ProjectionState, err error) {
 	defer func() {
 		if err != nil && t.transaction != nil {
 			if rollbackErr := t.transaction.Rollback(); rollbackErr != nil {
@@ -41,33 +36,36 @@ func (t *skipLockProjectorTransaction) AcquireState(ctx context.Context) (driver
 	}()
 
 	// If there is no active transaction begin one
+	var rawState driverSQL.ProjectionRawState
 	if t.transaction == nil {
 		t.transaction, err = t.conn.BeginTx(context.Background(), nil)
 		if err != nil {
 			return state, err
 		}
 
-		res := t.transaction.QueryRowContext(ctx, t.queryAcquireRowLock, t.projectionID)
-
 		var (
 			acquiredLock bool
 			failed       bool
 		)
-		if err := res.Scan(&acquiredLock, &failed, &rawState.Position, &rawState.ProjectionState); err != nil {
+		err = t.transaction.QueryRowContext(ctx, t.queryAcquireRowLock, t.projectionID).
+			Scan(&acquiredLock, &failed, &rawState.Position, &rawState.ProjectionState)
+		if err != nil {
 			// No rows are returned when the projector is already at the notification position
 			if err == sql.ErrNoRows {
 				return state, driverSQL.ErrNoProjectionRequired
 			}
 
-			return state, err
+			return
 		}
 
 		if !acquiredLock {
-			return state, driverSQL.ErrProjectionFailedToLock
+			err = driverSQL.ErrProjectionFailedToLock
+			return
 		}
 
 		if failed {
-			return state, driverSQL.ErrProjectionPreviouslyLocked
+			err = driverSQL.ErrProjectionPreviouslyLocked
+			return
 		}
 	} else {
 		rawState = *t.rawState
@@ -84,12 +82,12 @@ func (t *skipLockProjectorTransaction) AcquireState(ctx context.Context) (driver
 	}
 
 	if err != nil {
-		return state, err
+		return
 	}
 
 	t.rawState = nil
 
-	return state, err
+	return state, nil
 }
 
 func (t *skipLockProjectorTransaction) CommitState(newState driverSQL.ProjectionState) error {

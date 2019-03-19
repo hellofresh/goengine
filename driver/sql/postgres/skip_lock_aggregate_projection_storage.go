@@ -155,15 +155,18 @@ func (a *SkipLockAggregateProjectionStorage) Acquire(
 	}
 
 	if projectionState.Position >= notification.No {
-		return nil, 0, driverSQL.ErrNoProjectionRequired
+		err = driverSQL.ErrNoProjectionRequired
+		return nil, 0, err
 	}
 
 	if !acquiredLock {
-		return nil, 0, driverSQL.ErrProjectionFailedToLock
+		err = driverSQL.ErrProjectionFailedToLock
+		return nil, 0, err
 	}
 
 	if failed {
-		return nil, 0, driverSQL.ErrProjectionPreviouslyLocked
+		err = driverSQL.ErrProjectionPreviouslyLocked
+		return nil, 0, err
 	}
 
 	a.logger.Debug("acquired projection lock", logFields)
