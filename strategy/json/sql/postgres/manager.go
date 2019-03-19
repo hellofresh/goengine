@@ -78,6 +78,7 @@ func (m *SingleStreamManager) NewStreamProjector(
 	projectionTable string,
 	projection goengine.Projection,
 	projectionErrorHandler driverSQL.ProjectionErrorCallback,
+	useLockedField bool,
 ) (*driverSQL.StreamProjector, error) {
 	eventStore, err := m.NewEventStore()
 	if err != nil {
@@ -88,7 +89,7 @@ func (m *SingleStreamManager) NewStreamProjector(
 		projection.Name(),
 		projectionTable,
 		driverSQL.GetProjectionStateSerialization(projection),
-		true,
+		useLockedField,
 		m.logger,
 	)
 	if err != nil {
@@ -113,6 +114,7 @@ func (m *SingleStreamManager) NewAggregateProjector(
 	projectionTable string,
 	projection goengine.Projection,
 	projectionErrorHandler driverSQL.ProjectionErrorCallback,
+	useLockedField bool,
 ) (*driverSQL.AggregateProjector, error) {
 	eventStore, err := m.NewEventStore()
 	if err != nil {
@@ -128,7 +130,7 @@ func (m *SingleStreamManager) NewAggregateProjector(
 		eventStoreTable,
 		projectionTable,
 		driverSQL.GetProjectionStateSerialization(projection),
-		true,
+		useLockedField,
 		m.logger,
 	)
 	if err != nil {
