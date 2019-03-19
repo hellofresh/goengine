@@ -44,14 +44,14 @@ func TestAggregateProjectorSuite(t *testing.T) {
 	t.Run("AdvisoryLock", func(t *testing.T) {
 		suite.Run(t, &aggregateProjectorTestSuite{
 			createProjectionStorage: func(eventStoreTable, projectionTable string, serialization driverSQL.ProjectionStateSerialization, logger goengine.Logger) (storage driverSQL.AggregateProjectorStorage, e error) {
-				return postgres.NewAdvisoryLockAggregateProjectionStorage(eventStoreTable, projectionTable, serialization, logger)
+				return postgres.NewAdvisoryLockAggregateProjectionStorage(eventStoreTable, projectionTable, serialization, true, logger)
 			},
 		})
 	})
-	t.Run("SkipLock", func(t *testing.T) {
+	t.Run("AdvisoryLock without locked field", func(t *testing.T) {
 		suite.Run(t, &aggregateProjectorTestSuite{
 			createProjectionStorage: func(eventStoreTable, projectionTable string, serialization driverSQL.ProjectionStateSerialization, logger goengine.Logger) (storage driverSQL.AggregateProjectorStorage, e error) {
-				return postgres.NewSkipLockAggregateProjectionStorage(eventStoreTable, projectionTable, serialization, logger)
+				return postgres.NewAdvisoryLockAggregateProjectionStorage(eventStoreTable, projectionTable, serialization, false, logger)
 			},
 		})
 	})

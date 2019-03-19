@@ -72,6 +72,7 @@ func BenchmarkAggregateProjector_Run(b *testing.B) {
 				eventStoreTable,
 				projectionTable,
 				serialization,
+				true,
 				goengine.NopLogger,
 			)
 		},
@@ -82,15 +83,16 @@ func BenchmarkAggregateProjector_Run(b *testing.B) {
 	require.NoError(b, projector.Run(ctx))
 }
 
-func BenchmarkAggregateProjectorSkipLock_Run(b *testing.B) {
+func BenchmarkAggregateProjectorWithout_Run(b *testing.B) {
 	ctx := context.Background()
 	projector, teardown := setup(
 		b,
 		func(eventStoreTable, projectionTable string, serialization driverSQL.ProjectionStateSerialization, logger goengine.Logger) (driverSQL.AggregateProjectorStorage, error) {
-			return postgres.NewSkipLockAggregateProjectionStorage(
+			return postgres.NewAdvisoryLockAggregateProjectionStorage(
 				eventStoreTable,
 				projectionTable,
 				serialization,
+				false,
 				goengine.NopLogger,
 			)
 		},
