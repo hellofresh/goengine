@@ -18,6 +18,7 @@ import (
 //go:generate go run ../vendor/github.com/golang/mock/mockgen/ -package=aggregate -destination aggregate/aggregate.go -mock_names Root=Root github.com/hellofresh/goengine/aggregate Root
 //go:generate go run ../vendor/github.com/golang/mock/mockgen/ -package=aggregate -destination aggregate/aggregate_another.go -mock_names Root=AnotherRoot github.com/hellofresh/goengine/aggregate Root
 //go:generate go run ../vendor/github.com/golang/mock/mockgen/ -package=sql -destination driver/sql/execer.go -mock_names Execer=Execer github.com/hellofresh/goengine/driver/sql Execer
+//go:generate go run ../vendor/github.com/golang/mock/mockgen/ -package=sql -destination driver/sql/queryer.go -mock_names Queryer=Queryer github.com/hellofresh/goengine/driver/sql Queryer
 //go:generate go run ../vendor/github.com/golang/mock/mockgen/ -package=sql -destination driver/sql/persistence_strategy.go -mock_names PersistenceStrategy=PersistenceStrategy github.com/hellofresh/goengine/driver/sql PersistenceStrategy
 //go:generate go run ../vendor/github.com/golang/mock/mockgen/ -package=sql -destination driver/sql/projection_state_serialization.go -mock_names ProjectionStateSerialization=ProjectionStateSerialization github.com/hellofresh/goengine/driver/sql ProjectionStateSerialization
 //go:generate go run ../vendor/github.com/golang/mock/mockgen/ -package=sql -destination driver/sql/message_factory.go -mock_names MessageFactory=MessageFactory github.com/hellofresh/goengine/driver/sql MessageFactory

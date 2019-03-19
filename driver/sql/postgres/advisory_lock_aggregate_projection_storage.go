@@ -112,11 +112,8 @@ func (a *AdvisoryLockAggregateProjectionStorage) LoadOutOfSync(ctx context.Conte
 
 // PersistFailure marks the specified aggregate_id projection as failed
 func (a *AdvisoryLockAggregateProjectionStorage) PersistFailure(conn driverSQL.Execer, notification *driverSQL.ProjectionNotification) error {
-	if _, err := conn.ExecContext(context.Background(), a.queryPersistFailure, notification.AggregateID); err != nil {
-		return err
-	}
-
-	return nil
+	_, err := conn.ExecContext(context.Background(), a.queryPersistFailure, notification.AggregateID)
+	return err
 }
 
 // Acquire returns a driverSQL.ProjectorTransaction and the position of the projection within the event stream when a
@@ -126,7 +123,6 @@ func (a *AdvisoryLockAggregateProjectionStorage) Acquire(
 	conn *sql.Conn,
 	notification *driverSQL.ProjectionNotification,
 ) (driverSQL.ProjectorTransaction, int64, error) {
-
 	logFields := func(e goengine.LoggerEntry) {
 		e.Int64("notification.no", notification.No)
 		e.String("projection_id", notification.AggregateID)

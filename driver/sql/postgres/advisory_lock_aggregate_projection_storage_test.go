@@ -1,89 +1,58 @@
 // +build unit
 
-package postgres
+package postgres_test
 
 import (
 	"context"
-	"database/sql"
+	"errors"
 	"testing"
 
-	sqlmock "github.com/DATA-DOG/go-sqlmock"
+	"github.com/stretchr/testify/assert"
+
+	"github.com/golang/mock/gomock"
 	"github.com/hellofresh/goengine"
 	driverSQL "github.com/hellofresh/goengine/driver/sql"
-	"github.com/hellofresh/goengine/driver/sql/internal/test"
-	"github.com/pkg/errors"
-	"github.com/stretchr/testify/assert"
+	"github.com/hellofresh/goengine/driver/sql/postgres"
+	"github.com/hellofresh/goengine/mocks/driver/sql"
 	"github.com/stretchr/testify/require"
 )
 
-func TestAdvisoryLockAggregateProjectionStorage_PersistState(t *testing.T) {
-	mockedProjectionState := "I'm a projection state"
+func TestAdvisoryLockAggregateProjectionStorage_PersistFailure(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
 	notification := &driverSQL.ProjectionNotification{
 		No:          1,
-		AggregateID: "d8490e85-dd22-4c32-9cb0-a29e57949951",
-	}
-	projectionState := driverSQL.ProjectionState{
-		Position:        5,
-		ProjectionState: mockedProjectionState,
+		AggregateID: "20a151cc-e44e-4133-9491-8dc341032d37",
 	}
 
-	test.RunWithMockDB(t, "Persist projection state", func(t *testing.T, db *sql.DB, dbMock sqlmock.Sqlmock) {
-		stateEncoderCalls := 0
-		stateEncoder := func(i interface{}) (bytes []byte, e error) {
-			assert.Equal(t, mockedProjectionState, i)
+	storage, err := postgres.NewAdvisoryLockAggregateProjectionStorage(
+		"event_store_table",
+		"event_store_projection_table",
+		sql.NewProjectionStateSerialization(ctrl),
+		goengine.NopLogger,
+	)
+	require.NoError(t, err)
 
-			stateEncoderCalls++
-			return []byte(mockedProjectionState), nil
-		}
+	// No error
+	mockDB := sql.NewExecer(ctrl)
+	mockDB.EXPECT().
+		ExecContext(context.Background(), gomock.AssignableToTypeOf(""), "20a151cc-e44e-4133-9491-8dc341032d37").
+		Return(nil, nil).
+		Times(1)
 
-		conn, err := db.Conn(context.Background())
-		require.NoError(t, err)
+	err = storage.PersistFailure(mockDB, notification)
+	assert.NoError(t, err)
 
-		storage, err := NewAdvisoryLockAggregateProjectionStorage("store_table", "projection_table", stateEncoder, goengine.NopLogger)
-		require.NoError(t, err)
+	// DB error
+	expectedErr := errors.New("test error")
 
-		dbMock.ExpectExec("^UPDATE \"projection_table\" SET").
-			WithArgs(notification.AggregateID, 5, []byte(mockedProjectionState)).
-			WillReturnResult(sqlmock.NewResult(18, 1))
+	mockDB = sql.NewExecer(ctrl)
+	mockDB.EXPECT().
+		ExecContext(context.Background(), gomock.AssignableToTypeOf(""), "20a151cc-e44e-4133-9491-8dc341032d37").
+		Return(nil, expectedErr).
+		Times(1)
 
-		err = storage.PersistState(conn, notification, projectionState)
-		assert.NoError(t, err)
-		assert.Equal(t, 1, stateEncoderCalls)
-	})
-
-	test.RunWithMockDB(t, "Persist projection state (using default encoder)", func(t *testing.T, db *sql.DB, dbMock sqlmock.Sqlmock) {
-		projectionState := driverSQL.ProjectionState{
-			Position:        6,
-			ProjectionState: nil,
-		}
-
-		conn, err := db.Conn(context.Background())
-		require.NoError(t, err)
-
-		storage, err := NewAdvisoryLockAggregateProjectionStorage("store_table", "projection_table", nil, goengine.NopLogger)
-		require.NoError(t, err)
-
-		dbMock.ExpectExec("^UPDATE \"projection_table\" SET").
-			WithArgs(notification.AggregateID, 6, []byte("{}")).
-			WillReturnResult(sqlmock.NewResult(18, 1))
-
-		err = storage.PersistState(conn, notification, projectionState)
-		assert.NoError(t, err)
-	})
-
-	test.RunWithMockDB(t, "Fail when state encoding fails", func(t *testing.T, db *sql.DB, dbMock sqlmock.Sqlmock) {
-		stateEncoderErr := errors.New("Failed to encode")
-		stateEncoder := func(i interface{}) (bytes []byte, e error) {
-			return nil, stateEncoderErr
-		}
-
-		conn, err := db.Conn(context.Background())
-		require.NoError(t, err)
-
-		storage, err := NewAdvisoryLockAggregateProjectionStorage("store_table", "projection_table", stateEncoder, goengine.NopLogger)
-		require.NoError(t, err)
-
-		err = storage.PersistState(conn, notification, projectionState)
-		assert.Equal(t, stateEncoderErr, err)
-	})
+	err = storage.PersistFailure(mockDB, notification)
+	assert.Equal(t, expectedErr, err)
 }
