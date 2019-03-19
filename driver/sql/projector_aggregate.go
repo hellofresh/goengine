@@ -245,11 +245,11 @@ func (a *AggregateProjector) markProjectionAsFailed(notification *ProjectionNoti
 
 // AggregateProjectionEventStreamLoader returns a EventStreamLoader for the AggregateProjector
 func AggregateProjectionEventStreamLoader(eventStore ReadOnlyEventStore, streamName goengine.StreamName, aggregateTypeName string) EventStreamLoader {
-	return func(ctx context.Context, conn *sql.Conn, notification *ProjectionNotification, position int64) (goengine.EventStream, error) {
-		matcher := metadata.NewMatcher()
-		matcher = metadata.WithConstraint(matcher, aggregate.IDKey, metadata.Equals, notification.AggregateID)
-		matcher = metadata.WithConstraint(matcher, aggregate.TypeKey, metadata.Equals, aggregateTypeName)
+	matcher := metadata.NewMatcher()
+	matcher = metadata.WithConstraint(matcher, aggregate.TypeKey, metadata.Equals, aggregateTypeName)
 
-		return eventStore.LoadWithConnection(ctx, conn, streamName, position+1, nil, matcher)
+	return func(ctx context.Context, conn *sql.Conn, notification *ProjectionNotification, position int64) (goengine.EventStream, error) {
+		aggMatcher := metadata.WithConstraint(matcher, aggregate.IDKey, metadata.Equals, notification.AggregateID)
+		return eventStore.LoadWithConnection(ctx, conn, streamName, position+1, nil, aggMatcher)
 	}
 }
