@@ -11,6 +11,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hellofresh/goengine"
+
 	"github.com/hellofresh/goengine/aggregate"
 	driverSQL "github.com/hellofresh/goengine/driver/sql"
 	"github.com/hellofresh/goengine/driver/sql/postgres"
@@ -24,11 +26,31 @@ import (
 type (
 	streamProjectorTestSuite struct {
 		projectorSuite
+
+		createProjectionStorage func(
+			eventStoreTable,
+			projectionTable string,
+			projectionStateSerialization driverSQL.ProjectionStateSerialization,
+			logger goengine.Logger,
+		) (driverSQL.StreamProjectorStorage, error)
 	}
 )
 
 func TestStreamProjectorSuite(t *testing.T) {
-	suite.Run(t, new(streamProjectorTestSuite))
+	t.Run("AdvisoryLock", func(t *testing.T) {
+		suite.Run(t, &streamProjectorTestSuite{
+			createProjectionStorage: func(eventStoreTable, projectionTable string, serialization driverSQL.ProjectionStateSerialization, logger goengine.Logger) (storage driverSQL.StreamProjectorStorage, e error) {
+				return postgres.NewAdvisoryLockStreamProjectionStorage(eventStoreTable, projectionTable, serialization, true, logger)
+			},
+		})
+	})
+	t.Run("AdvisoryLock without locked field", func(t *testing.T) {
+		suite.Run(t, &streamProjectorTestSuite{
+			createProjectionStorage: func(eventStoreTable, projectionTable string, serialization driverSQL.ProjectionStateSerialization, logger goengine.Logger) (storage driverSQL.StreamProjectorStorage, e error) {
+				return postgres.NewAdvisoryLockStreamProjectionStorage(eventStoreTable, projectionTable, serialization, false, logger)
+			},
+		})
+	})
 }
 
 func (s *streamProjectorTestSuite) SetupTest() {
@@ -83,7 +105,7 @@ func (s *streamProjectorTestSuite) TestRunAndListen() {
 	)
 	s.Require().NoError(err)
 
-	projectorStorage, err := postgres.NewAdvisoryLockStreamProjectionStorage(projection.Name(), "projections", projection, s.GetLogger())
+	projectorStorage, err := s.createProjectionStorage(projection.Name(), "projections", projection, s.GetLogger())
 	s.Require().NoError(err, "failed to create projector storage")
 
 	project, err := driverSQL.NewStreamProjector(
@@ -155,7 +177,7 @@ func (s *streamProjectorTestSuite) TestRunAndListen() {
 	s.Run("projection should not rerun events", func() {
 		projection := &DepositedProjection{}
 
-		projectorStorage, err := postgres.NewAdvisoryLockStreamProjectionStorage(projection.Name(), "projections", projection, s.GetLogger())
+		projectorStorage, err := s.createProjectionStorage(projection.Name(), "projections", projection, s.GetLogger())
 		s.Require().NoError(err, "failed to create projector storage")
 
 		project, err := driverSQL.NewStreamProjector(
@@ -207,7 +229,7 @@ func (s *streamProjectorTestSuite) TestRun() {
 
 	projection := &DepositedProjection{}
 
-	projectorStorage, err := postgres.NewAdvisoryLockStreamProjectionStorage(projection.Name(), "projections", projection, s.GetLogger())
+	projectorStorage, err := s.createProjectionStorage(projection.Name(), "projections", projection, s.GetLogger())
 	s.Require().NoError(err, "failed to create projector storage")
 
 	project, err := driverSQL.NewStreamProjector(

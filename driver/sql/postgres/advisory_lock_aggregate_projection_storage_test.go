@@ -30,6 +30,7 @@ func TestAdvisoryLockAggregateProjectionStorage_PersistFailure(t *testing.T) {
 		"event_store_table",
 		"event_store_projection_table",
 		sql.NewProjectionStateSerialization(ctrl),
+		true,
 		goengine.NopLogger,
 	)
 	require.NoError(t, err)
