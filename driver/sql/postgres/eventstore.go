@@ -162,27 +162,38 @@ func (e *EventStore) loadQuery(
 		return nil, err
 	}
 
-	conditions, params := matchConditions(matcher)
+	selectQuery := make([]byte, 0, 196)
+	params := make([]interface{}, 0, 4)
 
+	selectQuery = append(selectQuery, "SELECT * FROM "...)
+	selectQuery = append(selectQuery, tableName...)
+
+	// Add conditions to the select query
+	selectQuery = append(selectQuery, " WHERE no >= $1"...)
 	params = append(params, fromNumber)
-	conditions = append(conditions, fmt.Sprintf("no >= $%d", len(params)))
 
-	limit := ""
+	if matcher != nil {
+		paramCount := 1
+		matcher.Iterate(func(c metadata.Constraint) {
+			paramCount++
+			params = append(params, c.Value())
+
+			// We are doing "metadata ->> %s %s $%d" with a possible AND
+			selectQuery = append(selectQuery, " AND metadata ->> "...)
+			selectQuery = append(selectQuery, QuoteString(c.Field())...)
+			selectQuery = append(selectQuery, ' ')
+			selectQuery = append(selectQuery, c.Operator()...)
+			selectQuery = append(selectQuery, " $"...)
+			selectQuery = append(selectQuery, strconv.Itoa(paramCount)...)
+		})
+	}
+	selectQuery = append(selectQuery, " ORDER BY no "...)
 	if count != nil {
-		limit = fmt.Sprintf("LIMIT %d", *count)
+		selectQuery = append(selectQuery, "LIMIT "...)
+		selectQuery = append(selectQuery, strconv.FormatUint(uint64(*count), 10)...)
 	}
 
-	rows, err := db.QueryContext(
-		ctx,
-		/* #nosec */
-		fmt.Sprintf(
-			`SELECT * FROM %s WHERE %s ORDER BY no %s`,
-			tableName,
-			strings.Join(conditions, " AND "),
-			limit,
-		),
-		params...,
-	)
+	rows, err := db.QueryContext(ctx, string(selectQuery), params...)
 	if err != nil {
 		return nil, err
 	}
@@ -250,8 +261,7 @@ func (e *EventStore) prepareInsertValues(streamEvents []goengine.Message, lenCol
 		return values
 	}
 
-	placeholders := bytes.NewBufferString("")
-
+	placeholders := bytes.NewBuffer(make([]byte, 0, (lenCols*3)+(messageCount*3)))
 	placeholderCount := messageCount * lenCols
 	for i := 0; i < placeholderCount; i++ {
 		if m := i % lenCols; m == 0 {
@@ -281,22 +291,6 @@ func (e *EventStore) tableName(s goengine.StreamName) (string, error) {
 		return "", ErrTableNameEmpty
 	}
 	return tableName, nil
-}
-
-func matchConditions(matcher metadata.Matcher) (conditions []string, params []interface{}) {
-	if matcher == nil {
-		return
-	}
-
-	i := 0
-	matcher.Iterate(func(c metadata.Constraint) {
-		i++
-		condition := fmt.Sprintf("metadata ->> %s %s $%d", QuoteString(c.Field()), c.Operator(), i)
-		conditions = append(conditions, condition)
-		params = append(params, c.Value())
-	})
-
-	return
 }
 
 func (e *EventStore) tableExists(ctx context.Context, tableName string) bool {
