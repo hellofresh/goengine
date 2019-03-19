@@ -121,7 +121,7 @@ func (a *SkipLockAggregateProjectionStorage) Acquire(
 	}
 	defer func() {
 		if err != nil {
-			if rollbackErr := transaction.Rollback(); rollbackErr != nil {
+			if rollbackErr := transaction.Rollback(); rollbackErr != nil && rollbackErr != sql.ErrTxDone {
 				a.logger.Error("acquire state could not rollback transaction", func(e goengine.LoggerEntry) {
 					e.Error(rollbackErr)
 				})
@@ -141,8 +141,20 @@ func (a *SkipLockAggregateProjectionStorage) Acquire(
 			return nil, 0, err
 		}
 
+		// Rollback the transaction to avoid creating the projection row inside the transaction
+		err = transaction.Rollback()
+		if err != nil {
+			return nil, 0, err
+		}
+
 		// No rows are returned this mean we need to create a new projection row
 		_, err = conn.ExecContext(ctx, a.queryCreateRow, aggregateID)
+		if err != nil {
+			return nil, 0, err
+		}
+
+		// Acquire the newly created projection row
+		transaction, err = conn.BeginTx(context.Background(), nil)
 		if err != nil {
 			return nil, 0, err
 		}
