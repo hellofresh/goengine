@@ -1,11 +1,9 @@
 package postgres
 
 import (
-	"bytes"
 	"context"
 	"database/sql"
 	"errors"
-	"fmt"
 	"strconv"
 	"strings"
 
@@ -30,12 +28,12 @@ var (
 
 // EventStore a in postgres event store implementation
 type EventStore struct {
-	persistenceStrategy       driverSQL.PersistenceStrategy
-	db                        *sql.DB
-	messageFactory            driverSQL.MessageFactory
-	preparedInsertPlaceholder map[int]string
-	columns                   string
-	logger                    goengine.Logger
+	persistenceStrategy driverSQL.PersistenceStrategy
+	db                  *sql.DB
+	messageFactory      driverSQL.MessageFactory
+	columns             string
+	columnCount         int
+	logger              goengine.Logger
 }
 
 // NewEventStore return a new postgres.EventStore
@@ -57,15 +55,18 @@ func NewEventStore(
 		logger = goengine.NopLogger
 	}
 
-	columns := strings.Join(persistenceStrategy.ColumnNames(), ", ")
+	columns := persistenceStrategy.ColumnNames()
+	for i, c := range persistenceStrategy.ColumnNames() {
+		columns[i] = QuoteIdentifier(c)
+	}
 
 	return &EventStore{
-		persistenceStrategy:       persistenceStrategy,
-		db:                        db,
-		messageFactory:            messageFactory,
-		preparedInsertPlaceholder: make(map[int]string),
-		columns:                   columns,
-		logger:                    logger,
+		persistenceStrategy: persistenceStrategy,
+		db:                  db,
+		messageFactory:      messageFactory,
+		columns:             strings.Join(columns, ", "),
+		columnCount:         len(columns),
+		logger:              logger,
 	}, nil
 }
 
@@ -208,6 +209,11 @@ func (e *EventStore) AppendTo(ctx context.Context, streamName goengine.StreamNam
 
 // AppendToWithExecer batch inserts Messages into the event stream table using the provided Connection/Execer
 func (e *EventStore) AppendToWithExecer(ctx context.Context, conn driverSQL.Execer, streamName goengine.StreamName, streamEvents []goengine.Message) error {
+	eventCount := len(streamEvents)
+	if eventCount == 0 {
+		return nil
+	}
+
 	tableName, err := e.tableName(streamName)
 	if err != nil {
 		return err
@@ -218,20 +224,30 @@ func (e *EventStore) AppendToWithExecer(ctx context.Context, conn driverSQL.Exec
 		return err
 	}
 
-	columns := e.persistenceStrategy.ColumnNames()
-	values := e.prepareInsertValues(streamEvents, len(columns))
+	insertQuery := make([]byte, 0, 35+len(e.columns)+(e.columnCount*2)+(eventCount*3))
+	insertQuery = append(insertQuery, "INSERT INTO "...)
+	insertQuery = append(insertQuery, tableName...)
+	insertQuery = append(insertQuery, " ("...)
+	insertQuery = append(insertQuery, e.columns...)
+	insertQuery = append(insertQuery, ") VALUES "...)
+	for i := 0; i < eventCount; i++ {
+		if i != 0 {
+			insertQuery = append(insertQuery, ',')
+		}
+		insertQuery = append(insertQuery, '(')
+		for j := 0; j < e.columnCount; {
+			if j != 0 {
+				insertQuery = append(insertQuery, ',')
+			}
+			j++
 
-	result, err := conn.ExecContext(
-		ctx,
-		/* #nosec G201 */
-		fmt.Sprintf(
-			"INSERT INTO %s (%s) VALUES %s",
-			tableName,
-			e.columns,
-			values,
-		),
-		data...,
-	)
+			insertQuery = append(insertQuery, '$')
+			insertQuery = append(insertQuery, strconv.Itoa((i*e.columnCount)+j)...)
+		}
+		insertQuery = append(insertQuery, ')')
+	}
+
+	result, err := conn.ExecContext(ctx, string(insertQuery), data...)
 	if err != nil {
 		e.logger.Warn("failed to insert messages into the event stream", func(e goengine.LoggerEntry) {
 			e.Error(err)
@@ -250,36 +266,6 @@ func (e *EventStore) AppendToWithExecer(ctx context.Context, conn driverSQL.Exec
 	})
 
 	return nil
-}
-
-func (e *EventStore) prepareInsertValues(streamEvents []goengine.Message, lenCols int) string {
-	messageCount := len(streamEvents)
-	if messageCount == 0 {
-		return ""
-	}
-	if values, ok := e.preparedInsertPlaceholder[messageCount]; ok {
-		return values
-	}
-
-	placeholders := bytes.NewBuffer(make([]byte, 0, (lenCols*3)+(messageCount*3)))
-	placeholderCount := messageCount * lenCols
-	for i := 0; i < placeholderCount; i++ {
-		if m := i % lenCols; m == 0 {
-			if i != 0 {
-				_, _ = placeholders.WriteString("),")
-			}
-			_, _ = placeholders.WriteRune('(')
-		} else {
-			_, _ = placeholders.WriteRune(',')
-		}
-
-		_, _ = placeholders.WriteRune('$')
-		_, _ = placeholders.WriteString(strconv.Itoa(i + 1))
-	}
-	_, _ = placeholders.WriteString(")")
-	e.preparedInsertPlaceholder[messageCount] = placeholders.String()
-
-	return e.preparedInsertPlaceholder[messageCount]
 }
 
 func (e *EventStore) tableName(s goengine.StreamName) (string, error) {
