@@ -121,9 +121,8 @@ func (s *AdvisoryLockStreamProjectionStorage) Acquire(
 	}
 
 	var (
-		acquiredLock    bool
-		locked          bool
-		projectionState driverSQL.ProjectionRawState
+		acquiredLock, locked bool
+		projectionState      driverSQL.ProjectionRawState
 	)
 	if err := res.Scan(&acquiredLock, &locked, &projectionState.Position, &projectionState.ProjectionState); err != nil {
 		// No rows are returned when the projector is already at the notification position

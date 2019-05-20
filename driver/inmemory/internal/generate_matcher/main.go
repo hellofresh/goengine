@@ -21,9 +21,7 @@ import (
 	"github.com/hellofresh/goengine/metadata"
 )
 
-var (
-	ErrUnsupportedType = errors.New("the value is not a scalar type")
-)
+var ErrUnsupportedType = errors.New("the value is not a scalar type")
 
 func asScalar(value interface{}) (interface{}, error) {
 	switch value.(type) {

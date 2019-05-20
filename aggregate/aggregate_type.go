@@ -7,10 +7,8 @@ import (
 	"github.com/hellofresh/goengine"
 )
 
-var (
-	// ErrInitiatorMustReturnRoot occurs when a aggregate.Initiator did not return a pointer
-	ErrInitiatorMustReturnRoot = errors.New("goengine: the aggregate.Initiator must return a pointer to the aggregate.Root")
-)
+// ErrInitiatorMustReturnRoot occurs when a aggregate.Initiator did not return a pointer
+var ErrInitiatorMustReturnRoot = errors.New("goengine: the aggregate.Initiator must return a pointer to the aggregate.Root")
 
 type (
 	// Initiator creates a new empty instance of a aggregate.Root

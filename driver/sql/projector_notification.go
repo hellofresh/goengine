@@ -150,11 +150,8 @@ func (s *notificationProjector) projectStream(
 	ctx context.Context,
 	tx ProjectorTransaction,
 	stream *eventStreamHandlerIterator,
-) error {
-	var (
-		err   error
-		state ProjectionState
-	)
+) (err error) {
+	var state ProjectionState
 	for stream.Next() {
 		// Check if the context is expired
 		select {
