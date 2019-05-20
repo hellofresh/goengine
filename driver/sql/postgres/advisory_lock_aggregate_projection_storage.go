@@ -120,7 +120,7 @@ func (a *AdvisoryLockAggregateProjectionStorage) PersistFailure(conn driverSQL.E
 }
 
 // Acquire returns a driverSQL.ProjectorTransaction and the position of the projection within the event stream when a
-// lock is acquire for the specified aggregate_id. Otherwise an error is returned indicating why the lock could not be acquired.
+// lock is acquired for the specified aggregate_id. Otherwise an error is returned indicating why the lock could not be acquired.
 func (a *AdvisoryLockAggregateProjectionStorage) Acquire(
 	ctx context.Context,
 	conn *sql.Conn,
@@ -135,10 +135,8 @@ func (a *AdvisoryLockAggregateProjectionStorage) Acquire(
 	res := conn.QueryRowContext(ctx, a.queryAcquireLock, aggregateID, notification.No)
 
 	var (
-		acquiredLock    bool
-		locked          bool
-		failed          bool
-		projectionState driverSQL.ProjectionRawState
+		acquiredLock, locked, failed bool
+		projectionState              driverSQL.ProjectionRawState
 	)
 	if err := res.Scan(&acquiredLock, &locked, &failed, &projectionState.Position, &projectionState.ProjectionState); err != nil {
 		// No rows are returned when the projector is already at the notification position
