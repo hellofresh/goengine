@@ -1,11 +1,9 @@
 package postgres
 
 import (
-	"bytes"
 	"context"
 	"database/sql"
 	"errors"
-	"fmt"
 	"strconv"
 	"strings"
 
@@ -30,12 +28,12 @@ var (
 
 // EventStore a in postgres event store implementation
 type EventStore struct {
-	persistenceStrategy       driverSQL.PersistenceStrategy
-	db                        *sql.DB
-	messageFactory            driverSQL.MessageFactory
-	preparedInsertPlaceholder map[int]string
-	columns                   string
-	logger                    goengine.Logger
+	persistenceStrategy driverSQL.PersistenceStrategy
+	db                  *sql.DB
+	messageFactory      driverSQL.MessageFactory
+	columns             string
+	columnCount         int
+	logger              goengine.Logger
 }
 
 // NewEventStore return a new postgres.EventStore
@@ -57,15 +55,18 @@ func NewEventStore(
 		logger = goengine.NopLogger
 	}
 
-	columns := strings.Join(persistenceStrategy.ColumnNames(), ", ")
+	columns := persistenceStrategy.ColumnNames()
+	for i, c := range persistenceStrategy.ColumnNames() {
+		columns[i] = QuoteIdentifier(c)
+	}
 
 	return &EventStore{
-		persistenceStrategy:       persistenceStrategy,
-		db:                        db,
-		messageFactory:            messageFactory,
-		preparedInsertPlaceholder: make(map[int]string),
-		columns:                   columns,
-		logger:                    logger,
+		persistenceStrategy: persistenceStrategy,
+		db:                  db,
+		messageFactory:      messageFactory,
+		columns:             strings.Join(columns, ", "),
+		columnCount:         len(columns),
+		logger:              logger,
 	}, nil
 }
 
@@ -162,27 +163,38 @@ func (e *EventStore) loadQuery(
 		return nil, err
 	}
 
-	conditions, params := matchConditions(matcher)
+	selectQuery := make([]byte, 0, 196)
+	params := make([]interface{}, 0, 4)
 
+	selectQuery = append(selectQuery, "SELECT * FROM "...)
+	selectQuery = append(selectQuery, tableName...)
+
+	// Add conditions to the select query
+	selectQuery = append(selectQuery, " WHERE no >= $1"...)
 	params = append(params, fromNumber)
-	conditions = append(conditions, fmt.Sprintf("no >= $%d", len(params)))
 
-	limit := ""
+	if matcher != nil {
+		paramCount := 1
+		matcher.Iterate(func(c metadata.Constraint) {
+			paramCount++
+			params = append(params, c.Value())
+
+			// We are doing "metadata ->> %s %s $%d" with a possible AND
+			selectQuery = append(selectQuery, " AND metadata ->> "...)
+			selectQuery = append(selectQuery, QuoteString(c.Field())...)
+			selectQuery = append(selectQuery, ' ')
+			selectQuery = append(selectQuery, c.Operator()...)
+			selectQuery = append(selectQuery, " $"...)
+			selectQuery = append(selectQuery, strconv.Itoa(paramCount)...)
+		})
+	}
+	selectQuery = append(selectQuery, " ORDER BY no "...)
 	if count != nil {
-		limit = fmt.Sprintf("LIMIT %d", *count)
+		selectQuery = append(selectQuery, "LIMIT "...)
+		selectQuery = append(selectQuery, strconv.FormatUint(uint64(*count), 10)...)
 	}
 
-	rows, err := db.QueryContext(
-		ctx,
-		/* #nosec */
-		fmt.Sprintf(
-			`SELECT * FROM %s WHERE %s ORDER BY no %s`,
-			tableName,
-			strings.Join(conditions, " AND "),
-			limit,
-		),
-		params...,
-	)
+	rows, err := db.QueryContext(ctx, string(selectQuery), params...)
 	if err != nil {
 		return nil, err
 	}
@@ -197,6 +209,11 @@ func (e *EventStore) AppendTo(ctx context.Context, streamName goengine.StreamNam
 
 // AppendToWithExecer batch inserts Messages into the event stream table using the provided Connection/Execer
 func (e *EventStore) AppendToWithExecer(ctx context.Context, conn driverSQL.Execer, streamName goengine.StreamName, streamEvents []goengine.Message) error {
+	eventCount := len(streamEvents)
+	if eventCount == 0 {
+		return nil
+	}
+
 	tableName, err := e.tableName(streamName)
 	if err != nil {
 		return err
@@ -207,20 +224,30 @@ func (e *EventStore) AppendToWithExecer(ctx context.Context, conn driverSQL.Exec
 		return err
 	}
 
-	columns := e.persistenceStrategy.ColumnNames()
-	values := e.prepareInsertValues(streamEvents, len(columns))
+	insertQuery := make([]byte, 0, 35+len(e.columns)+(e.columnCount*2)+(eventCount*3))
+	insertQuery = append(insertQuery, "INSERT INTO "...)
+	insertQuery = append(insertQuery, tableName...)
+	insertQuery = append(insertQuery, " ("...)
+	insertQuery = append(insertQuery, e.columns...)
+	insertQuery = append(insertQuery, ") VALUES "...)
+	for i := 0; i < eventCount; i++ {
+		if i != 0 {
+			insertQuery = append(insertQuery, ',')
+		}
+		insertQuery = append(insertQuery, '(')
+		for j := 0; j < e.columnCount; {
+			if j != 0 {
+				insertQuery = append(insertQuery, ',')
+			}
+			j++
 
-	result, err := conn.ExecContext(
-		ctx,
-		/* #nosec G201 */
-		fmt.Sprintf(
-			"INSERT INTO %s (%s) VALUES %s",
-			tableName,
-			e.columns,
-			values,
-		),
-		data...,
-	)
+			insertQuery = append(insertQuery, '$')
+			insertQuery = append(insertQuery, strconv.Itoa((i*e.columnCount)+j)...)
+		}
+		insertQuery = append(insertQuery, ')')
+	}
+
+	result, err := conn.ExecContext(ctx, string(insertQuery), data...)
 	if err != nil {
 		e.logger.Warn("failed to insert messages into the event stream", func(e goengine.LoggerEntry) {
 			e.Error(err)
@@ -241,37 +268,6 @@ func (e *EventStore) AppendToWithExecer(ctx context.Context, conn driverSQL.Exec
 	return nil
 }
 
-func (e *EventStore) prepareInsertValues(streamEvents []goengine.Message, lenCols int) string {
-	messageCount := len(streamEvents)
-	if messageCount == 0 {
-		return ""
-	}
-	if values, ok := e.preparedInsertPlaceholder[messageCount]; ok {
-		return values
-	}
-
-	placeholders := bytes.NewBufferString("")
-
-	placeholderCount := messageCount * lenCols
-	for i := 0; i < placeholderCount; i++ {
-		if m := i % lenCols; m == 0 {
-			if i != 0 {
-				_, _ = placeholders.WriteString("),")
-			}
-			_, _ = placeholders.WriteRune('(')
-		} else {
-			_, _ = placeholders.WriteRune(',')
-		}
-
-		_, _ = placeholders.WriteRune('$')
-		_, _ = placeholders.WriteString(strconv.Itoa(i + 1))
-	}
-	_, _ = placeholders.WriteString(")")
-	e.preparedInsertPlaceholder[messageCount] = placeholders.String()
-
-	return e.preparedInsertPlaceholder[messageCount]
-}
-
 func (e *EventStore) tableName(s goengine.StreamName) (string, error) {
 	tableName, err := e.persistenceStrategy.GenerateTableName(s)
 	if err != nil {
@@ -281,22 +277,6 @@ func (e *EventStore) tableName(s goengine.StreamName) (string, error) {
 		return "", ErrTableNameEmpty
 	}
 	return tableName, nil
-}
-
-func matchConditions(matcher metadata.Matcher) (conditions []string, params []interface{}) {
-	if matcher == nil {
-		return
-	}
-
-	i := 0
-	matcher.Iterate(func(c metadata.Constraint) {
-		i++
-		condition := fmt.Sprintf("metadata ->> %s %s $%d", QuoteString(c.Field()), c.Operator(), i)
-		conditions = append(conditions, condition)
-		params = append(params, c.Value())
-	})
-
-	return
 }
 
 func (e *EventStore) tableExists(ctx context.Context, tableName string) bool {

@@ -26,14 +26,12 @@ var (
 	ErrEmptyEventStream = errors.New("goengine: unsupported empty event stream")
 )
 
-type (
-	// Repository a repository to save and load aggregate.Root's of a specific type
-	Repository struct {
-		aggregateType *Type
-		eventStore    goengine.EventStore
-		streamName    goengine.StreamName
-	}
-)
+// Repository a repository to save and load aggregate.Root's of a specific type
+type Repository struct {
+	aggregateType *Type
+	eventStore    goengine.EventStore
+	streamName    goengine.StreamName
+}
 
 // NewRepository instantiates a new AggregateRepository
 func NewRepository(

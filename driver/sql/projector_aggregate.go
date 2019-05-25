@@ -1,25 +1,25 @@
-package postgres
+package sql
 
 import (
 	"context"
 	"database/sql"
-	"strings"
 	"sync"
 
+	"github.com/hellofresh/goengine/aggregate"
+	"github.com/hellofresh/goengine/metadata"
+
 	"github.com/hellofresh/goengine"
-	driverSQL "github.com/hellofresh/goengine/driver/sql"
-	"github.com/hellofresh/goengine/driver/sql/internal"
 )
 
 // AggregateProjector is a postgres projector used to execute a projection per aggregate instance against an event stream
 type AggregateProjector struct {
 	sync.Mutex
 
-	backgroundProcessor *internal.BackgroundProcessor
-	executor            *internal.NotificationProjector
-	storage             *aggregateProjectionStorage
+	backgroundProcessor *projectionNotificationProcessor
+	executor            *notificationProjector
+	storage             AggregateProjectorStorage
 
-	projectionErrorHandler driverSQL.ProjectionErrorCallback
+	projectionErrorHandler ProjectionErrorCallback
 
 	db *sql.DB
 
@@ -29,30 +29,24 @@ type AggregateProjector struct {
 // NewAggregateProjector creates a new projector for a projection
 func NewAggregateProjector(
 	db *sql.DB,
-	eventStore driverSQL.ReadOnlyEventStore,
-	eventStoreTable string,
+	eventLoader EventStreamLoader,
 	resolver goengine.MessagePayloadResolver,
-	aggregateTypeName string,
 	projection goengine.Projection,
-	projectionTable string,
-	projectionErrorHandler driverSQL.ProjectionErrorCallback,
+	projectorStorage AggregateProjectorStorage,
+	projectionErrorHandler ProjectionErrorCallback,
 	logger goengine.Logger,
 ) (*AggregateProjector, error) {
 	switch {
 	case db == nil:
 		return nil, goengine.InvalidArgumentError("db")
-	case eventStore == nil:
-		return nil, goengine.InvalidArgumentError("eventStore")
-	case strings.TrimSpace(eventStoreTable) == "":
-		return nil, goengine.InvalidArgumentError("eventStoreTable")
+	case eventLoader == nil:
+		return nil, goengine.InvalidArgumentError("eventLoader")
 	case resolver == nil:
 		return nil, goengine.InvalidArgumentError("resolver")
 	case projection == nil:
 		return nil, goengine.InvalidArgumentError("projection")
-	case strings.TrimSpace(projectionTable) == "":
-		return nil, goengine.InvalidArgumentError("projectionTable")
-	case aggregateTypeName == "":
-		return nil, goengine.InvalidArgumentError("aggregateTypeName")
+	case projectorStorage == nil:
+		return nil, goengine.InvalidArgumentError("projectorStorage")
 	case projectionErrorHandler == nil:
 		return nil, goengine.InvalidArgumentError("projectionErrorHandler")
 	}
@@ -64,32 +58,16 @@ func NewAggregateProjector(
 		e.String("projection", projection.Name())
 	})
 
-	processor, err := internal.NewBackgroundProcessor(10, 32, logger)
+	processor, err := newBackgroundProcessor(10, 32, logger)
 	if err != nil {
 		return nil, err
 	}
 
-	var (
-		stateDecoder driverSQL.ProjectionStateDecoder
-		stateEncoder driverSQL.ProjectionStateEncoder
-	)
-	if saga, ok := projection.(goengine.ProjectionSaga); ok {
-		stateDecoder = saga.DecodeState
-		stateEncoder = saga.EncodeState
-	}
-
-	storage, err := newAggregateProjectionStorage(eventStoreTable, projectionTable, stateEncoder, logger)
-	if err != nil {
-		return nil, err
-	}
-
-	executor, err := internal.NewNotificationProjector(
+	executor, err := newNotificationProjector(
 		db,
-		storage,
-		projection.Init,
-		stateDecoder,
+		projectorStorage,
 		projection.Handlers(),
-		aggregateProjectionEventStreamLoader(eventStore, projection.FromStream(), aggregateTypeName),
+		eventLoader,
 		resolver,
 		logger,
 	)
@@ -100,7 +78,7 @@ func NewAggregateProjector(
 	return &AggregateProjector{
 		backgroundProcessor:    processor,
 		executor:               executor,
-		storage:                storage,
+		storage:                projectorStorage,
 		projectionErrorHandler: projectionErrorHandler,
 
 		db: db,
@@ -125,7 +103,7 @@ func (a *AggregateProjector) Run(ctx context.Context) error {
 }
 
 // RunAndListen executes the projection and listens to any changes to the event store
-func (a *AggregateProjector) RunAndListen(ctx context.Context, listener driverSQL.Listener) error {
+func (a *AggregateProjector) RunAndListen(ctx context.Context, listener Listener) error {
 	a.Lock()
 	defer a.Unlock()
 
@@ -144,8 +122,8 @@ func (a *AggregateProjector) RunAndListen(ctx context.Context, listener driverSQ
 
 func (a *AggregateProjector) processNotification(
 	ctx context.Context,
-	notification *driverSQL.ProjectionNotification,
-	queue driverSQL.ProjectionTrigger,
+	notification *ProjectionNotification,
+	queue ProjectionTrigger,
 ) error {
 	var err error
 	if notification != nil {
@@ -168,7 +146,7 @@ func (a *AggregateProjector) processNotification(
 	switch resolveErrorAction(a.projectionErrorHandler, notification, err) {
 	case errorFail:
 		a.logger.Debug("ProcessHandler->ErrorHandler: marking projection as failed", logFields)
-		return a.markProjectionAsFailed(ctx, notification)
+		return a.markProjectionAsFailed(notification)
 	case errorIgnore:
 		a.logger.Debug("ProcessHandler->ErrorHandler: ignoring error", logFields)
 		return nil
@@ -181,9 +159,9 @@ func (a *AggregateProjector) processNotification(
 	return err
 }
 
-func (a *AggregateProjector) triggerOutOfSyncProjections(ctx context.Context, queue driverSQL.ProjectionTrigger) error {
+func (a *AggregateProjector) triggerOutOfSyncProjections(ctx context.Context, queue ProjectionTrigger) error {
 	// A nil notification was received this mean that we need to find and trigger any missed notifications
-	conn, err := internal.AcquireConn(ctx, a.db)
+	conn, err := AcquireConn(ctx, a.db)
 	if err != nil {
 		return err
 	}
@@ -224,7 +202,7 @@ func (a *AggregateProjector) triggerOutOfSyncProjections(ctx context.Context, qu
 			return err
 		}
 
-		notification := &driverSQL.ProjectionNotification{
+		notification := &ProjectionNotification{
 			No:          position,
 			AggregateID: aggregateID,
 		}
@@ -247,8 +225,9 @@ func (a *AggregateProjector) triggerOutOfSyncProjections(ctx context.Context, qu
 	return rows.Close()
 }
 
-func (a *AggregateProjector) markProjectionAsFailed(ctx context.Context, notification *driverSQL.ProjectionNotification) error {
-	conn, err := internal.AcquireConn(ctx, a.db)
+func (a *AggregateProjector) markProjectionAsFailed(notification *ProjectionNotification) error {
+	ctx := context.Background()
+	conn, err := AcquireConn(ctx, a.db)
 	if err != nil {
 		return err
 	}
@@ -261,5 +240,16 @@ func (a *AggregateProjector) markProjectionAsFailed(ctx context.Context, notific
 		}
 	}()
 
-	return a.storage.PersistFailure(ctx, conn, notification)
+	return a.storage.PersistFailure(conn, notification)
+}
+
+// AggregateProjectionEventStreamLoader returns a EventStreamLoader for the AggregateProjector
+func AggregateProjectionEventStreamLoader(eventStore ReadOnlyEventStore, streamName goengine.StreamName, aggregateTypeName string) EventStreamLoader {
+	matcher := metadata.NewMatcher()
+	matcher = metadata.WithConstraint(matcher, aggregate.TypeKey, metadata.Equals, aggregateTypeName)
+
+	return func(ctx context.Context, conn *sql.Conn, notification *ProjectionNotification, position int64) (goengine.EventStream, error) {
+		aggMatcher := metadata.WithConstraint(matcher, aggregate.IDKey, metadata.Equals, notification.AggregateID)
+		return eventStore.LoadWithConnection(ctx, conn, streamName, position+1, nil, aggMatcher)
+	}
 }

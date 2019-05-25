@@ -13,6 +13,7 @@ import (
 	sqlmock "github.com/DATA-DOG/go-sqlmock"
 	"github.com/golang/mock/gomock"
 	"github.com/hellofresh/goengine"
+	"github.com/hellofresh/goengine/aggregate"
 	driverSQL "github.com/hellofresh/goengine/driver/sql"
 	"github.com/hellofresh/goengine/driver/sql/internal/test"
 	"github.com/hellofresh/goengine/driver/sql/postgres"
@@ -261,7 +262,7 @@ func TestEventStore_Load(t *testing.T) {
 					m = metadata.WithConstraint(m, "version", metadata.LowerThan, 100)
 					return m
 				},
-				`SELECT \* FROM event_stream WHERE metadata ->> 'version' > \$1 AND metadata ->> 'version' < \$2 AND no >= \$3 ORDER BY no`,
+				`SELECT \* FROM event_stream WHERE no >= \$1 AND metadata ->> 'version' > \$2 AND metadata ->> 'version' < \$3 ORDER BY no`,
 			},
 			{
 				"Without matcher",
@@ -401,4 +402,91 @@ func createEventStore(t *testing.T, db *sql.DB, converter goengine.MessagePayloa
 	require.NoError(t, err)
 
 	return store
+}
+
+func BenchmarkEventStore_AppendToWithExecer(b *testing.B) {
+	ctx := context.Background()
+	ctrl := gomock.NewController(b)
+	defer func() {
+		b.StopTimer()
+		ctrl.Finish()
+	}()
+
+	db, _, err := sqlmock.New()
+	require.NoError(b, err)
+
+	dbExecer := mockSQL.NewExecer(ctrl)
+	dbExecer.EXPECT().ExecContext(ctx, gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
+
+	persistenceStrategy := mockSQL.NewPersistenceStrategy(ctrl)
+	persistenceStrategy.EXPECT().ColumnNames().Return([]string{"event_id", "event_name", "payload", "metadata", "created_at"}).AnyTimes()
+	persistenceStrategy.EXPECT().GenerateTableName(goengine.StreamName("hello")).Return("hello", nil).AnyTimes()
+	persistenceStrategy.EXPECT().PrepareData(gomock.Any()).Return([]interface{}{
+		"event_id", "event_name", "payload", "metadata", "created_at",
+		"event_id", "event_name", "payload", "metadata", "created_at",
+		"event_id", "event_name", "payload", "metadata", "created_at",
+		"event_id", "event_name", "payload", "metadata", "created_at",
+		"event_id", "event_name", "payload", "metadata", "created_at",
+	}, nil).AnyTimes()
+	require.NoError(b, err)
+
+	messageFactory := mockSQL.NewMessageFactory(ctrl)
+	messageFactory.EXPECT().CreateEventStream(gomock.Any()).Return(nil, nil).AnyTimes()
+
+	store, err := postgres.NewEventStore(persistenceStrategy, db, messageFactory, nil)
+	require.NoError(b, err)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		err := store.AppendToWithExecer(ctx, dbExecer, "hello", make([]goengine.Message, 5))
+		if err != nil {
+			b.Error(err)
+		}
+	}
+}
+
+func BenchmarkEventStore_LoadWithConnection(b *testing.B) {
+	ctrl := gomock.NewController(b)
+	defer func() {
+		b.StopTimer()
+		ctrl.Finish()
+	}()
+
+	ctx := context.Background()
+
+	db, _, err := sqlmock.New()
+	require.NoError(b, err)
+
+	dbQueryer := mockSQL.NewQueryer(ctrl)
+	dbQueryer.EXPECT().QueryContext(ctx, gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
+
+	persistenceStrategy := mockSQL.NewPersistenceStrategy(ctrl)
+	persistenceStrategy.EXPECT().ColumnNames().Return([]string{"event_id", "event_name", "payload", "metadata", "created_at"}).AnyTimes()
+	persistenceStrategy.EXPECT().GenerateTableName(goengine.StreamName("hello")).Return("hello", nil).AnyTimes()
+	require.NoError(b, err)
+
+	messageFactory := mockSQL.NewMessageFactory(ctrl)
+	messageFactory.EXPECT().CreateEventStream(gomock.Any()).Return(nil, nil).AnyTimes()
+
+	store, err := postgres.NewEventStore(persistenceStrategy, db, messageFactory, nil)
+	require.NoError(b, err)
+
+	matcher := metadata.NewMatcher()
+	matcher = metadata.WithConstraint(matcher, aggregate.TypeKey, metadata.Equals, "test")
+	matcher = metadata.WithConstraint(matcher, aggregate.IDKey, metadata.Equals, "lalalalala")
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		res, err := store.LoadWithConnection(
+			ctx,
+			dbQueryer,
+			"hello",
+			10,
+			nil,
+			matcher,
+		)
+		if err != nil {
+			b.Error(res, err)
+		}
+	}
 }

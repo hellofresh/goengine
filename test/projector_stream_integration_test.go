@@ -11,10 +11,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hellofresh/goengine"
+
 	"github.com/hellofresh/goengine/aggregate"
 	driverSQL "github.com/hellofresh/goengine/driver/sql"
 	"github.com/hellofresh/goengine/driver/sql/postgres"
-	pq "github.com/hellofresh/goengine/extension/pq"
+	"github.com/hellofresh/goengine/extension/pq"
 	strategyPostgres "github.com/hellofresh/goengine/strategy/json/sql/postgres"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
@@ -24,11 +26,31 @@ import (
 type (
 	streamProjectorTestSuite struct {
 		projectorSuite
+
+		createProjectionStorage func(
+			eventStoreTable,
+			projectionTable string,
+			projectionStateSerialization driverSQL.ProjectionStateSerialization,
+			logger goengine.Logger,
+		) (driverSQL.StreamProjectorStorage, error)
 	}
 )
 
 func TestStreamProjectorSuite(t *testing.T) {
-	suite.Run(t, new(streamProjectorTestSuite))
+	t.Run("AdvisoryLock", func(t *testing.T) {
+		suite.Run(t, &streamProjectorTestSuite{
+			createProjectionStorage: func(eventStoreTable, projectionTable string, serialization driverSQL.ProjectionStateSerialization, logger goengine.Logger) (storage driverSQL.StreamProjectorStorage, e error) {
+				return postgres.NewAdvisoryLockStreamProjectionStorage(eventStoreTable, projectionTable, serialization, true, logger)
+			},
+		})
+	})
+	t.Run("AdvisoryLock without locked field", func(t *testing.T) {
+		suite.Run(t, &streamProjectorTestSuite{
+			createProjectionStorage: func(eventStoreTable, projectionTable string, serialization driverSQL.ProjectionStateSerialization, logger goengine.Logger) (storage driverSQL.StreamProjectorStorage, e error) {
+				return postgres.NewAdvisoryLockStreamProjectionStorage(eventStoreTable, projectionTable, serialization, false, logger)
+			},
+		})
+	})
 }
 
 func (s *streamProjectorTestSuite) SetupTest() {
@@ -83,12 +105,15 @@ func (s *streamProjectorTestSuite) TestRunAndListen() {
 	)
 	s.Require().NoError(err)
 
-	project, err := postgres.NewStreamProjector(
+	projectorStorage, err := s.createProjectionStorage(projection.Name(), "projections", projection, s.GetLogger())
+	s.Require().NoError(err, "failed to create projector storage")
+
+	project, err := driverSQL.NewStreamProjector(
 		s.DB(),
-		s.eventStore,
+		driverSQL.StreamProjectionEventStreamLoader(s.eventStore, projection.FromStream()),
 		s.payloadTransformer,
 		projection,
-		"projections",
+		projectorStorage,
 		func(error, *driverSQL.ProjectionNotification) driverSQL.ProjectionErrorAction {
 			return driverSQL.ProjectionFail
 		},
@@ -150,12 +175,17 @@ func (s *streamProjectorTestSuite) TestRunAndListen() {
 	projectorCancel()
 
 	s.Run("projection should not rerun events", func() {
-		project, err := postgres.NewStreamProjector(
+		projection := &DepositedProjection{}
+
+		projectorStorage, err := s.createProjectionStorage(projection.Name(), "projections", projection, s.GetLogger())
+		s.Require().NoError(err, "failed to create projector storage")
+
+		project, err := driverSQL.NewStreamProjector(
 			s.DB(),
-			s.eventStore,
+			driverSQL.StreamProjectionEventStreamLoader(s.eventStore, projection.FromStream()),
 			s.payloadTransformer,
-			&DepositedProjection{},
-			"projections",
+			projection,
+			projectorStorage,
 			func(error, *driverSQL.ProjectionNotification) driverSQL.ProjectionErrorAction {
 				return driverSQL.ProjectionFail
 			},
@@ -197,12 +227,17 @@ func (s *streamProjectorTestSuite) TestRun() {
 		AccountDeposited{Amount: 1},
 	})
 
-	project, err := postgres.NewStreamProjector(
+	projection := &DepositedProjection{}
+
+	projectorStorage, err := s.createProjectionStorage(projection.Name(), "projections", projection, s.GetLogger())
+	s.Require().NoError(err, "failed to create projector storage")
+
+	project, err := driverSQL.NewStreamProjector(
 		s.DB(),
-		s.eventStore,
+		driverSQL.StreamProjectionEventStreamLoader(s.eventStore, projection.FromStream()),
 		s.payloadTransformer,
-		&DepositedProjection{},
-		"projections",
+		projection,
+		projectorStorage,
 		func(error, *driverSQL.ProjectionNotification) driverSQL.ProjectionErrorAction {
 			return driverSQL.ProjectionFail
 		},

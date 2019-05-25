@@ -78,18 +78,30 @@ func (m *SingleStreamManager) NewStreamProjector(
 	projectionTable string,
 	projection goengine.Projection,
 	projectionErrorHandler driverSQL.ProjectionErrorCallback,
-) (*postgres.StreamProjector, error) {
+	useLockedField bool,
+) (*driverSQL.StreamProjector, error) {
 	eventStore, err := m.NewEventStore()
 	if err != nil {
 		return nil, err
 	}
 
-	return postgres.NewStreamProjector(
+	projectorStorage, err := postgres.NewAdvisoryLockStreamProjectionStorage(
+		projection.Name(),
+		projectionTable,
+		driverSQL.GetProjectionStateSerialization(projection),
+		useLockedField,
+		m.logger,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return driverSQL.NewStreamProjector(
 		m.db,
-		eventStore,
+		driverSQL.StreamProjectionEventStreamLoader(eventStore, projection.FromStream()),
 		m.payloadTransformer,
 		projection,
-		projectionTable,
+		projectorStorage,
 		projectionErrorHandler,
 		m.logger,
 	)
@@ -102,7 +114,8 @@ func (m *SingleStreamManager) NewAggregateProjector(
 	projectionTable string,
 	projection goengine.Projection,
 	projectionErrorHandler driverSQL.ProjectionErrorCallback,
-) (*postgres.AggregateProjector, error) {
+	useLockedField bool,
+) (*driverSQL.AggregateProjector, error) {
 	eventStore, err := m.NewEventStore()
 	if err != nil {
 		return nil, err
@@ -113,14 +126,23 @@ func (m *SingleStreamManager) NewAggregateProjector(
 		return nil, err
 	}
 
-	return postgres.NewAggregateProjector(
-		m.db,
-		eventStore,
+	projectorStorage, err := postgres.NewAdvisoryLockAggregateProjectionStorage(
 		eventStoreTable,
-		m.payloadTransformer,
-		aggregateTypeName,
-		projection,
 		projectionTable,
+		driverSQL.GetProjectionStateSerialization(projection),
+		useLockedField,
+		m.logger,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return driverSQL.NewAggregateProjector(
+		m.db,
+		driverSQL.AggregateProjectionEventStreamLoader(eventStore, projection.FromStream(), aggregateTypeName),
+		m.payloadTransformer,
+		projection,
+		projectorStorage,
 		projectionErrorHandler,
 		m.logger,
 	)

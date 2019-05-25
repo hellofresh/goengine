@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hellofresh/goengine"
 	"github.com/hellofresh/goengine/aggregate"
 	"github.com/hellofresh/goengine/driver/sql"
 	driverSQL "github.com/hellofresh/goengine/driver/sql"
@@ -24,6 +25,13 @@ import (
 type (
 	aggregateProjectorTestSuite struct {
 		projectorSuite
+
+		createProjectionStorage func(
+			eventStoreTable,
+			projectionTable string,
+			projectionStateSerialization driverSQL.ProjectionStateSerialization,
+			logger goengine.Logger,
+		) (driverSQL.AggregateProjectorStorage, error)
 	}
 
 	projectionInfo struct {
@@ -33,7 +41,20 @@ type (
 )
 
 func TestAggregateProjectorSuite(t *testing.T) {
-	suite.Run(t, new(aggregateProjectorTestSuite))
+	t.Run("AdvisoryLock", func(t *testing.T) {
+		suite.Run(t, &aggregateProjectorTestSuite{
+			createProjectionStorage: func(eventStoreTable, projectionTable string, serialization driverSQL.ProjectionStateSerialization, logger goengine.Logger) (storage driverSQL.AggregateProjectorStorage, e error) {
+				return postgres.NewAdvisoryLockAggregateProjectionStorage(eventStoreTable, projectionTable, serialization, true, logger)
+			},
+		})
+	})
+	t.Run("AdvisoryLock without locked field", func(t *testing.T) {
+		suite.Run(t, &aggregateProjectorTestSuite{
+			createProjectionStorage: func(eventStoreTable, projectionTable string, serialization driverSQL.ProjectionStateSerialization, logger goengine.Logger) (storage driverSQL.AggregateProjectorStorage, e error) {
+				return postgres.NewAdvisoryLockAggregateProjectionStorage(eventStoreTable, projectionTable, serialization, false, logger)
+			},
+		})
+	})
 }
 
 func (s *aggregateProjectorTestSuite) SetupTest() {
@@ -60,11 +81,6 @@ func (s *aggregateProjectorTestSuite) SetupTest() {
 
 func (s *aggregateProjectorTestSuite) TestRunAndListen() {
 	var wg sync.WaitGroup
-	defer func() {
-		if s.waitTimeout(&wg, 5*time.Second) {
-			s.T().Fatal("projection.Run in go routines failed to return")
-		}
-	}()
 
 	projectorCtx, projectorCancel := context.WithCancel(context.Background())
 	defer projectorCancel()
@@ -80,14 +96,15 @@ func (s *aggregateProjectorTestSuite) TestRunAndListen() {
 	)
 	s.Require().NoError(err)
 
-	project, err := postgres.NewAggregateProjector(
+	projectorStorage, err := s.createProjectionStorage(s.eventStoreTable, "agg_projections", projection, s.GetLogger())
+	s.Require().NoError(err, "failed to create projector storage")
+
+	project, err := driverSQL.NewAggregateProjector(
 		s.DB(),
-		s.eventStore,
-		s.eventStoreTable,
+		driverSQL.AggregateProjectionEventStreamLoader(s.eventStore, projection.FromStream(), accountAggregateTypeName),
 		s.payloadTransformer,
-		accountAggregateTypeName,
 		projection,
-		"agg_projections",
+		projectorStorage,
 		func(error, *driverSQL.ProjectionNotification) driverSQL.ProjectionErrorAction {
 			return driverSQL.ProjectionFail
 		},
@@ -169,16 +186,22 @@ func (s *aggregateProjectorTestSuite) TestRunAndListen() {
 	})
 
 	projectorCancel()
+	if s.waitTimeout(&wg, 5*time.Second) {
+		s.T().Fatal("projection.Run in go routines failed to return")
+	}
 
 	s.Run("projection should not rerun events", func() {
-		project, err := postgres.NewAggregateProjector(
+		projection := &DepositedProjection{}
+
+		projectorStorage, err := s.createProjectionStorage(s.eventStoreTable, "agg_projections", projection, s.GetLogger())
+		s.Require().NoError(err, "failed to create projector storage")
+
+		project, err := driverSQL.NewAggregateProjector(
 			s.DB(),
-			s.eventStore,
-			s.eventStoreTable,
+			driverSQL.AggregateProjectionEventStreamLoader(s.eventStore, projection.FromStream(), accountAggregateTypeName),
 			s.payloadTransformer,
-			accountAggregateTypeName,
-			&DepositedProjection{},
-			"agg_projections",
+			projection,
+			projectorStorage,
 			func(error, *driverSQL.ProjectionNotification) driverSQL.ProjectionErrorAction {
 				return driverSQL.ProjectionFail
 			},
@@ -222,14 +245,17 @@ func (s *aggregateProjectorTestSuite) TestRun() {
 
 	var err error
 
-	project, err := postgres.NewAggregateProjector(
+	projection := &DepositedProjection{}
+
+	projectorStorage, err := s.createProjectionStorage(s.eventStoreTable, "agg_projections", projection, s.GetLogger())
+	s.Require().NoError(err, "failed to create projector storage")
+
+	project, err := driverSQL.NewAggregateProjector(
 		s.DB(),
-		s.eventStore,
-		s.eventStoreTable,
+		driverSQL.AggregateProjectionEventStreamLoader(s.eventStore, projection.FromStream(), accountAggregateTypeName),
 		s.payloadTransformer,
-		accountAggregateTypeName,
-		&DepositedProjection{},
-		"agg_projections",
+		projection,
+		projectorStorage,
 		func(error, *sql.ProjectionNotification) driverSQL.ProjectionErrorAction {
 			return driverSQL.ProjectionFail
 		},

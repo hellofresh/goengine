@@ -1,15 +1,12 @@
-package postgres
+package sql
 
 import (
 	"context"
 	"database/sql"
 	"math"
-	"strings"
 	"sync"
 
 	"github.com/hellofresh/goengine"
-	driverSQL "github.com/hellofresh/goengine/driver/sql"
-	internalSQL "github.com/hellofresh/goengine/driver/sql/internal"
 	"github.com/pkg/errors"
 )
 
@@ -18,10 +15,10 @@ type StreamProjector struct {
 	sync.Mutex
 
 	db       *sql.DB
-	executor *internalSQL.NotificationProjector
-	storage  *streamProjectionStorage
+	executor *notificationProjector
+	storage  StreamProjectorStorage
 
-	projectionErrorHandler driverSQL.ProjectionErrorCallback
+	projectionErrorHandler ProjectionErrorCallback
 
 	logger goengine.Logger
 }
@@ -29,24 +26,24 @@ type StreamProjector struct {
 // NewStreamProjector creates a new projector for a projection
 func NewStreamProjector(
 	db *sql.DB,
-	eventStore driverSQL.ReadOnlyEventStore,
+	eventLoader EventStreamLoader,
 	resolver goengine.MessagePayloadResolver,
 	projection goengine.Projection,
-	projectionTable string,
-	projectionErrorHandler driverSQL.ProjectionErrorCallback,
+	projectorStorage StreamProjectorStorage,
+	projectionErrorHandler ProjectionErrorCallback,
 	logger goengine.Logger,
 ) (*StreamProjector, error) {
 	switch {
 	case db == nil:
 		return nil, goengine.InvalidArgumentError("db")
-	case eventStore == nil:
-		return nil, goengine.InvalidArgumentError("eventStore")
+	case eventLoader == nil:
+		return nil, goengine.InvalidArgumentError("eventLoader")
 	case resolver == nil:
 		return nil, goengine.InvalidArgumentError("resolver")
 	case projection == nil:
 		return nil, goengine.InvalidArgumentError("projection")
-	case strings.TrimSpace(projectionTable) == "":
-		return nil, goengine.InvalidArgumentError("projectionTable")
+	case projectorStorage == nil:
+		return nil, goengine.InvalidArgumentError("projectorStorage")
 	case projectionErrorHandler == nil:
 		return nil, goengine.InvalidArgumentError("projectionErrorHandler")
 	}
@@ -58,27 +55,11 @@ func NewStreamProjector(
 		e.String("projection", projection.Name())
 	})
 
-	var (
-		stateDecoder driverSQL.ProjectionStateDecoder
-		stateEncoder driverSQL.ProjectionStateEncoder
-	)
-	if saga, ok := projection.(goengine.ProjectionSaga); ok {
-		stateDecoder = saga.DecodeState
-		stateEncoder = saga.EncodeState
-	}
-
-	storage, err := newStreamProjectionStorage(projection.Name(), projectionTable, stateEncoder, logger)
-	if err != nil {
-		return nil, err
-	}
-
-	executor, err := internalSQL.NewNotificationProjector(
+	executor, err := newNotificationProjector(
 		db,
-		storage,
-		projection.Init,
-		stateDecoder,
+		projectorStorage,
 		projection.Handlers(),
-		streamProjectionEventStreamLoader(eventStore, projection.FromStream()),
+		eventLoader,
 		resolver,
 		logger,
 	)
@@ -89,7 +70,7 @@ func NewStreamProjector(
 	return &StreamProjector{
 		db:                     db,
 		executor:               executor,
-		storage:                storage,
+		storage:                projectorStorage,
 		projectionErrorHandler: projectionErrorHandler,
 		logger:                 logger,
 	}, nil
@@ -115,7 +96,7 @@ func (s *StreamProjector) Run(ctx context.Context) error {
 }
 
 // RunAndListen executes the projection and listens to any changes to the event store
-func (s *StreamProjector) RunAndListen(ctx context.Context, listener driverSQL.Listener) error {
+func (s *StreamProjector) RunAndListen(ctx context.Context, listener Listener) error {
 	s.Lock()
 	defer s.Unlock()
 
@@ -135,7 +116,7 @@ func (s *StreamProjector) RunAndListen(ctx context.Context, listener driverSQL.L
 
 func (s *StreamProjector) processNotification(
 	ctx context.Context,
-	notification *driverSQL.ProjectionNotification,
+	notification *ProjectionNotification,
 ) error {
 	for i := 0; i < math.MaxInt16; i++ {
 		err := s.executor.Execute(ctx, notification)
@@ -148,8 +129,12 @@ func (s *StreamProjector) processNotification(
 		// Resolve the action to take based on the error that occurred
 		logFields := func(e goengine.LoggerEntry) {
 			e.Error(err)
-			e.Int64("notification.no", notification.No)
-			e.String("notification.aggregate_id", notification.AggregateID)
+			if notification == nil {
+				e.Any("notification", notification)
+			} else {
+				e.Int64("notification.no", notification.No)
+				e.String("notification.aggregate_id", notification.AggregateID)
+			}
 		}
 		switch resolveErrorAction(s.projectionErrorHandler, notification, err) {
 		case errorRetry:
@@ -168,4 +153,11 @@ func (s *StreamProjector) processNotification(
 		"seriously %d retries is enough! maybe it's time to fix your projection or error handling code?",
 		math.MaxInt16,
 	)
+}
+
+// StreamProjectionEventStreamLoader returns a EventStreamLoader for the StreamProjector
+func StreamProjectionEventStreamLoader(eventStore ReadOnlyEventStore, streamName goengine.StreamName) EventStreamLoader {
+	return func(ctx context.Context, conn *sql.Conn, notification *ProjectionNotification, position int64) (goengine.EventStream, error) {
+		return eventStore.LoadWithConnection(ctx, conn, streamName, position+1, nil, nil)
+	}
 }

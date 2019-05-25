@@ -7,26 +7,16 @@ import (
 	"strings"
 
 	"github.com/hellofresh/goengine"
-	"github.com/hellofresh/goengine/aggregate"
 	driverSQL "github.com/hellofresh/goengine/driver/sql"
-	"github.com/hellofresh/goengine/metadata"
 	"github.com/pkg/errors"
 )
 
-func aggregateProjectionEventStreamLoader(eventStore driverSQL.ReadOnlyEventStore, streamName goengine.StreamName, aggregateTypeName string) driverSQL.EventStreamLoader {
-	return func(ctx context.Context, conn *sql.Conn, notification *driverSQL.ProjectionNotification, position int64) (goengine.EventStream, error) {
-		matcher := metadata.NewMatcher()
-		matcher = metadata.WithConstraint(matcher, aggregate.IDKey, metadata.Equals, notification.AggregateID)
-		matcher = metadata.WithConstraint(matcher, aggregate.TypeKey, metadata.Equals, aggregateTypeName)
+var _ driverSQL.AggregateProjectorStorage = &AdvisoryLockAggregateProjectionStorage{}
 
-		return eventStore.LoadWithConnection(ctx, conn, streamName, position+1, nil, matcher)
-	}
-}
-
-var _ driverSQL.ProjectionStorage = &aggregateProjectionStorage{}
-
-type aggregateProjectionStorage struct {
-	projectionStateEncoder driverSQL.ProjectionStateEncoder
+// AdvisoryLockAggregateProjectionStorage is a AggregateProjectorStorage that uses a advisory locks to lock a projection
+type AdvisoryLockAggregateProjectionStorage struct {
+	stateSerialization driverSQL.ProjectionStateSerialization
+	useLockField       bool
 
 	logger goengine.Logger
 
@@ -38,23 +28,24 @@ type aggregateProjectionStorage struct {
 	querySetRowLocked         string
 }
 
-func newAggregateProjectionStorage(
+// NewAdvisoryLockAggregateProjectionStorage returns a new AdvisoryLockAggregateProjectionStorage
+func NewAdvisoryLockAggregateProjectionStorage(
 	eventStoreTable,
 	projectionTable string,
-	projectionStateEncoder driverSQL.ProjectionStateEncoder,
+	projectionStateSerialization driverSQL.ProjectionStateSerialization,
+	useLockField bool,
 	logger goengine.Logger,
-) (*aggregateProjectionStorage, error) {
+) (*AdvisoryLockAggregateProjectionStorage, error) {
 	switch {
 	case strings.TrimSpace(projectionTable) == "":
 		return nil, goengine.InvalidArgumentError("projectionTable")
 	case strings.TrimSpace(eventStoreTable) == "":
 		return nil, goengine.InvalidArgumentError("eventStoreTable")
+	case projectionStateSerialization == nil:
+		return nil, goengine.InvalidArgumentError("projectionStateSerialization")
 	}
 	if logger == nil {
 		logger = goengine.NopLogger
-	}
-	if projectionStateEncoder == nil {
-		projectionStateEncoder = defaultProjectionStateEncoder
 	}
 
 	projectionTableQuoted := QuoteIdentifier(projectionTable)
@@ -62,9 +53,10 @@ func newAggregateProjectionStorage(
 	eventStoreTableQuoted := QuoteIdentifier(eventStoreTable)
 
 	/* #nosec G201 */
-	return &aggregateProjectionStorage{
-		projectionStateEncoder: projectionStateEncoder,
-		logger:                 logger,
+	return &AdvisoryLockAggregateProjectionStorage{
+		stateSerialization: projectionStateSerialization,
+		useLockField:       useLockField,
+		logger:             logger,
 
 		queryOutOfSyncProjections: fmt.Sprintf(
 			`WITH aggregate_position AS (
@@ -116,68 +108,47 @@ func newAggregateProjectionStorage(
 	}, nil
 }
 
-func (a *aggregateProjectionStorage) LoadOutOfSync(ctx context.Context, conn driverSQL.Queryer) (*sql.Rows, error) {
+// LoadOutOfSync return a set of rows with the aggregate_id and number of the projection that are not in sync with the event store
+func (a *AdvisoryLockAggregateProjectionStorage) LoadOutOfSync(ctx context.Context, conn driverSQL.Queryer) (*sql.Rows, error) {
 	return conn.QueryContext(ctx, a.queryOutOfSyncProjections)
 }
 
-func (a *aggregateProjectionStorage) PersistState(conn driverSQL.Execer, notification *driverSQL.ProjectionNotification, state driverSQL.ProjectionState) error {
-	encodedState, err := a.projectionStateEncoder(state.ProjectionState)
-	if err != nil {
-		return err
-	}
-
-	_, err = conn.ExecContext(context.Background(), a.queryPersistState, notification.AggregateID, state.Position, encodedState)
-	if err != nil {
-		return err
-	}
-
-	a.logger.Debug("updated projection state", func(e goengine.LoggerEntry) {
-		e.Int64("notification.no", notification.No)
-		e.String("notification.aggregate_id", notification.AggregateID)
-		e.Any("state", state)
-	})
-	return nil
+// PersistFailure marks the specified aggregate_id projection as failed
+func (a *AdvisoryLockAggregateProjectionStorage) PersistFailure(conn driverSQL.Execer, notification *driverSQL.ProjectionNotification) error {
+	_, err := conn.ExecContext(context.Background(), a.queryPersistFailure, notification.AggregateID)
+	return err
 }
 
-func (a *aggregateProjectionStorage) PersistFailure(ctx context.Context, conn driverSQL.Execer, notification *driverSQL.ProjectionNotification) error {
-	if _, err := conn.ExecContext(ctx, a.queryPersistFailure, notification.AggregateID); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (a *aggregateProjectionStorage) Acquire(
+// Acquire returns a driverSQL.ProjectorTransaction and the position of the projection within the event stream when a
+// lock is acquired for the specified aggregate_id. Otherwise an error is returned indicating why the lock could not be acquired.
+func (a *AdvisoryLockAggregateProjectionStorage) Acquire(
 	ctx context.Context,
 	conn *sql.Conn,
 	notification *driverSQL.ProjectionNotification,
-) (func(), *driverSQL.ProjectionRawState, error) {
+) (driverSQL.ProjectorTransaction, int64, error) {
 	logFields := func(e goengine.LoggerEntry) {
 		e.Int64("notification.no", notification.No)
-		e.String("notification.aggregate_id", notification.AggregateID)
+		e.String("projection_id", notification.AggregateID)
 	}
 	aggregateID := notification.AggregateID
 
 	res := conn.QueryRowContext(ctx, a.queryAcquireLock, aggregateID, notification.No)
 
 	var (
-		acquiredLock bool
-		locked       bool
-		failed       bool
-		rawState     []byte
-		position     int64
+		acquiredLock, locked, failed bool
+		projectionState              driverSQL.ProjectionRawState
 	)
-	if err := res.Scan(&acquiredLock, &locked, &failed, &position, &rawState); err != nil {
+	if err := res.Scan(&acquiredLock, &locked, &failed, &projectionState.Position, &projectionState.ProjectionState); err != nil {
 		// No rows are returned when the projector is already at the notification position
 		if err == sql.ErrNoRows {
-			return nil, nil, driverSQL.ErrNoProjectionRequired
+			return nil, 0, driverSQL.ErrNoProjectionRequired
 		}
 
-		return nil, nil, err
+		return nil, 0, err
 	}
 
 	if !acquiredLock {
-		return nil, nil, driverSQL.ErrProjectionFailedToLock
+		return nil, 0, driverSQL.ErrProjectionFailedToLock
 	}
 
 	if locked || failed {
@@ -192,48 +163,34 @@ func (a *aggregateProjectionStorage) Acquire(
 			a.logger.Debug("released connection lock for a locked projection", logFields)
 		}
 
-		return nil, nil, driverSQL.ErrProjectionPreviouslyLocked
+		return nil, 0, driverSQL.ErrProjectionPreviouslyLocked
 	}
 
-	// Set the projection as row locked
-	_, err := conn.ExecContext(ctx, a.querySetRowLocked, aggregateID, true)
-	if err != nil {
-		if releaseErr := a.releaseProjection(conn, aggregateID); releaseErr != nil {
-			a.logger.Error("failed to release lock while setting projection rows as locked", func(e goengine.LoggerEntry) {
-				logFields(e)
-				e.Error(releaseErr)
-			})
-		} else {
-			a.logger.Debug("failed to set projection as locked", logFields)
-		}
-
-		return nil, nil, err
-	}
 	a.logger.Debug("acquired projection lock", logFields)
 
-	return func() {
-		if err := a.releaseProjection(conn, aggregateID); err != nil {
-			a.logger.Error("failed to release projection lock", func(e goengine.LoggerEntry) {
-				logFields(e)
-				e.Error(err)
-			})
-		} else {
-			a.logger.Debug("released projection lock", logFields)
-		}
-	}, &driverSQL.ProjectionRawState{ProjectionState: rawState, Position: position}, nil
-}
+	tx := advisoryLockProjectorTransaction{
+		conn:              conn,
+		queryPersistState: a.queryPersistState,
+		queryReleaseLock:  a.queryReleaseLock,
 
-func (a *aggregateProjectionStorage) releaseProjection(conn *sql.Conn, aggregateID string) error {
-	// Set the projection as row unlocked
-	_, err := conn.ExecContext(context.Background(), a.querySetRowLocked, aggregateID, false)
-	if err != nil {
-		return err
+		stateSerialization: a.stateSerialization,
+		rawState:           &projectionState,
+
+		projectionID: aggregateID,
+		logger:       a.logger,
 	}
 
-	return a.releaseProjectionConnectionLock(conn, aggregateID)
+	if a.useLockField {
+		return &advisoryLockWithUpdateProjectorTransaction{
+			advisoryLockProjectorTransaction: tx,
+			querySetRowLocked:                a.querySetRowLocked,
+		}, projectionState.Position, nil
+	}
+
+	return &tx, projectionState.Position, nil
 }
 
-func (a *aggregateProjectionStorage) releaseProjectionConnectionLock(conn *sql.Conn, aggregateID string) error {
+func (a *AdvisoryLockAggregateProjectionStorage) releaseProjectionConnectionLock(conn *sql.Conn, aggregateID string) error {
 	res := conn.QueryRowContext(context.Background(), a.queryReleaseLock, aggregateID)
 
 	var unlocked bool

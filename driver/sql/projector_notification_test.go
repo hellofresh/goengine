@@ -1,6 +1,6 @@
 // +build unit
 
-package internal
+package sql
 
 import (
 	"context"
@@ -8,7 +8,6 @@ import (
 
 	"github.com/hellofresh/goengine"
 	"github.com/hellofresh/goengine/aggregate"
-	"github.com/hellofresh/goengine/driver/sql"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -56,7 +55,7 @@ func TestWrapProjectionHandlerToTrapError(t *testing.T) {
 
 			state, err := wrapped(context.Background(), nil, &aggregate.Changed{})
 			switch x := err.(type) {
-			case *sql.ProjectionHandlerError:
+			case *ProjectionHandlerError:
 				require.EqualError(t, x.Cause(), testCase.expectedCause)
 			default:
 				t.Errorf("expected *projector.ProjectionHandlerError error got %T: %s", x, x.Error())

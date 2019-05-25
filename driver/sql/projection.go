@@ -6,6 +6,7 @@ import (
 
 	"github.com/hellofresh/goengine"
 	"github.com/mailru/easyjson/jlexer"
+	"github.com/pkg/errors"
 )
 
 type (
@@ -24,29 +25,22 @@ type (
 		ProjectionState interface{}
 	}
 
-	// ProjectionRawState the raw projection projectionState returned by ProjectionStorage.Acquire
+	// ProjectionRawState the raw projection projectionState returned by ProjectorStorage.Acquire
 	ProjectionRawState struct {
 		Position        int64
 		ProjectionState []byte
 	}
 
-	// ProjectionStateInitializer is a func to initialize a ProjectionState.ProjectionState
-	ProjectionStateInitializer func(ctx context.Context) (interface{}, error)
+	// ProjectionStateSerialization is an interface describing how a projection state can be initialized, serialized/encoded anf deserialized/decoded
+	ProjectionStateSerialization interface {
+		// init initializes the state
+		Init(ctx context.Context) (interface{}, error)
 
-	// ProjectionStateEncoder is a func to marshal the ProjectionState.ProjectionState
-	ProjectionStateEncoder func(interface{}) ([]byte, error)
+		// DecodeState reconstitute the projection state based on the provided state data
+		DecodeState(data []byte) (interface{}, error)
 
-	// ProjectionStateDecoder is a func to unmarshal the ProjectionRawState.ProjectionState
-	ProjectionStateDecoder func(data []byte) (interface{}, error)
-
-	// ProjectionStorage is an interface for handling the projection storage
-	ProjectionStorage interface {
-		// PersistState persists the state of the projection
-		PersistState(conn Execer, notification *ProjectionNotification, state ProjectionState) error
-
-		// Acquire this function is used to acquire the projection and it's projectionState
-		// A projection can only be acquired once and must be released using the returned func
-		Acquire(ctx context.Context, conn *sql.Conn, notification *ProjectionNotification) (func(), *ProjectionRawState, error)
+		// EncodeState encode the given object for storage
+		EncodeState(obj interface{}) ([]byte, error)
 	}
 
 	// ProjectionErrorCallback is a function used to determin what action to take based on a failed projection
@@ -57,6 +51,37 @@ type (
 
 	// EventStreamLoader loads a event stream based on the provided notification and state
 	EventStreamLoader func(ctx context.Context, conn *sql.Conn, notification *ProjectionNotification, position int64) (goengine.EventStream, error)
+
+	// ProjectorStorage is an interface for handling the projection storage
+	ProjectorStorage interface {
+		// Acquire this function is used to acquire the projection and it's projectionState
+		// A projection can only be acquired once and must be released using the returned func
+		Acquire(ctx context.Context, conn *sql.Conn, notification *ProjectionNotification) (ProjectorTransaction, int64, error)
+	}
+
+	// AggregateProjectorStorage the storage interface that will persist and load the projection state
+	AggregateProjectorStorage interface {
+		ProjectorStorage
+
+		LoadOutOfSync(ctx context.Context, conn Queryer) (*sql.Rows, error)
+
+		PersistFailure(conn Execer, notification *ProjectionNotification) error
+	}
+
+	// StreamProjectorStorage the storage interface that will persist and load the projection state
+	StreamProjectorStorage interface {
+		ProjectorStorage
+
+		CreateProjection(ctx context.Context, conn Execer) error
+	}
+
+	// ProjectorTransaction is a transaction type object returned by the ProjectorStorage
+	ProjectorTransaction interface {
+		AcquireState(ctx context.Context) (ProjectionState, error)
+		CommitState(ProjectionState) error
+
+		Close() error
+	}
 )
 
 // UnmarshalJSON supports json.Unmarshaler interface
@@ -99,4 +124,33 @@ func (p *ProjectionNotification) UnmarshalEasyJSON(in *jlexer.Lexer) {
 	if isTopLevel {
 		in.Consumed()
 	}
+}
+
+// GetProjectionStateSerialization returns a ProjectionStateSerialization based on the provided projection
+func GetProjectionStateSerialization(projection goengine.Projection) ProjectionStateSerialization {
+	if saga, ok := projection.(ProjectionStateSerialization); ok {
+		return saga
+	}
+
+	return nopProjectionStateSerialization{
+		Projection: projection,
+	}
+}
+
+type nopProjectionStateSerialization struct {
+	goengine.Projection
+}
+
+// DecodeState reconstitute the projection state based on the provided state data
+func (nopProjectionStateSerialization) DecodeState(data []byte) (interface{}, error) {
+	return nil, nil
+}
+
+// EncodeState encode the given object for storage
+func (nopProjectionStateSerialization) EncodeState(obj interface{}) ([]byte, error) {
+	if obj == nil {
+		return []byte{'{', '}'}, nil
+	}
+
+	return nil, errors.New("unexpected state provided (Did you forget to implement goengine.ProjectionSaga?)")
 }
