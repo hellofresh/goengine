@@ -17,16 +17,20 @@ type SingleStreamManager struct {
 	persistenceStrategy driverSQL.PersistenceStrategy
 	messageFactory      driverSQL.MessageFactory
 
-	logger goengine.Logger
+	logger  goengine.Logger
+	metrics goengine.Metrics
 }
 
 // NewSingleStreamManager return a new instance of the SingleStreamManager
-func NewSingleStreamManager(db *sql.DB, logger goengine.Logger) (*SingleStreamManager, error) {
+func NewSingleStreamManager(db *sql.DB, logger goengine.Logger, metrics goengine.Metrics) (*SingleStreamManager, error) {
 	if db == nil {
 		return nil, goengine.InvalidArgumentError("db")
 	}
 	if logger == nil {
 		logger = goengine.NopLogger
+	}
+	if metrics == nil {
+		metrics = goengine.NopMetrics
 	}
 
 	payloadTransformer := json.NewPayloadTransformer()
@@ -49,6 +53,7 @@ func NewSingleStreamManager(db *sql.DB, logger goengine.Logger) (*SingleStreamMa
 		persistenceStrategy: persistenceStrategy,
 		messageFactory:      messageFactory,
 		logger:              logger,
+		metrics:             metrics,
 	}, nil
 }
 
@@ -145,5 +150,6 @@ func (m *SingleStreamManager) NewAggregateProjector(
 		projectorStorage,
 		projectionErrorHandler,
 		m.logger,
+		m.metrics,
 	)
 }
