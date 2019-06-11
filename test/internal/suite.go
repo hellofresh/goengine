@@ -1,14 +1,15 @@
 package internal
 
 import (
-	"github.com/hellofresh/goengine/extension/prometheus"
 	"testing"
 
-	"github.com/hellofresh/goengine"
-	logWrapper "github.com/hellofresh/goengine/extension/logrus"
 	"github.com/sirupsen/logrus"
 	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/suite"
+
+	"github.com/hellofresh/goengine"
+	logWrapper "github.com/hellofresh/goengine/extension/logrus"
+	"github.com/hellofresh/goengine/extension/prometheus"
 )
 
 // Suite is an extension of github.com/stretchr/testify/suite.Suite

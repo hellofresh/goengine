@@ -50,6 +50,9 @@ func NewMetrics() *Metrics {
 			},
 			[]string{"success", "retry"},
 		),
+
+		// notificationStartTimes holds start time for notification queue and processing
+		notificationStartTimes: make(map[string]time.Time),
 	}
 }
 
