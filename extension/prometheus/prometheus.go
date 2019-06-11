@@ -2,9 +2,11 @@ package prometheus
 
 import (
 	"fmt"
-	"github.com/prometheus/client_golang/prometheus"
 	"strconv"
+	"sync"
 	"time"
+
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 const namespace = "goengine"
@@ -14,7 +16,7 @@ type Metrics struct {
 	notificationCounter            *prometheus.CounterVec
 	notificationQueueDuration      *prometheus.HistogramVec
 	notificationProcessingDuration *prometheus.HistogramVec
-	notificationStartTimes         map[string]time.Time
+	notificationStartTimes         sync.Map
 }
 
 // NewMetrics instantiate and return an object of Metrics
@@ -50,9 +52,6 @@ func NewMetrics() *Metrics {
 			},
 			[]string{"success", "retry"},
 		),
-
-		// notificationStartTimes holds start time for notification queue and processing
-		notificationStartTimes: make(map[string]time.Time),
 	}
 }
 
@@ -80,22 +79,22 @@ func (m *Metrics) ReceivedNotification(isNotification bool) {
 // QueueNotification returns http handler for prometheus
 func (m *Metrics) QueueNotification(notification interface{}) {
 	key := "q" + fmt.Sprintf("%p", notification)
-	m.notificationStartTimes[key] = time.Now()
+	m.notificationStartTimes.Store(key, time.Now())
 }
 
 // StartNotificationProcessing is used to record start time of notification processing
 func (m *Metrics) StartNotificationProcessing(notification interface{}) {
 	key := "p" + fmt.Sprintf("%p", notification)
-	m.notificationStartTimes[key] = time.Now()
+	m.notificationStartTimes.Store(key, time.Now())
 }
 
 // FinishNotificationProcessing is used to observe end time of notification queue and processing time
 func (m *Metrics) FinishNotificationProcessing(notification interface{}, success bool, retry bool) {
 	memAddress := fmt.Sprintf("%p", notification)
-	queueStartTime := m.notificationStartTimes["q"+memAddress]
-	processingStartTime := m.notificationStartTimes["p"+memAddress]
+	queueStartTime, _ := m.notificationStartTimes.Load("q" + memAddress)
+	processingStartTime, _ := m.notificationStartTimes.Load("p" + memAddress)
 	labels := prometheus.Labels{"success": strconv.FormatBool(success), "retry": strconv.FormatBool(retry)}
 
-	m.notificationQueueDuration.With(labels).Observe(time.Since(queueStartTime).Seconds())
-	m.notificationProcessingDuration.With(labels).Observe(time.Since(processingStartTime).Seconds())
+	m.notificationQueueDuration.With(labels).Observe(time.Since(queueStartTime.(time.Time)).Seconds())
+	m.notificationProcessingDuration.With(labels).Observe(time.Since(processingStartTime.(time.Time)).Seconds())
 }
