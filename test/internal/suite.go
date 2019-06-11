@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"github.com/hellofresh/goengine/extension/prometheus"
 	"testing"
 
 	"github.com/hellofresh/goengine"
@@ -16,6 +17,8 @@ type Suite struct {
 
 	Logger     *logrus.Logger
 	LoggerHook *test.Hook
+
+	Metrics *prometheus.Metrics
 }
 
 // SetupTest set logrus output to use the current testing.T
@@ -25,6 +28,8 @@ func (s *Suite) SetupTest() {
 	s.Logger.SetOutput(NewLogWriter(s.T()))
 
 	s.LoggerHook = test.NewLocal(s.Logger)
+
+	s.Metrics = prometheus.NewMetrics()
 }
 
 // TearDownTest cleanup suite variables
