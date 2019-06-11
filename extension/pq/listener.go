@@ -23,7 +23,7 @@ type Listener struct {
 	maxReconnectInterval time.Duration
 
 	logger  goengine.Logger
-	metrics goengine.Metrics
+	metrics sql.Metrics
 }
 
 // NewListener returns a new notification listener
@@ -33,7 +33,7 @@ func NewListener(
 	minReconnectInterval time.Duration,
 	maxReconnectInterval time.Duration,
 	logger goengine.Logger,
-	metrics goengine.Metrics,
+	metrics sql.Metrics,
 ) (*Listener, error) {
 	switch {
 	case strings.TrimSpace(dbDSN) == "":
@@ -51,7 +51,7 @@ func NewListener(
 	}
 
 	if metrics == nil {
-		metrics = goengine.NopMetrics
+		metrics = sql.NopMetrics
 	}
 
 	return &Listener{

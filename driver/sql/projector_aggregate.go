@@ -35,7 +35,7 @@ func NewAggregateProjector(
 	projectorStorage AggregateProjectorStorage,
 	projectionErrorHandler ProjectionErrorCallback,
 	logger goengine.Logger,
-	metrics goengine.Metrics,
+	metrics Metrics,
 ) (*AggregateProjector, error) {
 	switch {
 	case db == nil:

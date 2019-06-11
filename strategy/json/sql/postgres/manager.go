@@ -18,11 +18,11 @@ type SingleStreamManager struct {
 	messageFactory      driverSQL.MessageFactory
 
 	logger  goengine.Logger
-	metrics goengine.Metrics
+	metrics driverSQL.Metrics
 }
 
 // NewSingleStreamManager return a new instance of the SingleStreamManager
-func NewSingleStreamManager(db *sql.DB, logger goengine.Logger, metrics goengine.Metrics) (*SingleStreamManager, error) {
+func NewSingleStreamManager(db *sql.DB, logger goengine.Logger, metrics driverSQL.Metrics) (*SingleStreamManager, error) {
 	if db == nil {
 		return nil, goengine.InvalidArgumentError("db")
 	}
@@ -30,7 +30,7 @@ func NewSingleStreamManager(db *sql.DB, logger goengine.Logger, metrics goengine
 		logger = goengine.NopLogger
 	}
 	if metrics == nil {
-		metrics = goengine.NopMetrics
+		metrics = driverSQL.NopMetrics
 	}
 
 	payloadTransformer := json.NewPayloadTransformer()

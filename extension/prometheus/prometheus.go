@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hellofresh/goengine/driver/sql"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -77,19 +78,19 @@ func (m *Metrics) ReceivedNotification(isNotification bool) {
 }
 
 // QueueNotification returns http handler for prometheus
-func (m *Metrics) QueueNotification(notification interface{}) {
+func (m *Metrics) QueueNotification(notification *sql.ProjectionNotification) {
 	key := "q" + fmt.Sprintf("%p", notification)
 	m.notificationStartTimes.Store(key, time.Now())
 }
 
 // StartNotificationProcessing is used to record start time of notification processing
-func (m *Metrics) StartNotificationProcessing(notification interface{}) {
+func (m *Metrics) StartNotificationProcessing(notification *sql.ProjectionNotification) {
 	key := "p" + fmt.Sprintf("%p", notification)
 	m.notificationStartTimes.Store(key, time.Now())
 }
 
 // FinishNotificationProcessing is used to observe end time of notification queue and processing time
-func (m *Metrics) FinishNotificationProcessing(notification interface{}, success bool, retry bool) {
+func (m *Metrics) FinishNotificationProcessing(notification *sql.ProjectionNotification, success bool, retry bool) {
 	memAddress := fmt.Sprintf("%p", notification)
 	queueStartTime, _ := m.notificationStartTimes.Load("q" + memAddress)
 	processingStartTime, _ := m.notificationStartTimes.Load("p" + memAddress)
