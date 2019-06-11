@@ -1,25 +1,26 @@
-package json
+package protobuf
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"reflect"
 
+	"github.com/golang/protobuf/proto"
 	"github.com/hellofresh/goengine"
 	reflectUtil "github.com/hellofresh/goengine/internal/reflect"
-	"github.com/hellofresh/goengine/strategy/json/internal"
 )
 
 var (
-	// ErrUnsupportedJSONPayloadData occurs when the data type is not supported by the PayloadTransformer
-	ErrUnsupportedJSONPayloadData = errors.New("goengine: payload data was expected to be a []byte, json.RawMessage or string")
+	// ErrUnsupportedProtobufPayloadData occurs when the data type is not supported by the PayloadTransformer
+	ErrUnsupportedProtobufPayloadData = errors.New("goengine: payload data was expected to be a []byte or string")
 	// ErrPayloadCannotBeSerialized occurs when the payload cannot be serialized
 	ErrPayloadCannotBeSerialized = errors.New("goengine: payload cannot be serialized")
 	// ErrPayloadNotRegistered occurs when the payload is not registered
 	ErrPayloadNotRegistered = errors.New("goengine: payload is not registered")
 	// ErrUnknownPayloadType occurs when a payload type is unknown
 	ErrUnknownPayloadType = errors.New("goengine: unknown payload type provided")
+	// ErrNotProtobufPayload occurs when a PayloadInitiator is not implementing proto.Message
+	ErrNotProtobufPayload = errors.New("goengine: payload not implementing proto.Message")
 	// ErrInitiatorInvalidResult occurs when a PayloadInitiator returns a reference to nil
 	ErrInitiatorInvalidResult = errors.New("goengine: initializer must return a pointer that is not nil")
 	// ErrDuplicatePayloadType occurs when a payload type is already registered
@@ -38,7 +39,7 @@ type (
 	// this instance can then be used to Unmarshal
 	PayloadInitiator func() interface{}
 
-	// PayloadTransformer is a payload factory that can reconstruct payload from and to JSON
+	// PayloadTransformer is a payload factory that can reconstruct payload from and to Protobuf
 	PayloadTransformer struct {
 		types map[string]PayloadType
 		names map[string]string
@@ -60,14 +61,19 @@ func NewPayloadTransformer() *PayloadTransformer {
 	}
 }
 
-// ConvertPayload marshall the payload into JSON returning the payload fullpkgPath and the serialized data.
+// ConvertPayload marshall the payload into Protobuf returning the payload fullpkgPath and the serialized data.
 func (p *PayloadTransformer) ConvertPayload(payload interface{}) (string, []byte, error) {
 	payloadName, err := p.ResolveName(payload)
 	if err != nil {
 		return "", nil, err
 	}
 
-	data, err := internal.MarshalJSON(payload)
+	message, ok := payload.(proto.Message)
+	if !ok {
+		return "", nil, ErrNotProtobufPayload
+	}
+
+	data, err := proto.Marshal(message)
 	if err != nil {
 		return "", nil, ErrPayloadCannotBeSerialized
 	}
@@ -124,37 +130,46 @@ func (p *PayloadTransformer) RegisterPayloads(payloads map[string]PayloadInitiat
 	return nil
 }
 
-// CreatePayload reconstructs a payload based on it's type and the json data
+// CreatePayload reconstructs a payload based on it's type and the Protobuf data
 func (p *PayloadTransformer) CreatePayload(typeName string, data interface{}) (interface{}, error) {
 	var dataBytes []byte
 	switch d := data.(type) {
 	case []byte:
 		dataBytes = d
-	case json.RawMessage:
-		dataBytes = d
 	case string:
 		dataBytes = bytes.NewBufferString(d).Bytes()
 	default:
-		return nil, ErrUnsupportedJSONPayloadData
+		return nil, ErrUnsupportedProtobufPayloadData
 	}
 
 	payloadType, found := p.types[typeName]
 	if !found {
 		return nil, ErrUnknownPayloadType
 	}
-	payload := payloadType.initiator()
 
-	// Pointer we can handle nicely
 	if payloadType.isPtr {
-		if err := internal.UnmarshalJSON(dataBytes, payload); err != nil {
+		payload, ok := payloadType.initiator().(proto.Message)
+		if !ok {
+			return nil, ErrNotProtobufPayload
+		}
+
+		if err := proto.Unmarshal(dataBytes, payload); err != nil {
 			return nil, err
 		}
+
+		return payload, nil
 	}
 
 	// Not a pointer so let's cry and use reflection
-	vp := reflect.New(payloadType.reflectionType)
+	payload := payloadType.initiator()
+	vp := reflect.New(payloadType.reflectionType) // ptr to
 	vp.Elem().Set(reflect.ValueOf(payload))
-	if err := internal.UnmarshalJSON(dataBytes, vp.Interface()); err != nil {
+	message, ok := vp.Interface().(proto.Message)
+	if !ok {
+		return nil, ErrNotProtobufPayload
+	}
+
+	if err := proto.Unmarshal(dataBytes, message); err != nil {
 		return nil, err
 	}
 

@@ -6,14 +6,14 @@ import (
 	"github.com/hellofresh/goengine"
 	driverSQL "github.com/hellofresh/goengine/driver/sql"
 	"github.com/hellofresh/goengine/driver/sql/postgres"
-	"github.com/hellofresh/goengine/strategy/json"
-	strategySQL "github.com/hellofresh/goengine/strategy/json/sql"
+	"github.com/hellofresh/goengine/strategy/protobuf"
+	strategySQL "github.com/hellofresh/goengine/strategy/protobuf/sql"
 )
 
-// SingleStreamManager is a helper for creating JSON Postgres event stores and projectors
+// SingleStreamManager is a helper for creating Protobuf Postgres event stores and projectors
 type SingleStreamManager struct {
 	db                  *sql.DB
-	payloadTransformer  *json.PayloadTransformer
+	payloadTransformer  *protobuf.PayloadTransformer
 	persistenceStrategy driverSQL.PersistenceStrategy
 	messageFactory      driverSQL.MessageFactory
 
@@ -29,7 +29,7 @@ func NewSingleStreamManager(db *sql.DB, logger goengine.Logger) (*SingleStreamMa
 		logger = goengine.NopLogger
 	}
 
-	payloadTransformer := json.NewPayloadTransformer()
+	payloadTransformer := protobuf.NewPayloadTransformer()
 
 	// Setting up the postgres strategy
 	persistenceStrategy, err := NewSingleStreamStrategy(payloadTransformer)
@@ -64,7 +64,7 @@ func (m *SingleStreamManager) NewEventStore() (*postgres.EventStore, error) {
 }
 
 // RegisterPayloads registers a set of payload type initiators
-func (m *SingleStreamManager) RegisterPayloads(initiators map[string]json.PayloadInitiator) error {
+func (m *SingleStreamManager) RegisterPayloads(initiators map[string]protobuf.PayloadInitiator) error {
 	return m.payloadTransformer.RegisterPayloads(initiators)
 }
 

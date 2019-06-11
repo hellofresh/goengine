@@ -9,19 +9,16 @@ import (
 
 	sqlmock "github.com/DATA-DOG/go-sqlmock"
 	"github.com/golang/mock/gomock"
+	"github.com/golang/protobuf/proto"
 	"github.com/hellofresh/goengine"
 	"github.com/hellofresh/goengine/aggregate"
 	"github.com/hellofresh/goengine/metadata"
 	"github.com/hellofresh/goengine/mocks"
-	"github.com/hellofresh/goengine/strategy/json/internal"
-	"github.com/hellofresh/goengine/strategy/json/sql"
+	"github.com/hellofresh/goengine/strategy/protobuf/internal"
+	"github.com/hellofresh/goengine/strategy/protobuf/sql"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-type nameChanged struct {
-	name string
-}
 
 func TestAggregateChangedFactory_CreateFromRows(t *testing.T) {
 	rowColumns := []string{"no", "event_id", "event_name", "payload", "metadata", "created_at"}
@@ -43,10 +40,10 @@ func TestAggregateChangedFactory_CreateFromRows(t *testing.T) {
 				"create aggregate.Changed messages from rows",
 				func(t *testing.T) []*aggregate.Changed {
 					// Create expectations
-					expectedMessage1, err := createAggregateChangedMessage(nameChanged{"bob"}, 1)
+					expectedMessage1, err := createAggregateChangedMessage(internal.NameChanged{Name: "bob"}, 1)
 					require.NoError(t, err)
 
-					expectedMessage2, err := createAggregateChangedMessage(nameChanged{"alice"}, 2)
+					expectedMessage2, err := createAggregateChangedMessage(internal.NameChanged{Name: "alice"}, 2)
 					require.NoError(t, err)
 
 					return []*aggregate.Changed{
@@ -69,7 +66,9 @@ func TestAggregateChangedFactory_CreateFromRows(t *testing.T) {
 				payloadFactory := mocks.NewMessagePayloadFactory(ctrl)
 				mockRows := sqlmock.NewRows(rowColumns)
 				for i, msg := range expectedMessages {
-					rowPayload, err := internal.MarshalJSON(msg.Payload())
+					protoMessage, ok := msg.Payload().(internal.NameChanged)
+					require.True(t, ok)
+					rowPayload, err := proto.Marshal(&protoMessage)
 					require.NoError(t, err)
 
 					rowMetadata, err := internal.MarshalJSON(msg.Metadata())
@@ -174,13 +173,13 @@ func TestAggregateChangedFactory_CreateFromRows(t *testing.T) {
 						1,
 						uuid,
 						"some",
-						[]byte("{}"),
+						[]byte("no protobuf"),
 						[]byte("{}"),
 						time.Now().UTC(),
 					)
 
 					factory := mocks.NewMessagePayloadFactory(ctrl)
-					factory.EXPECT().CreatePayload("some", []byte("{}")).Return(nil, errors.New("bad payload")).Times(1)
+					factory.EXPECT().CreatePayload("some", []byte("no protobuf")).Return(nil, errors.New("bad payload")).Times(1)
 
 					return mockRows, factory
 				},
