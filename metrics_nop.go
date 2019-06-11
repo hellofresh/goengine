@@ -1,5 +1,6 @@
 package goengine
 
+// NopMetrics is default Metrics handler in case nil is passed
 var NopMetrics Metrics = &nopMetrics{}
 
 type nopMetrics struct{}

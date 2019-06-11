@@ -9,6 +9,7 @@ import (
 
 const namespace = "goengine"
 
+// Metrics is an object for exposing prometheus metrics
 type Metrics struct {
 	notificationCounter            *prometheus.CounterVec
 	notificationQueueDuration      *prometheus.HistogramVec
@@ -16,6 +17,7 @@ type Metrics struct {
 	notificationStartTimes         map[string]time.Time
 }
 
+// NewMetrics instantiate and return an object of Metrics
 func NewMetrics() *Metrics {
 	return &Metrics{
 		// notificationCounter is used to expose 'notification_count' metric
@@ -66,7 +68,7 @@ func (m *Metrics) RegisterMetrics(registry *prometheus.Registry) error {
 	return registry.Register(m.notificationProcessingDuration)
 }
 
-// ReceivedNotification
+// ReceivedNotification counts received notifications
 func (m *Metrics) ReceivedNotification(isNotification bool) {
 	labels := prometheus.Labels{"is_notification": strconv.FormatBool(isNotification)}
 	m.notificationCounter.With(labels).Inc()
