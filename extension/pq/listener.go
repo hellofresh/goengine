@@ -98,9 +98,9 @@ func (s *Listener) Listen(ctx context.Context, exec sql.ProjectionTrigger) error
 	for {
 		select {
 		case n := <-listener.Notify:
+			s.metrics.ReceivedNotification(n != nil)
 			// Unmarshal the notification
 			notification := s.unmarshalNotification(n)
-			s.metrics.ReceivedNotification(notification != nil)
 
 			// Execute the notification to be projected
 			if err := exec(ctx, notification); err != nil {

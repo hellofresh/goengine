@@ -1,16 +1,20 @@
 package prometheus
 
 import (
+	"fmt"
 	"github.com/hellofresh/goengine/driver/sql"
 	"github.com/prometheus/client_golang/prometheus"
+	"strconv"
+	"time"
 )
 
 const namespace = "goengine"
 
 type Metrics struct {
-	notificationCounter        *prometheus.CounterVec
-	queueDuration              *prometheus.HistogramVec
-	notificationHandleDuration *prometheus.HistogramVec
+	notificationCounter            *prometheus.CounterVec
+	notificationQueueDuration      *prometheus.HistogramVec
+	notificationProcessingDuration *prometheus.HistogramVec
+	notificationStartTimes         map[string]time.Time
 }
 
 func NewMetrics() *Metrics {
@@ -22,10 +26,10 @@ func NewMetrics() *Metrics {
 				Name:      "notification_count",
 				Help:      "counter for number of notifications received",
 			},
-			[]string{"is_event"},
+			[]string{"is_notification"},
 		),
 		// queueDuration is used to expose 'queue_duration_seconds' metrics
-		queueDuration: prometheus.NewHistogramVec(
+		notificationQueueDuration: prometheus.NewHistogramVec(
 			prometheus.HistogramOpts{
 				Namespace: namespace,
 				Name:      "queue_duration_seconds",
@@ -35,15 +39,15 @@ func NewMetrics() *Metrics {
 			[]string{"retry", "success"},
 		),
 
-		// notificationHandleDuration is used to expose 'notification_handle_duration_seconds' metrics
-		notificationHandleDuration: prometheus.NewHistogramVec(
+		// notificationProcessingDuration is used to expose 'notification_handle_duration_seconds' metrics
+		notificationProcessingDuration: prometheus.NewHistogramVec(
 			prometheus.HistogramOpts{
 				Namespace: namespace,
-				Name:      "notification_handle_duration_seconds",
-				Help:      "histogram of event handled latencies",
+				Name:      "notification_processing_duration_seconds",
+				Help:      "histogram of notifications handled latencies",
 				Buckets:   []float64{0.1, 0.5, 0.9, 0.99}, //buckets for histogram
 			},
-			[]string{"retry", "success"},
+			[]string{"success", "retry"},
 		),
 	}
 }
@@ -55,30 +59,39 @@ func (m *Metrics) RegisterMetrics(registry *prometheus.Registry) error {
 		return err
 	}
 
-	err = registry.Register(m.queueDuration)
+	err = registry.Register(m.notificationQueueDuration)
 	if err != nil {
 		return err
 	}
 
-	return registry.Register(m.notificationHandleDuration)
+	return registry.Register(m.notificationProcessingDuration)
 }
 
 // ReceivedNotification
 func (m *Metrics) ReceivedNotification(isNotification bool) {
-
+	labels := prometheus.Labels{"is_notification": strconv.FormatBool(isNotification)}
+	m.notificationCounter.With(labels).Inc()
 }
 
 // QueueNotification returns http handler for prometheus
 func (m *Metrics) QueueNotification(notification *sql.ProjectionNotification) {
-
+	key := "q" + fmt.Sprintf("%p", notification)
+	m.notificationStartTimes[key] = time.Now()
 }
 
 // StartNotificationProcessing is used to record start time of notification processing
 func (m *Metrics) StartNotificationProcessing(notification *sql.ProjectionNotification) {
-
+	key := "p" + fmt.Sprintf("%p", notification)
+	m.notificationStartTimes[key] = time.Now()
 }
 
 // FinishNotificationProcessing is used to observe end time of notification queue and processing time
-func (m *Metrics) FinishNotificationProcessing(notification *sql.ProjectionNotification) {
+func (m *Metrics) FinishNotificationProcessing(notification *sql.ProjectionNotification, success bool, retry bool) {
+	memAddress := fmt.Sprintf("%p", notification)
+	queueStartTime := m.notificationStartTimes["q"+memAddress]
+	processingStartTime := m.notificationStartTimes["p"+memAddress]
+	labels := prometheus.Labels{"success": strconv.FormatBool(success), "retry": strconv.FormatBool(retry)}
 
+	m.notificationQueueDuration.With(labels).Observe(time.Since(queueStartTime).Seconds())
+	m.notificationProcessingDuration.With(labels).Observe(time.Since(processingStartTime).Seconds())
 }

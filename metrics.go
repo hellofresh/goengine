@@ -10,6 +10,6 @@ type (
 		ReceivedNotification(isNotification bool)
 		QueueNotification(notification *sql.ProjectionNotification)
 		StartNotificationProcessing(notification *sql.ProjectionNotification)
-		FinishNotificationProcessing(notification *sql.ProjectionNotification)
+		FinishNotificationProcessing(notification *sql.ProjectionNotification, success bool, retry bool)
 	}
 )
