@@ -9,11 +9,12 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
+	"github.com/golang/protobuf/proto"
 	"github.com/hellofresh/goengine"
 	"github.com/hellofresh/goengine/metadata"
 	"github.com/hellofresh/goengine/mocks"
-	"github.com/hellofresh/goengine/strategy/json/internal"
-	"github.com/hellofresh/goengine/strategy/json/sql/postgres"
+	"github.com/hellofresh/goengine/strategy/protobuf/internal"
+	"github.com/hellofresh/goengine/strategy/protobuf/sql/postgres"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -53,11 +54,6 @@ func TestGenerateTableName(t *testing.T) {
 				"no escaping: letters",
 				"order",
 				"events_order",
-			},
-			{
-				"no escaping: letters, numbers",
-				"order1",
-				"events_order1",
 			},
 			{
 				"no escaping: letters, numbers",
@@ -172,7 +168,13 @@ func TestPrepareData(t *testing.T) {
 		expectedColumns := make([]interface{}, 0, 3*5)
 		for i := range messages {
 			id := goengine.GenerateUUID()
-			payload := []byte(fmt.Sprintf(`{"Name":"%d","Balance":0}`, i))
+			simplePayload := &internal.Simple{
+				Test:  fmt.Sprintf("Payload%d", i),
+				Order: int32(i),
+			}
+			payload, _ := proto.Marshal(simplePayload)
+
+			//payload := []byte{0xa, 0x4, 0x74, 0x65, 0x73, 0x74, 0x10, 0x1}
 			payloadType := fmt.Sprintf("Payload%d", i)
 			meta := metadata.FromMap(map[string]interface{}{"type": "m", "version": i})
 			createdAt := time.Now()
@@ -209,7 +211,7 @@ func TestPrepareData(t *testing.T) {
 
 		expectedErr := errors.New("converter error")
 
-		payload := []byte(`{"Name":"alice","Balance":0}`)
+		payload := []byte{0xa, 0x4, 0x74, 0x65, 0x73, 0x74, 0x10, 0x1}
 
 		messages := []goengine.Message{
 			mocks.NewDummyMessage(

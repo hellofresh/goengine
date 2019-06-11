@@ -67,12 +67,12 @@ func (a *aggregateChangedEventStream) Message() (goengine.Message, int64, error)
 		eventNumber  int64
 		eventID      goengine.UUID
 		eventName    string
-		jsonPayload  []byte
+		payloadData  []byte
 		jsonMetadata []byte
 		createdAt    time.Time
 	)
 
-	err := a.rows.Scan(&eventNumber, &eventID, &eventName, &jsonPayload, &jsonMetadata, &createdAt)
+	err := a.rows.Scan(&eventNumber, &eventID, &eventName, &payloadData, &jsonMetadata, &createdAt)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -82,7 +82,7 @@ func (a *aggregateChangedEventStream) Message() (goengine.Message, int64, error)
 		return nil, 0, err
 	}
 
-	payload, err := a.payloadFactory.CreatePayload(eventName, jsonPayload)
+	payload, err := a.payloadFactory.CreatePayload(eventName, payloadData)
 	if err != nil {
 		return nil, 0, err
 	}

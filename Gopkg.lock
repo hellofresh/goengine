@@ -30,6 +30,14 @@
   version = "v1.2.0"
 
 [[projects]]
+  digest = "1:318f1c959a8a740366fce4b1e1eb2fd914036b4af58fbd0a003349b305f118ad"
+  name = "github.com/golang/protobuf"
+  packages = ["proto"]
+  pruneopts = "UT"
+  revision = "b5d812f8a3706043e23a9cd5babf2e5423744d30"
+  version = "v1.3.1"
+
+[[projects]]
   digest = "1:3a26588bc48b96825977c1b3df964f8fd842cd6860cc26370588d3563433cf11"
   name = "github.com/google/uuid"
   packages = ["."]
@@ -158,6 +166,7 @@
     "github.com/DATA-DOG/go-sqlmock",
     "github.com/golang/mock/gomock",
     "github.com/golang/mock/mockgen",
+    "github.com/golang/protobuf/proto",
     "github.com/google/uuid",
     "github.com/lib/pq",
     "github.com/mailru/easyjson",
@@ -170,6 +179,7 @@
     "github.com/stretchr/testify/require",
     "github.com/stretchr/testify/suite",
     "go.uber.org/zap",
+    "go.uber.org/zap/zapcore",
     "go.uber.org/zap/zaptest/observer",
   ]
   solver-name = "gps-cdcl"

@@ -8,7 +8,7 @@ import (
 	"github.com/hellofresh/goengine"
 	"github.com/hellofresh/goengine/driver/sql"
 	"github.com/hellofresh/goengine/driver/sql/postgres"
-	"github.com/hellofresh/goengine/strategy/json/internal"
+	"github.com/hellofresh/goengine/strategy/protobuf/internal"
 )
 
 var (
@@ -42,7 +42,7 @@ func (s *SingleStreamStrategy) CreateSchema(tableName string) []string {
     no BIGSERIAL,
     event_id UUID NOT NULL,
     event_name VARCHAR(100) NOT NULL,
-    payload JSON NOT NULL,
+    payload BYTEA NOT NULL,
     metadata JSONB NOT NULL,
     created_at TIMESTAMP(6) NOT NULL,
     PRIMARY KEY (no),
