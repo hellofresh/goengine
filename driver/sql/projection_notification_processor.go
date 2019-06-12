@@ -131,10 +131,10 @@ func (b *projectionNotificationProcessor) startProcessor(ctx context.Context, ha
 					e.Any("notification", notification)
 				})
 
-				b.metrics.FinishNotificationProcessing(notification, false, false)
+				b.metrics.FinishNotificationProcessing(notification, false)
 
 			} else {
-				b.metrics.FinishNotificationProcessing(notification, true, false)
+				b.metrics.FinishNotificationProcessing(notification, true)
 			}
 		}
 	}

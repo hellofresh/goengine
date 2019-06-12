@@ -8,5 +8,5 @@ type nopMetrics struct{}
 func (nm *nopMetrics) ReceivedNotification(isNotification bool)                         {}
 func (nm *nopMetrics) QueueNotification(notification *ProjectionNotification)           {}
 func (nm *nopMetrics) StartNotificationProcessing(notification *ProjectionNotification) {}
-func (nm *nopMetrics) FinishNotificationProcessing(notification *ProjectionNotification, success bool, retry bool) {
+func (nm *nopMetrics) FinishNotificationProcessing(notification *ProjectionNotification, success bool) {
 }

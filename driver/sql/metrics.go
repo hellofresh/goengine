@@ -6,6 +6,6 @@ type (
 		ReceivedNotification(isNotification bool)
 		QueueNotification(notification *ProjectionNotification)
 		StartNotificationProcessing(notification *ProjectionNotification)
-		FinishNotificationProcessing(notification *ProjectionNotification, success bool, retry bool)
+		FinishNotificationProcessing(notification *ProjectionNotification, success bool)
 	}
 )

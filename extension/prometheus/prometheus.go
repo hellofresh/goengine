@@ -40,7 +40,7 @@ func NewMetrics() *Metrics {
 				Help:      "histogram of queue latencies",
 				Buckets:   []float64{0.1, 0.5, 0.9, 0.99}, //buckets for histogram
 			},
-			[]string{"retry", "success"},
+			[]string{"success"},
 		),
 
 		// notificationProcessingDuration is used to expose 'notification_handle_duration_seconds' metrics
@@ -51,7 +51,7 @@ func NewMetrics() *Metrics {
 				Help:      "histogram of notifications handled latencies",
 				Buckets:   []float64{0.1, 0.5, 0.9, 0.99}, //buckets for histogram
 			},
-			[]string{"success", "retry"},
+			[]string{"success"},
 		),
 	}
 }
@@ -90,11 +90,11 @@ func (m *Metrics) StartNotificationProcessing(notification *sql.ProjectionNotifi
 }
 
 // FinishNotificationProcessing is used to observe end time of notification queue and processing time
-func (m *Metrics) FinishNotificationProcessing(notification *sql.ProjectionNotification, success bool, retry bool) {
+func (m *Metrics) FinishNotificationProcessing(notification *sql.ProjectionNotification, success bool) {
 	memAddress := fmt.Sprintf("%p", notification)
 	queueStartTime, _ := m.notificationStartTimes.Load("q" + memAddress)
 	processingStartTime, _ := m.notificationStartTimes.Load("p" + memAddress)
-	labels := prometheus.Labels{"success": strconv.FormatBool(success), "retry": strconv.FormatBool(retry)}
+	labels := prometheus.Labels{"success": strconv.FormatBool(success)}
 
 	m.notificationQueueDuration.With(labels).Observe(time.Since(queueStartTime.(time.Time)).Seconds())
 	m.notificationProcessingDuration.With(labels).Observe(time.Since(processingStartTime.(time.Time)).Seconds())
