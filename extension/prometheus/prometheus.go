@@ -10,7 +10,11 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-const namespace = "goengine"
+const (
+	namespace                       = "goengine"
+	notificationQueueKeyPrefix      = "q"
+	notificationProcessingKeyPrefix = "p"
+)
 
 // Metrics is an object for exposing prometheus metrics
 type Metrics struct {
@@ -78,24 +82,38 @@ func (m *Metrics) ReceivedNotification(isNotification bool) {
 }
 
 // QueueNotification returns http handler for prometheus
-func (m *Metrics) QueueNotification(notification *sql.ProjectionNotification) {
-	key := "q" + fmt.Sprintf("%p", notification)
-	m.notificationStartTimes.Store(key, time.Now())
+func (m *Metrics) QueueNotification(notification *sql.ProjectionNotification) bool {
+	return m.storeStartTime(notificationQueueKeyPrefix, notification)
 }
 
 // StartNotificationProcessing is used to record start time of notification processing
-func (m *Metrics) StartNotificationProcessing(notification *sql.ProjectionNotification) {
-	key := "p" + fmt.Sprintf("%p", notification)
-	m.notificationStartTimes.Store(key, time.Now())
+func (m *Metrics) StartNotificationProcessing(notification *sql.ProjectionNotification) bool {
+	return m.storeStartTime(notificationProcessingKeyPrefix, notification)
 }
 
 // FinishNotificationProcessing is used to observe end time of notification queue and processing time
-func (m *Metrics) FinishNotificationProcessing(notification *sql.ProjectionNotification, success bool) {
+func (m *Metrics) FinishNotificationProcessing(notification *sql.ProjectionNotification, success bool) bool {
 	memAddress := fmt.Sprintf("%p", notification)
-	queueStartTime, _ := m.notificationStartTimes.Load("q" + memAddress)
-	processingStartTime, _ := m.notificationStartTimes.Load("p" + memAddress)
 	labels := prometheus.Labels{"success": strconv.FormatBool(success)}
 
-	m.notificationQueueDuration.With(labels).Observe(time.Since(queueStartTime.(time.Time)).Seconds())
-	m.notificationProcessingDuration.With(labels).Observe(time.Since(processingStartTime.(time.Time)).Seconds())
+	queueStartTime, queueOk := m.notificationStartTimes.Load(notificationQueueKeyPrefix + memAddress)
+
+	processingStartTime, processingOk := m.notificationStartTimes.Load(notificationProcessingKeyPrefix + memAddress)
+
+	if processingOk && queueOk {
+		m.notificationProcessingDuration.With(labels).Observe(time.Since(processingStartTime.(time.Time)).Seconds())
+		m.notificationQueueDuration.With(labels).Observe(time.Since(queueStartTime.(time.Time)).Seconds())
+		return true
+	}
+
+	return false
+}
+
+// storeStartTime stores the start time against each notification only if it's not already existent
+func (m *Metrics) storeStartTime(prefix string, notification *sql.ProjectionNotification) bool {
+	key := prefix + fmt.Sprintf("%p", notification)
+
+	_, alreadyExists := m.notificationStartTimes.LoadOrStore(key, time.Now())
+
+	return !alreadyExists
 }

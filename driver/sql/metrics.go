@@ -4,8 +4,8 @@ type (
 	// Metrics a structured metrics interface
 	Metrics interface {
 		ReceivedNotification(isNotification bool)
-		QueueNotification(notification *ProjectionNotification)
-		StartNotificationProcessing(notification *ProjectionNotification)
-		FinishNotificationProcessing(notification *ProjectionNotification, success bool)
+		QueueNotification(notification *ProjectionNotification) bool
+		StartNotificationProcessing(notification *ProjectionNotification) bool
+		FinishNotificationProcessing(notification *ProjectionNotification, success bool) bool
 	}
 )

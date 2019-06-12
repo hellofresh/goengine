@@ -1,34 +1,43 @@
 // +build unit
 
-package prometheus
+package prometheus_test
 
 import (
-	"fmt"
 	"testing"
-	"time"
 
+	"github.com/hellofresh/goengine/extension/prometheus"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/hellofresh/goengine/driver/sql"
 )
 
 func TestPrometheusMetrics(t *testing.T) {
-	metrics := NewMetrics()
+	metrics := prometheus.NewMetrics()
 
 	testSQLProjection := sql.ProjectionNotification{
 		No:          1,
 		AggregateID: "C56A4180-65AA-42EC-A945-5FD21DEC0538",
 	}
 
-	metrics.QueueNotification(&testSQLProjection)
-	metrics.StartNotificationProcessing(&testSQLProjection)
+	ok := metrics.FinishNotificationProcessing(&testSQLProjection, true)
+	assert.False(t, ok)
 
-	memAddress := fmt.Sprintf("%p", &testSQLProjection)
-	queueStartTime, ok := metrics.notificationStartTimes.Load("q" + memAddress)
+	ok = metrics.QueueNotification(&testSQLProjection)
 	assert.True(t, ok)
-	assert.IsType(t, time.Time{}, queueStartTime)
 
-	processingStartTime, _ := metrics.notificationStartTimes.Load("p" + memAddress)
+	ok = metrics.QueueNotification(&testSQLProjection)
+	assert.False(t, ok)
+
+	ok = metrics.FinishNotificationProcessing(&testSQLProjection, true)
+	assert.False(t, ok)
+
+	ok = metrics.StartNotificationProcessing(&testSQLProjection)
 	assert.True(t, ok)
-	assert.IsType(t, time.Time{}, processingStartTime)
+
+	ok = metrics.StartNotificationProcessing(&testSQLProjection)
+	assert.False(t, ok)
+
+	ok = metrics.FinishNotificationProcessing(&testSQLProjection, true)
+	assert.True(t, ok)
+
 }
