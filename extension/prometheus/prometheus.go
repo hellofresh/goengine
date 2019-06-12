@@ -2,6 +2,7 @@ package prometheus
 
 import (
 	"fmt"
+	"github.com/hellofresh/goengine"
 	"strconv"
 	"sync"
 	"time"
@@ -22,6 +23,7 @@ type Metrics struct {
 	notificationQueueDuration      *prometheus.HistogramVec
 	notificationProcessingDuration *prometheus.HistogramVec
 	notificationStartTimes         sync.Map
+	logger                         goengine.Logger
 }
 
 // NewMetrics instantiate and return an object of Metrics
@@ -60,6 +62,10 @@ func NewMetrics() *Metrics {
 	}
 }
 
+func (m *Metrics) SetLogger(logger goengine.Logger) {
+	m.logger = logger
+}
+
 // RegisterMetrics returns http handler for prometheus
 func (m *Metrics) RegisterMetrics(registry *prometheus.Registry) error {
 	err := registry.Register(m.notificationCounter)
@@ -82,31 +88,47 @@ func (m *Metrics) ReceivedNotification(isNotification bool) {
 }
 
 // QueueNotification returns http handler for prometheus
-func (m *Metrics) QueueNotification(notification *sql.ProjectionNotification) bool {
-	return m.storeStartTime(notificationQueueKeyPrefix, notification)
+func (m *Metrics) QueueNotification(notification *sql.ProjectionNotification) {
+	if !m.storeStartTime(notificationQueueKeyPrefix, notification) {
+		m.logger.Warn("notification already queued", func(e goengine.LoggerEntry) {
+			e.Any("notification", notification)
+		})
+	}
+
 }
 
 // StartNotificationProcessing is used to record start time of notification processing
-func (m *Metrics) StartNotificationProcessing(notification *sql.ProjectionNotification) bool {
-	return m.storeStartTime(notificationProcessingKeyPrefix, notification)
+func (m *Metrics) StartNotificationProcessing(notification *sql.ProjectionNotification) {
+	if !m.storeStartTime(notificationProcessingKeyPrefix, notification) {
+		m.logger.Warn("notification processing already started", func(e goengine.LoggerEntry) {
+			e.Any("notification", notification)
+		})
+	}
 }
 
 // FinishNotificationProcessing is used to observe end time of notification queue and processing time
-func (m *Metrics) FinishNotificationProcessing(notification *sql.ProjectionNotification, success bool) bool {
+func (m *Metrics) FinishNotificationProcessing(notification *sql.ProjectionNotification, success bool) {
 	memAddress := fmt.Sprintf("%p", notification)
 	labels := prometheus.Labels{"success": strconv.FormatBool(success)}
 
-	queueStartTime, queueOk := m.notificationStartTimes.Load(notificationQueueKeyPrefix + memAddress)
-
-	processingStartTime, processingOk := m.notificationStartTimes.Load(notificationProcessingKeyPrefix + memAddress)
-
-	if processingOk && queueOk {
-		m.notificationProcessingDuration.With(labels).Observe(time.Since(processingStartTime.(time.Time)).Seconds())
+	if queueStartTime, ok := m.notificationStartTimes.Load(notificationQueueKeyPrefix + memAddress); ok {
 		m.notificationQueueDuration.With(labels).Observe(time.Since(queueStartTime.(time.Time)).Seconds())
-		return true
+
+	} else {
+
+		m.logger.Warn("notification queue start time not found", func(e goengine.LoggerEntry) {
+			e.Any("notification", notification)
+		})
 	}
 
-	return false
+	if processingStartTime, ok := m.notificationStartTimes.Load(notificationProcessingKeyPrefix + memAddress); ok {
+		m.notificationProcessingDuration.With(labels).Observe(time.Since(processingStartTime.(time.Time)).Seconds())
+	} else {
+		m.logger.Warn("notification processing start time not found", func(e goengine.LoggerEntry) {
+			e.Any("notification", notification)
+		})
+	}
+
 }
 
 // storeStartTime stores the start time against each notification only if it's not already existent
@@ -114,6 +136,5 @@ func (m *Metrics) storeStartTime(prefix string, notification *sql.ProjectionNoti
 	key := prefix + fmt.Sprintf("%p", notification)
 
 	_, alreadyExists := m.notificationStartTimes.LoadOrStore(key, time.Now())
-
 	return !alreadyExists
 }
