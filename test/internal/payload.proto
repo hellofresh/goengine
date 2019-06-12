@@ -1,0 +1,8 @@
+syntax = "proto3";
+
+package internal;
+
+message Payload {
+    string Name = 1;
+    int32 Balance = 2;
+}

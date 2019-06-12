@@ -68,7 +68,27 @@ func (p *PayloadTransformer) ConvertPayload(payload interface{}) (string, []byte
 		return "", nil, err
 	}
 
-	message, ok := payload.(proto.Message)
+	payloadType, found := p.types[payloadName]
+	if !found {
+		return "", nil, ErrUnknownPayloadType
+	}
+
+	if payloadType.isPtr {
+		message, ok := payload.(proto.Message)
+		if !ok {
+			return "", nil, ErrNotProtobufPayload
+		}
+		data, err := proto.Marshal(message)
+		if err != nil {
+			return "", nil, ErrPayloadCannotBeSerialized
+		}
+
+		return payloadName, data, nil
+	}
+
+	vp := reflect.New(payloadType.reflectionType) // ptr to
+	vp.Elem().Set(reflect.ValueOf(payload))
+	message, ok := vp.Interface().(proto.Message)
 	if !ok {
 		return "", nil, ErrNotProtobufPayload
 	}
