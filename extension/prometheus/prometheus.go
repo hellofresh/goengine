@@ -20,8 +20,8 @@ const (
 // Metrics is an object for exposing prometheus metrics
 type Metrics struct {
 	notificationCounter            *prometheus.CounterVec
-	notificationQueueDuration      *prometheus.HistogramVec
-	notificationProcessingDuration *prometheus.HistogramVec
+	notificationQueueDuration      prometheus.ObserverVec
+	notificationProcessingDuration prometheus.ObserverVec
 	notificationStartTimes         sync.Map
 	logger                         goengine.Logger
 }
@@ -59,9 +59,11 @@ func NewMetrics() *Metrics {
 			},
 			[]string{"success"},
 		),
+		logger: goengine.NopLogger,
 	}
 }
 
+// SetLogger sets the logger for metrics
 func (m *Metrics) SetLogger(logger goengine.Logger) {
 	m.logger = logger
 }
@@ -128,7 +130,6 @@ func (m *Metrics) FinishNotificationProcessing(notification *sql.ProjectionNotif
 			e.Any("notification", notification)
 		})
 	}
-
 }
 
 // storeStartTime stores the start time against each notification only if it's not already existent
