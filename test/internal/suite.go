@@ -3,11 +3,13 @@ package internal
 import (
 	"testing"
 
-	"github.com/hellofresh/goengine"
-	logWrapper "github.com/hellofresh/goengine/extension/logrus"
 	"github.com/sirupsen/logrus"
 	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/suite"
+
+	"github.com/hellofresh/goengine"
+	logWrapper "github.com/hellofresh/goengine/extension/logrus"
+	"github.com/hellofresh/goengine/extension/prometheus"
 )
 
 // Suite is an extension of github.com/stretchr/testify/suite.Suite
@@ -16,6 +18,8 @@ type Suite struct {
 
 	Logger     *logrus.Logger
 	LoggerHook *test.Hook
+
+	Metrics *prometheus.Metrics
 }
 
 // SetupTest set logrus output to use the current testing.T
@@ -25,6 +29,8 @@ func (s *Suite) SetupTest() {
 	s.Logger.SetOutput(NewLogWriter(s.T()))
 
 	s.LoggerHook = test.NewLocal(s.Logger)
+
+	s.Metrics = prometheus.NewMetrics(nil)
 }
 
 // TearDownTest cleanup suite variables

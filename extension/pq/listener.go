@@ -22,7 +22,8 @@ type Listener struct {
 	minReconnectInterval time.Duration
 	maxReconnectInterval time.Duration
 
-	logger goengine.Logger
+	logger  goengine.Logger
+	metrics sql.Metrics
 }
 
 // NewListener returns a new notification listener
@@ -32,6 +33,7 @@ func NewListener(
 	minReconnectInterval time.Duration,
 	maxReconnectInterval time.Duration,
 	logger goengine.Logger,
+	metrics sql.Metrics,
 ) (*Listener, error) {
 	switch {
 	case strings.TrimSpace(dbDSN) == "":
@@ -48,12 +50,17 @@ func NewListener(
 		logger = goengine.NopLogger
 	}
 
+	if metrics == nil {
+		metrics = sql.NopMetrics
+	}
+
 	return &Listener{
 		dbDSN:                dbDSN,
 		dbChannel:            dbChannel,
 		minReconnectInterval: minReconnectInterval,
 		maxReconnectInterval: maxReconnectInterval,
 		logger:               logger,
+		metrics:              metrics,
 	}, nil
 }
 
@@ -83,6 +90,7 @@ func (s *Listener) Listen(ctx context.Context, exec sql.ProjectionTrigger) error
 
 	// Execute an initial run of the projection.
 	// This is done after db listen is started to avoid losing a set of messages while the Listener creates a db connection.
+	s.metrics.ReceivedNotification(false)
 	if err := exec(ctx, nil); err != nil {
 		return err
 	}
@@ -90,6 +98,7 @@ func (s *Listener) Listen(ctx context.Context, exec sql.ProjectionTrigger) error
 	for {
 		select {
 		case n := <-listener.Notify:
+			s.metrics.ReceivedNotification(n != nil)
 			// Unmarshal the notification
 			notification := s.unmarshalNotification(n)
 

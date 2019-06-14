@@ -181,6 +181,7 @@ func setup(
 			return driverSQL.ProjectionFail
 		},
 		goengine.NopLogger,
+		driverSQL.NopMetrics,
 	)
 	require.NoError(b, err, "failed to create aggregate projector")
 

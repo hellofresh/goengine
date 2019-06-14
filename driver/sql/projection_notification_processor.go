@@ -20,7 +20,8 @@ type (
 		queueProcessors int
 		queueBuffer     int
 
-		logger goengine.Logger
+		logger  goengine.Logger
+		metrics Metrics
 	}
 
 	// ProcessHandler is a func used to trigger a notification but with the addition of providing a Trigger func so
@@ -29,7 +30,7 @@ type (
 )
 
 // newBackgroundProcessor create a new projectionNotificationProcessor
-func newBackgroundProcessor(queueProcessors, queueBuffer int, logger goengine.Logger) (*projectionNotificationProcessor, error) {
+func newBackgroundProcessor(queueProcessors, queueBuffer int, logger goengine.Logger, metrics Metrics) (*projectionNotificationProcessor, error) {
 	if queueProcessors <= 0 {
 		return nil, errors.New("queueProcessors must be greater then zero")
 	}
@@ -39,11 +40,15 @@ func newBackgroundProcessor(queueProcessors, queueBuffer int, logger goengine.Lo
 	if logger == nil {
 		logger = goengine.NopLogger
 	}
+	if metrics == nil {
+		metrics = NopMetrics
+	}
 
 	return &projectionNotificationProcessor{
 		queueProcessors: queueProcessors,
 		queueBuffer:     queueBuffer,
 		logger:          logger,
+		metrics:         metrics,
 	}, nil
 }
 
@@ -104,6 +109,8 @@ func (b *projectionNotificationProcessor) Queue(ctx context.Context, notificatio
 		return errors.New("goengine: unable to queue notification because the processor was stopped")
 	}
 
+	b.metrics.QueueNotification(notification)
+
 	b.queue <- notification
 	return nil
 }
@@ -117,11 +124,17 @@ func (b *projectionNotificationProcessor) startProcessor(ctx context.Context, ha
 			return
 		case notification := <-b.queue:
 			// Execute the notification
+			b.metrics.StartNotificationProcessing(notification)
 			if err := handler(ctx, notification, b.Queue); err != nil {
 				b.logger.Error("the ProcessHandler produced an error", func(e goengine.LoggerEntry) {
 					e.Error(err)
 					e.Any("notification", notification)
 				})
+
+				b.metrics.FinishNotificationProcessing(notification, false)
+
+			} else {
+				b.metrics.FinishNotificationProcessing(notification, true)
 			}
 		}
 	}
