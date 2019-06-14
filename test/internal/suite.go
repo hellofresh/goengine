@@ -30,7 +30,7 @@ func (s *Suite) SetupTest() {
 
 	s.LoggerHook = test.NewLocal(s.Logger)
 
-	s.Metrics = prometheus.NewMetrics()
+	s.Metrics = prometheus.NewMetrics(nil)
 }
 
 // TearDownTest cleanup suite variables

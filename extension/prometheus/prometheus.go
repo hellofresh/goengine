@@ -28,7 +28,10 @@ type Metrics struct {
 }
 
 // NewMetrics instantiate and return an object of Metrics
-func NewMetrics() *Metrics {
+func NewMetrics(logger goengine.Logger) *Metrics {
+	if logger == nil {
+		logger = goengine.NopLogger
+	}
 	return &Metrics{
 		// notificationCounter is used to expose 'notification_count' metric
 		notificationCounter: prometheus.NewCounterVec(
@@ -60,13 +63,8 @@ func NewMetrics() *Metrics {
 			},
 			[]string{"success"},
 		),
-		logger: goengine.NopLogger,
+		logger: logger,
 	}
-}
-
-// SetLogger sets the logger for metrics
-func (m *Metrics) SetLogger(logger goengine.Logger) {
-	m.logger = logger
 }
 
 // RegisterMetrics returns http handler for prometheus
@@ -116,6 +114,7 @@ func (m *Metrics) FinishNotificationProcessing(notification *sql.ProjectionNotif
 
 	if queueStartTime, ok := m.notificationStartTimes.Load(notificationQueueKeyPrefix + memAddress); ok {
 		m.notificationQueueDuration.With(labels).Observe(time.Since(queueStartTime.(time.Time)).Seconds())
+		m.notificationStartTimes.Delete(notificationQueueKeyPrefix + memAddress)
 
 	} else {
 
@@ -126,6 +125,7 @@ func (m *Metrics) FinishNotificationProcessing(notification *sql.ProjectionNotif
 
 	if processingStartTime, ok := m.notificationStartTimes.Load(notificationProcessingKeyPrefix + memAddress); ok {
 		m.notificationProcessingDuration.With(labels).Observe(time.Since(processingStartTime.(time.Time)).Seconds())
+		m.notificationStartTimes.Delete(notificationProcessingKeyPrefix + memAddress)
 	} else {
 		m.logger.Warn("notification processing start time not found", func(e goengine.LoggerEntry) {
 			e.Any("notification", notification)
