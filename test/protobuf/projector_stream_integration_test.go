@@ -103,6 +103,7 @@ func (s *streamProjectorTestSuite) TestRunAndListen() {
 		time.Millisecond,
 		time.Second,
 		s.GetLogger(),
+		s.Metrics,
 	)
 	s.Require().NoError(err)
 

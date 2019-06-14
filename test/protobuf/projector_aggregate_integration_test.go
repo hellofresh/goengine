@@ -94,6 +94,7 @@ func (s *aggregateProjectorTestSuite) TestRunAndListen() {
 		time.Millisecond,
 		time.Second,
 		s.GetLogger(),
+		s.Metrics,
 	)
 	s.Require().NoError(err)
 
@@ -110,6 +111,7 @@ func (s *aggregateProjectorTestSuite) TestRunAndListen() {
 			return driverSQL.ProjectionFail
 		},
 		s.GetLogger(),
+		s.Metrics,
 	)
 	s.Require().NoError(err, "failed to create projector")
 
@@ -207,6 +209,7 @@ func (s *aggregateProjectorTestSuite) TestRunAndListen() {
 				return driverSQL.ProjectionFail
 			},
 			s.GetLogger(),
+			s.Metrics,
 		)
 		s.Require().NoError(err, "failed to create projector")
 
@@ -261,6 +264,7 @@ func (s *aggregateProjectorTestSuite) TestRun() {
 			return driverSQL.ProjectionFail
 		},
 		s.GetLogger(),
+		s.Metrics,
 	)
 	s.Require().NoError(err, "failed to create projector")
 
