@@ -21,8 +21,8 @@ const (
 // Metrics is an object for exposing prometheus metrics
 type Metrics struct {
 	notificationCounter            *prometheus.CounterVec
-	notificationQueueDuration      prometheus.ObserverVec
-	notificationProcessingDuration prometheus.ObserverVec
+	notificationQueueDuration      *prometheus.HistogramVec
+	notificationProcessingDuration *prometheus.HistogramVec
 	notificationStartTimes         sync.Map
 	logger                         goengine.Logger
 }
