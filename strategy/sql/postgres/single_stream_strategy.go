@@ -1,6 +1,7 @@
 package postgres
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
 	"strings"
@@ -8,7 +9,8 @@ import (
 	"github.com/hellofresh/goengine"
 	"github.com/hellofresh/goengine/driver/sql"
 	"github.com/hellofresh/goengine/driver/sql/postgres"
-	"github.com/hellofresh/goengine/strategy/json/internal"
+	"github.com/hellofresh/goengine/strategy"
+	"github.com/hellofresh/goengine/strategy/internal"
 )
 
 var (
@@ -16,6 +18,8 @@ var (
 	_ sql.PersistenceStrategy = &SingleStreamStrategy{}
 
 	tableNameInvalidCharRegex = regexp.MustCompile("[^a-z0-9_]+")
+	// ErrUnknownMessagePayloadConverter occurs when CreateSchema doesn't know the MessagePayloadConverter
+	ErrUnknownMessagePayloadConverter = errors.New("Unknown MessagePayloadConverter")
 )
 
 // SingleStreamStrategy struct represents eventstore with single stream
@@ -36,13 +40,24 @@ func NewSingleStreamStrategy(converter goengine.MessagePayloadConverter) (sql.Pe
 func (s *SingleStreamStrategy) CreateSchema(tableName string) []string {
 	tableName = postgres.QuoteIdentifier(tableName)
 
+	var payloadDataType string
+	switch s.converter.(type) {
+	case *strategy.ProtobufPayloadTransformer:
+		payloadDataType = "BYTEA"
+	case *strategy.JSONPayloadTransformer:
+		payloadDataType = "JSONB"
+	default:
+		// Let the payloadTransformer deal with []byte data
+		payloadDataType = "JSONB"
+	}
+
 	statements := make([]string, 3)
 	statements[0] = fmt.Sprintf(
 		`CREATE TABLE %s (
     no BIGSERIAL,
     event_id UUID NOT NULL,
     event_name VARCHAR(100) NOT NULL,
-    payload JSON NOT NULL,
+    payload %s NOT NULL,
     metadata JSONB NOT NULL,
     created_at TIMESTAMP(6) NOT NULL,
     PRIMARY KEY (no),
@@ -52,6 +67,7 @@ func (s *SingleStreamStrategy) CreateSchema(tableName string) []string {
     UNIQUE (event_id)
 );`,
 		tableName,
+		payloadDataType,
 	)
 	statements[1] = fmt.Sprintf(
 		`CREATE UNIQUE INDEX ON %s

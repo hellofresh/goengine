@@ -20,7 +20,7 @@ import (
 	"github.com/hellofresh/goengine/metadata"
 	"github.com/hellofresh/goengine/mocks"
 	mockSQL "github.com/hellofresh/goengine/mocks/driver/sql"
-	strategyPostgres "github.com/hellofresh/goengine/strategy/json/sql/postgres"
+	strategyPostgres "github.com/hellofresh/goengine/strategy/sql/postgres"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

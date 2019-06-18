@@ -14,9 +14,9 @@ import (
 	driverSQL "github.com/hellofresh/goengine/driver/sql"
 	"github.com/hellofresh/goengine/driver/sql/postgres"
 	"github.com/hellofresh/goengine/metadata"
-	"github.com/hellofresh/goengine/strategy/json"
-	strategySQL "github.com/hellofresh/goengine/strategy/json/sql"
-	strategyPostgres "github.com/hellofresh/goengine/strategy/json/sql/postgres"
+	"github.com/hellofresh/goengine/strategy"
+	strategySQL "github.com/hellofresh/goengine/strategy/sql"
+	strategyPostgres "github.com/hellofresh/goengine/strategy/sql/postgres"
 	_ "github.com/lib/pq"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -125,7 +125,7 @@ func setup(
 	require.NoError(b, err, "failed to open postgres driver")
 
 	// Create payload transformer
-	payloadTransformer := json.NewPayloadTransformer()
+	payloadTransformer := strategy.NewJSONPayloadTransformer()
 	require.NoError(b, err, payloadTransformer.RegisterPayload(personCreatedName, func() interface{} {
 		return personCreated{}
 	}))

@@ -6,14 +6,14 @@ import (
 	"github.com/hellofresh/goengine"
 	driverSQL "github.com/hellofresh/goengine/driver/sql"
 	"github.com/hellofresh/goengine/driver/sql/postgres"
-	"github.com/hellofresh/goengine/strategy/protobuf"
-	strategySQL "github.com/hellofresh/goengine/strategy/protobuf/sql"
+	"github.com/hellofresh/goengine/strategy"
+	strategySQL "github.com/hellofresh/goengine/strategy/sql"
 )
 
 // SingleStreamManager is a helper for creating Protobuf Postgres event stores and projectors
 type SingleStreamManager struct {
 	db                  *sql.DB
-	payloadTransformer  *protobuf.PayloadTransformer
+	payloadTransformer  strategy.PayloadTransformer
 	persistenceStrategy driverSQL.PersistenceStrategy
 	messageFactory      driverSQL.MessageFactory
 
@@ -22,7 +22,7 @@ type SingleStreamManager struct {
 }
 
 // NewSingleStreamManager return a new instance of the SingleStreamManager
-func NewSingleStreamManager(db *sql.DB, logger goengine.Logger, metrics driverSQL.Metrics) (*SingleStreamManager, error) {
+func NewSingleStreamManager(db *sql.DB, payloadTransformer strategy.PayloadTransformer, logger goengine.Logger, metrics driverSQL.Metrics) (*SingleStreamManager, error) {
 	if db == nil {
 		return nil, goengine.InvalidArgumentError("db")
 	}
@@ -33,8 +33,6 @@ func NewSingleStreamManager(db *sql.DB, logger goengine.Logger, metrics driverSQ
 	if metrics == nil {
 		metrics = driverSQL.NopMetrics
 	}
-
-	payloadTransformer := protobuf.NewPayloadTransformer()
 
 	// Setting up the postgres strategy
 	persistenceStrategy, err := NewSingleStreamStrategy(payloadTransformer)
@@ -70,8 +68,9 @@ func (m *SingleStreamManager) NewEventStore() (*postgres.EventStore, error) {
 }
 
 // RegisterPayloads registers a set of payload type initiators
-func (m *SingleStreamManager) RegisterPayloads(initiators map[string]protobuf.PayloadInitiator) error {
-	return m.payloadTransformer.RegisterPayloads(initiators)
+func (m *SingleStreamManager) RegisterPayloads(initiators map[string]strategy.PayloadInitiator) error {
+	registry := m.payloadTransformer
+	return registry.RegisterPayloads(initiators)
 }
 
 // PersistenceStrategy returns the sql persistence strategy
@@ -102,10 +101,11 @@ func (m *SingleStreamManager) NewStreamProjector(
 		return nil, err
 	}
 
+	resolver := m.payloadTransformer
 	return driverSQL.NewStreamProjector(
 		m.db,
 		driverSQL.StreamProjectionEventStreamLoader(eventStore, projection.FromStream()),
-		m.payloadTransformer,
+		resolver,
 		projection,
 		projectorStorage,
 		projectionErrorHandler,
@@ -143,10 +143,11 @@ func (m *SingleStreamManager) NewAggregateProjector(
 		return nil, err
 	}
 
+	resolver := m.payloadTransformer
 	return driverSQL.NewAggregateProjector(
 		m.db,
 		driverSQL.AggregateProjectionEventStreamLoader(eventStore, projection.FromStream(), aggregateTypeName),
-		m.payloadTransformer,
+		resolver,
 		projection,
 		projectorStorage,
 		projectionErrorHandler,

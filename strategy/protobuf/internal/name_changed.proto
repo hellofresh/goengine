@@ -1,7 +1,0 @@
-syntax = "proto3";
-
-package internal;
-
-message name_changed {
-    string name = 1;
-}

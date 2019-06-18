@@ -16,7 +16,8 @@ import (
 	driverSQL "github.com/hellofresh/goengine/driver/sql"
 	"github.com/hellofresh/goengine/driver/sql/postgres"
 	"github.com/hellofresh/goengine/extension/pq"
-	strategyPostgres "github.com/hellofresh/goengine/strategy/protobuf/sql/postgres"
+	"github.com/hellofresh/goengine/strategy"
+	strategyPostgres "github.com/hellofresh/goengine/strategy/sql/postgres"
 	"github.com/hellofresh/goengine/test/internal"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
@@ -24,7 +25,7 @@ import (
 )
 
 type (
-	aggregateProjectorTestSuite struct {
+	AggregateProjectorTestSuite struct {
 		projectorSuite
 
 		createProjectionStorage func(
@@ -33,6 +34,9 @@ type (
 			projectionStateSerialization driverSQL.ProjectionStateSerialization,
 			logger goengine.Logger,
 		) (driverSQL.AggregateProjectorStorage, error)
+		payloadTransformerConstructor func() strategy.PayloadTransformer
+		eventConverter                func(interface{}) interface{}
+		payloads                      map[string]strategy.PayloadInitiator
 	}
 
 	projectionInfo struct {
@@ -41,25 +45,95 @@ type (
 	}
 )
 
+func NewJSONAggregateProjectorTestSuite(createProjectionStorage func(
+	eventStoreTable,
+	projectionTable string,
+	projectionStateSerialization driverSQL.ProjectionStateSerialization,
+	logger goengine.Logger,
+) (driverSQL.AggregateProjectorStorage, error)) *AggregateProjectorTestSuite {
+	return &AggregateProjectorTestSuite{
+		createProjectionStorage: createProjectionStorage,
+		payloadTransformerConstructor: func() strategy.PayloadTransformer {
+			return strategy.NewJSONPayloadTransformer()
+		},
+		eventConverter: func(event interface{}) interface{} {
+			return event
+		},
+		payloads: map[string]strategy.PayloadInitiator{
+			"account_debited": func() interface{} {
+				return AccountDeposited{}
+			},
+			"account_credited": func() interface{} {
+				return AccountCredited{}
+			},
+		},
+	}
+}
+
+func NewProtobufAggregateProjectorTestSuite(createProjectionStorage func(
+	eventStoreTable,
+	projectionTable string,
+	projectionStateSerialization driverSQL.ProjectionStateSerialization,
+	logger goengine.Logger,
+) (driverSQL.AggregateProjectorStorage, error)) *AggregateProjectorTestSuite {
+	return &AggregateProjectorTestSuite{
+		createProjectionStorage: createProjectionStorage,
+		payloadTransformerConstructor: func() strategy.PayloadTransformer {
+			return strategy.NewProtobufPayloadTransformer()
+		},
+		eventConverter: func(event interface{}) interface{} {
+			switch event := event.(type) {
+			case AccountCredited:
+				return internal.AccountCredited{Amount: int32(event.Amount)}
+			case AccountDeposited:
+				return internal.AccountDeposited{Amount: int32(event.Amount)}
+			}
+			panic("Unknown payload type given.")
+		},
+		payloads: map[string]strategy.PayloadInitiator{
+			"account_debited": func() interface{} {
+				return internal.AccountDeposited{}
+			},
+			"account_credited": func() interface{} {
+				return internal.AccountCredited{}
+			},
+		},
+	}
+}
+
 func TestAggregateProjectorSuite(t *testing.T) {
-	t.Run("AdvisoryLock", func(t *testing.T) {
-		suite.Run(t, &aggregateProjectorTestSuite{
-			createProjectionStorage: func(eventStoreTable, projectionTable string, serialization driverSQL.ProjectionStateSerialization, logger goengine.Logger) (storage driverSQL.AggregateProjectorStorage, e error) {
+	t.Run("AdvisoryLock with JSON strategy", func(t *testing.T) {
+		suite.Run(t, NewJSONAggregateProjectorTestSuite(
+			func(eventStoreTable, projectionTable string, serialization driverSQL.ProjectionStateSerialization, logger goengine.Logger) (storage driverSQL.AggregateProjectorStorage, e error) {
 				return postgres.NewAdvisoryLockAggregateProjectionStorage(eventStoreTable, projectionTable, serialization, true, logger)
 			},
-		})
+		))
 	})
-	t.Run("AdvisoryLock without locked field", func(t *testing.T) {
-		suite.Run(t, &aggregateProjectorTestSuite{
-			createProjectionStorage: func(eventStoreTable, projectionTable string, serialization driverSQL.ProjectionStateSerialization, logger goengine.Logger) (storage driverSQL.AggregateProjectorStorage, e error) {
+	t.Run("AdvisoryLock with Protobuf strategy", func(t *testing.T) {
+		suite.Run(t, NewProtobufAggregateProjectorTestSuite(
+			func(eventStoreTable, projectionTable string, serialization driverSQL.ProjectionStateSerialization, logger goengine.Logger) (storage driverSQL.AggregateProjectorStorage, e error) {
+				return postgres.NewAdvisoryLockAggregateProjectionStorage(eventStoreTable, projectionTable, serialization, true, logger)
+			},
+		))
+	})
+	t.Run("AdvisoryLock without locked field with JSON strategy", func(t *testing.T) {
+		suite.Run(t, NewJSONAggregateProjectorTestSuite(
+			func(eventStoreTable, projectionTable string, serialization driverSQL.ProjectionStateSerialization, logger goengine.Logger) (storage driverSQL.AggregateProjectorStorage, e error) {
 				return postgres.NewAdvisoryLockAggregateProjectionStorage(eventStoreTable, projectionTable, serialization, false, logger)
 			},
-		})
+		))
+	})
+	t.Run("AdvisoryLock without locked field with Protobuf strategy", func(t *testing.T) {
+		suite.Run(t, NewJSONAggregateProjectorTestSuite(
+			func(eventStoreTable, projectionTable string, serialization driverSQL.ProjectionStateSerialization, logger goengine.Logger) (storage driverSQL.AggregateProjectorStorage, e error) {
+				return postgres.NewAdvisoryLockAggregateProjectionStorage(eventStoreTable, projectionTable, serialization, false, logger)
+			},
+		))
 	})
 }
 
-func (s *aggregateProjectorTestSuite) SetupTest() {
-	s.projectorSuite.SetupTest()
+func (s *AggregateProjectorTestSuite) SetupTest() {
+	s.projectorSuite.SetupTest(s.payloadTransformerConstructor)
 
 	ctx := context.Background()
 	queries := strategyPostgres.AggregateProjectorCreateSchema("agg_projections", s.eventStream, s.eventStoreTable)
@@ -68,19 +142,10 @@ func (s *aggregateProjectorTestSuite) SetupTest() {
 		s.Require().NoError(err, "failed to create projection tables etc.")
 	}
 
-	s.Require().NoError(
-		s.payloadTransformer.RegisterPayload("account_debited", func() interface{} {
-			return internal.AccountDeposited{}
-		}),
-	)
-	s.Require().NoError(
-		s.payloadTransformer.RegisterPayload("account_credited", func() interface{} {
-			return internal.AccountCredited{}
-		}),
-	)
+	s.Require().NoError(s.payloadTransformer.RegisterPayloads(s.payloads))
 }
 
-func (s *aggregateProjectorTestSuite) TestRunAndListen() {
+func (s *AggregateProjectorTestSuite) TestRunAndListen() {
 	var wg sync.WaitGroup
 
 	projectorCtx, projectorCancel := context.WithCancel(context.Background())
@@ -150,16 +215,16 @@ func (s *aggregateProjectorTestSuite) TestRunAndListen() {
 		"ce241bf3-2f8f-4e39-9a66-153bdca506fd",
 	})
 	s.appendEvents(aggregateIds[0], []interface{}{
-		internal.AccountDeposited{Amount: 100},
-		internal.AccountCredited{Amount: 50},
-		internal.AccountDeposited{Amount: 10},
-		internal.AccountDeposited{Amount: 5},
-		internal.AccountDeposited{Amount: 100},
-		internal.AccountDeposited{Amount: 1},
-	})
+		AccountDeposited{Amount: 100},
+		AccountCredited{Amount: 50},
+		AccountDeposited{Amount: 10},
+		AccountDeposited{Amount: 5},
+		AccountDeposited{Amount: 100},
+		AccountDeposited{Amount: 1},
+	}, s.eventConverter)
 	s.appendEvents(aggregateIds[1], []interface{}{
-		internal.AccountDeposited{Amount: 1},
-	})
+		AccountDeposited{Amount: 1},
+	}, s.eventConverter)
 
 	s.assertAggregateProjectionStates(map[aggregate.ID]projectionInfo{
 		aggregateIds[0]: {
@@ -174,9 +239,9 @@ func (s *aggregateProjectorTestSuite) TestRunAndListen() {
 
 	// Add events to the event stream
 	s.appendEvents(aggregateIds[0], []interface{}{
-		internal.AccountDeposited{Amount: 100},
-		internal.AccountDeposited{Amount: 1},
-	})
+		AccountDeposited{Amount: 100},
+		AccountDeposited{Amount: 1},
+	}, s.eventConverter)
 	s.assertAggregateProjectionStates(map[aggregate.ID]projectionInfo{
 		aggregateIds[0]: {
 			position: 9,
@@ -231,7 +296,7 @@ func (s *aggregateProjectorTestSuite) TestRunAndListen() {
 	s.AssertNoLogsWithLevelOrHigher(logrus.ErrorLevel)
 }
 
-func (s *aggregateProjectorTestSuite) TestRun() {
+func (s *AggregateProjectorTestSuite) TestRun() {
 	aggregateIds := []aggregate.ID{
 		aggregate.GenerateID(),
 		aggregate.GenerateID(),
@@ -239,13 +304,13 @@ func (s *aggregateProjectorTestSuite) TestRun() {
 	}
 	// Add events to the event stream
 	s.appendEvents(aggregateIds[0], []interface{}{
-		internal.AccountDeposited{Amount: 100},
-		internal.AccountCredited{Amount: 50},
-		internal.AccountDeposited{Amount: 10},
-		internal.AccountDeposited{Amount: 5},
-		internal.AccountDeposited{Amount: 100},
-		internal.AccountDeposited{Amount: 1},
-	})
+		AccountDeposited{Amount: 100},
+		AccountCredited{Amount: 50},
+		AccountDeposited{Amount: 10},
+		AccountDeposited{Amount: 5},
+		AccountDeposited{Amount: 100},
+		AccountDeposited{Amount: 1},
+	}, s.eventConverter)
 
 	var err error
 
@@ -284,15 +349,15 @@ func (s *aggregateProjectorTestSuite) TestRun() {
 		s.Run("Run projection again", func() {
 			// Append more events
 			s.appendEvents(aggregateIds[1], []interface{}{
-				internal.AccountDeposited{Amount: 100},
-			})
+				AccountDeposited{Amount: 100},
+			}, s.eventConverter)
 			s.appendEvents(aggregateIds[2], []interface{}{
-				internal.AccountDeposited{Amount: 1},
-				internal.AccountDeposited{Amount: 100},
-			})
+				AccountDeposited{Amount: 1},
+				AccountDeposited{Amount: 100},
+			}, s.eventConverter)
 			s.appendEvents(aggregateIds[0], []interface{}{
-				internal.AccountDeposited{Amount: 1},
-			})
+				AccountDeposited{Amount: 1},
+			}, s.eventConverter)
 
 			err := project.Run(ctx)
 			s.Require().NoError(err)
@@ -317,7 +382,7 @@ func (s *aggregateProjectorTestSuite) TestRun() {
 	s.AssertNoLogsWithLevelOrHigher(logrus.ErrorLevel)
 }
 
-func (s *aggregateProjectorTestSuite) assertAggregateProjectionStates(expectedProjections map[aggregate.ID]projectionInfo) {
+func (s *AggregateProjectorTestSuite) assertAggregateProjectionStates(expectedProjections map[aggregate.ID]projectionInfo) {
 	stmt, err := s.DB().Prepare(`SELECT aggregate_id, position, state FROM agg_projections`)
 	s.Require().NoError(err)
 

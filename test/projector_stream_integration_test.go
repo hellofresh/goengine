@@ -17,7 +17,8 @@ import (
 	driverSQL "github.com/hellofresh/goengine/driver/sql"
 	"github.com/hellofresh/goengine/driver/sql/postgres"
 	"github.com/hellofresh/goengine/extension/pq"
-	strategyPostgres "github.com/hellofresh/goengine/strategy/protobuf/sql/postgres"
+	"github.com/hellofresh/goengine/strategy"
+	strategyPostgres "github.com/hellofresh/goengine/strategy/sql/postgres"
 	"github.com/hellofresh/goengine/test/internal"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
@@ -25,7 +26,7 @@ import (
 )
 
 type (
-	streamProjectorTestSuite struct {
+	StreamProjectorTestSuite struct {
 		projectorSuite
 
 		createProjectionStorage func(
@@ -34,28 +35,101 @@ type (
 			projectionStateSerialization driverSQL.ProjectionStateSerialization,
 			logger goengine.Logger,
 		) (driverSQL.StreamProjectorStorage, error)
+		payloadTransformerConstructor func() strategy.PayloadTransformer
+		eventConverter                func(event interface{}) interface{}
+		payloads                      map[string]strategy.PayloadInitiator
 	}
 )
 
+func NewJSONStreamProjectorTestSuite(createProjectionStorage func(
+	eventStoreTable,
+	projectionTable string,
+	projectionStateSerialization driverSQL.ProjectionStateSerialization,
+	logger goengine.Logger,
+) (driverSQL.StreamProjectorStorage, error)) *StreamProjectorTestSuite {
+	return &StreamProjectorTestSuite{
+		createProjectionStorage: createProjectionStorage,
+		payloadTransformerConstructor: func() strategy.PayloadTransformer {
+			return strategy.NewJSONPayloadTransformer()
+		},
+		eventConverter: func(event interface{}) interface{} {
+			return event
+		},
+		payloads: map[string]strategy.PayloadInitiator{
+			"account_debited": func() interface{} {
+				return AccountDeposited{}
+			},
+			"account_credited": func() interface{} {
+				return AccountCredited{}
+			},
+		},
+	}
+}
+
+func NewProtobufStreamProjectorTestSuite(createProjectionStorage func(
+	eventStoreTable,
+	projectionTable string,
+	projectionStateSerialization driverSQL.ProjectionStateSerialization,
+	logger goengine.Logger,
+) (driverSQL.StreamProjectorStorage, error)) *StreamProjectorTestSuite {
+	return &StreamProjectorTestSuite{
+		createProjectionStorage: createProjectionStorage,
+		payloadTransformerConstructor: func() strategy.PayloadTransformer {
+			return strategy.NewProtobufPayloadTransformer()
+		},
+		eventConverter: func(event interface{}) interface{} {
+			switch event := event.(type) {
+			case AccountCredited:
+				return internal.AccountCredited{Amount: int32(event.Amount)}
+			case AccountDeposited:
+				return internal.AccountDeposited{Amount: int32(event.Amount)}
+			}
+			panic("Unknown payload type given.")
+		},
+		payloads: map[string]strategy.PayloadInitiator{
+			"account_debited": func() interface{} {
+				return internal.AccountDeposited{}
+			},
+			"account_credited": func() interface{} {
+				return internal.AccountCredited{}
+			},
+		},
+	}
+}
+
 func TestStreamProjectorSuite(t *testing.T) {
-	t.Run("AdvisoryLock", func(t *testing.T) {
-		suite.Run(t, &streamProjectorTestSuite{
-			createProjectionStorage: func(eventStoreTable, projectionTable string, serialization driverSQL.ProjectionStateSerialization, logger goengine.Logger) (storage driverSQL.StreamProjectorStorage, e error) {
+	t.Run("AdvisoryLock with JSON strategy", func(t *testing.T) {
+		suite.Run(t, NewJSONStreamProjectorTestSuite(
+			func(eventStoreTable, projectionTable string, serialization driverSQL.ProjectionStateSerialization, logger goengine.Logger) (storage driverSQL.StreamProjectorStorage, e error) {
 				return postgres.NewAdvisoryLockStreamProjectionStorage(eventStoreTable, projectionTable, serialization, true, logger)
 			},
-		})
+		))
 	})
-	t.Run("AdvisoryLock without locked field", func(t *testing.T) {
-		suite.Run(t, &streamProjectorTestSuite{
-			createProjectionStorage: func(eventStoreTable, projectionTable string, serialization driverSQL.ProjectionStateSerialization, logger goengine.Logger) (storage driverSQL.StreamProjectorStorage, e error) {
+	t.Run("AdvisoryLock with Protobuf strategy", func(t *testing.T) {
+		suite.Run(t, NewProtobufStreamProjectorTestSuite(
+			func(eventStoreTable, projectionTable string, serialization driverSQL.ProjectionStateSerialization, logger goengine.Logger) (storage driverSQL.StreamProjectorStorage, e error) {
+				return postgres.NewAdvisoryLockStreamProjectionStorage(eventStoreTable, projectionTable, serialization, true, logger)
+			},
+		))
+	})
+	t.Run("AdvisoryLock without locked field with JSON strategy", func(t *testing.T) {
+		suite.Run(t, NewJSONStreamProjectorTestSuite(
+			func(eventStoreTable, projectionTable string, serialization driverSQL.ProjectionStateSerialization, logger goengine.Logger) (storage driverSQL.StreamProjectorStorage, e error) {
 				return postgres.NewAdvisoryLockStreamProjectionStorage(eventStoreTable, projectionTable, serialization, false, logger)
 			},
-		})
+		))
+	})
+	t.Run("AdvisoryLock without locked field with Protobuf strategy", func(t *testing.T) {
+		suite.Run(t, NewProtobufStreamProjectorTestSuite(
+			func(eventStoreTable, projectionTable string, serialization driverSQL.ProjectionStateSerialization, logger goengine.Logger) (storage driverSQL.StreamProjectorStorage, e error) {
+				return postgres.NewAdvisoryLockStreamProjectionStorage(eventStoreTable, projectionTable, serialization, false, logger)
+			},
+		))
 	})
 }
 
-func (s *streamProjectorTestSuite) SetupTest() {
-	s.projectorSuite.SetupTest()
+func (s *StreamProjectorTestSuite) SetupTest() {
+	s.projectorSuite.SetupTest(s.payloadTransformerConstructor)
 
 	ctx := context.Background()
 	queries := strategyPostgres.StreamProjectorCreateSchema("projections", s.eventStream, s.eventStoreTable)
@@ -65,7 +139,7 @@ func (s *streamProjectorTestSuite) SetupTest() {
 	}
 }
 
-func (s *streamProjectorTestSuite) TearDownTest() {
+func (s *StreamProjectorTestSuite) TearDownTest() {
 	s.eventStore = nil
 	s.eventStream = ""
 	s.payloadTransformer = nil
@@ -73,7 +147,7 @@ func (s *streamProjectorTestSuite) TearDownTest() {
 	s.PostgresSuite.TearDownTest()
 }
 
-func (s *streamProjectorTestSuite) TestRunAndListen() {
+func (s *StreamProjectorTestSuite) TestRunAndListen() {
 	var wg sync.WaitGroup
 	defer func() {
 		if s.waitTimeout(&wg, 5*time.Second) {
@@ -81,16 +155,7 @@ func (s *streamProjectorTestSuite) TestRunAndListen() {
 		}
 	}()
 
-	s.Require().NoError(
-		s.payloadTransformer.RegisterPayload("account_debited", func() interface{} {
-			return internal.AccountDeposited{}
-		}),
-	)
-	s.Require().NoError(
-		s.payloadTransformer.RegisterPayload("account_credited", func() interface{} {
-			return internal.AccountCredited{}
-		}),
-	)
+	s.Require().NoError(s.payloadTransformer.RegisterPayloads(s.payloads))
 
 	projectorCtx, projectorCancel := context.WithCancel(context.Background())
 	defer projectorCancel()
@@ -157,20 +222,20 @@ func (s *streamProjectorTestSuite) TestRunAndListen() {
 		aggregate.GenerateID(),
 	}
 	s.appendEvents(aggregateIds[0], []interface{}{
-		internal.AccountDeposited{Amount: 100},
-		internal.AccountCredited{Amount: 50},
-		internal.AccountDeposited{Amount: 10},
-		internal.AccountDeposited{Amount: 5},
-		internal.AccountDeposited{Amount: 100},
-		internal.AccountDeposited{Amount: 1},
-	})
+		AccountDeposited{Amount: 100},
+		AccountCredited{Amount: 50},
+		AccountDeposited{Amount: 10},
+		AccountDeposited{Amount: 5},
+		AccountDeposited{Amount: 100},
+		AccountDeposited{Amount: 1},
+	}, s.eventConverter)
 	s.expectProjectionState("deposited_report", 6, `{"Total": 5, "TotalAmount": 216}`)
 
 	// Add events to the event stream
 	s.appendEvents(aggregateIds[0], []interface{}{
-		internal.AccountDeposited{Amount: 100},
-		internal.AccountDeposited{Amount: 1},
-	})
+		AccountDeposited{Amount: 100},
+		AccountDeposited{Amount: 1},
+	}, s.eventConverter)
 
 	s.expectProjectionState("deposited_report", 8, `{"Total": 7, "TotalAmount": 317}`)
 
@@ -204,30 +269,21 @@ func (s *streamProjectorTestSuite) TestRunAndListen() {
 	s.AssertNoLogsWithLevelOrHigher(logrus.ErrorLevel)
 }
 
-func (s *streamProjectorTestSuite) TestRun() {
-	s.Require().NoError(
-		s.payloadTransformer.RegisterPayload("account_debited", func() interface{} {
-			return internal.AccountDeposited{}
-		}),
-	)
-	s.Require().NoError(
-		s.payloadTransformer.RegisterPayload("account_credited", func() interface{} {
-			return internal.AccountCredited{}
-		}),
-	)
+func (s *StreamProjectorTestSuite) TestRun() {
+	s.Require().NoError(s.payloadTransformer.RegisterPayloads(s.payloads))
 
 	aggregateIds := []aggregate.ID{
 		aggregate.GenerateID(),
 	}
 	// Add events to the event stream
 	s.appendEvents(aggregateIds[0], []interface{}{
-		internal.AccountDeposited{Amount: 100},
-		internal.AccountCredited{Amount: 50},
-		internal.AccountDeposited{Amount: 10},
-		internal.AccountDeposited{Amount: 5},
-		internal.AccountDeposited{Amount: 100},
-		internal.AccountDeposited{Amount: 1},
-	})
+		AccountDeposited{Amount: 100},
+		AccountCredited{Amount: 50},
+		AccountDeposited{Amount: 10},
+		AccountDeposited{Amount: 5},
+		AccountDeposited{Amount: 100},
+		AccountDeposited{Amount: 1},
+	}, s.eventConverter)
 
 	projection := &DepositedProjection{}
 
@@ -258,9 +314,9 @@ func (s *streamProjectorTestSuite) TestRun() {
 		s.Run("Run projection again", func() {
 			// Append more events
 			s.appendEvents(aggregateIds[0], []interface{}{
-				internal.AccountDeposited{Amount: 100},
-				internal.AccountDeposited{Amount: 1},
-			})
+				AccountDeposited{Amount: 100},
+				AccountDeposited{Amount: 1},
+			}, s.eventConverter)
 
 			err := project.Run(ctx)
 			s.Require().NoError(err)
@@ -272,7 +328,7 @@ func (s *streamProjectorTestSuite) TestRun() {
 	s.AssertNoLogsWithLevelOrHigher(logrus.ErrorLevel)
 }
 
-func (s *streamProjectorTestSuite) expectProjectionState(name string, expectedPosition int64, expectedState string) {
+func (s *StreamProjectorTestSuite) expectProjectionState(name string, expectedPosition int64, expectedState string) {
 	stmt, err := s.DB().Prepare(`SELECT position, state FROM projections WHERE name = $1`)
 	s.Require().NoError(err)
 

@@ -13,9 +13,9 @@ import (
 	"github.com/hellofresh/goengine/aggregate"
 	"github.com/hellofresh/goengine/driver/sql/postgres"
 	"github.com/hellofresh/goengine/metadata"
-	strategy "github.com/hellofresh/goengine/strategy/protobuf"
-	strategySQL "github.com/hellofresh/goengine/strategy/protobuf/sql"
-	strategyPostgres "github.com/hellofresh/goengine/strategy/protobuf/sql/postgres"
+	"github.com/hellofresh/goengine/strategy"
+	strategySQL "github.com/hellofresh/goengine/strategy/sql"
+	strategyPostgres "github.com/hellofresh/goengine/strategy/sql/postgres"
 	"github.com/hellofresh/goengine/test/internal"
 )
 
@@ -24,6 +24,14 @@ const accountAggregateTypeName = "account"
 var _ goengine.ProjectionSaga = &DepositedProjection{}
 
 type (
+	AccountCredited struct {
+		Amount uint
+	}
+
+	AccountDeposited struct {
+		Amount uint
+	}
+
 	DepositedProjection struct {
 	}
 
@@ -51,6 +59,9 @@ func (p *DepositedProjection) Handlers() map[string]goengine.MessageHandler {
 			projectionState := state.(depositedProjectionState)
 
 			switch event := message.Payload().(type) {
+			case AccountDeposited:
+				projectionState.Total++
+				projectionState.TotalAmount += uint64(event.Amount)
 			case internal.AccountDeposited:
 				projectionState.Total++
 				projectionState.TotalAmount += uint64(event.Amount)
@@ -82,17 +93,17 @@ type projectorSuite struct {
 	eventStream        goengine.StreamName
 	eventStore         *postgres.EventStore
 	eventStoreTable    string
-	payloadTransformer *strategy.PayloadTransformer
+	payloadTransformer strategy.PayloadTransformer
 }
 
-func (s *projectorSuite) SetupTest() {
+func (s *projectorSuite) SetupTest(payloadTransformerConstructor func() strategy.PayloadTransformer) {
 	s.PostgresSuite.SetupTest()
 	db := s.DB()
 
 	s.eventStream = goengine.StreamName("event_stream")
 
 	// Create payload transformer
-	s.payloadTransformer = strategy.NewPayloadTransformer()
+	s.payloadTransformer = payloadTransformerConstructor()
 
 	// Use a persistence strategy
 	persistenceStrategy, err := strategyPostgres.NewSingleStreamStrategy(s.payloadTransformer)
@@ -125,7 +136,7 @@ func (s *projectorSuite) TearDownTest() {
 	s.PostgresSuite.TearDownTest()
 }
 
-func (s *projectorSuite) appendEvents(aggregateID aggregate.ID, events []interface{}) {
+func (s *projectorSuite) appendEvents(aggregateID aggregate.ID, events []interface{}, eventConverter func(interface{}) interface{}) {
 	ctx := context.Background()
 
 	// Find the last event
@@ -168,7 +179,7 @@ func (s *projectorSuite) appendEvents(aggregateID aggregate.ID, events []interfa
 		message, err := aggregate.ReconstituteChange(
 			aggregateID,
 			goengine.GenerateUUID(),
-			event,
+			eventConverter(event),
 			m,
 			time.Now().UTC(),
 			uint(i+1),

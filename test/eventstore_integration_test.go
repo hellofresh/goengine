@@ -9,31 +9,27 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/proto"
-	"github.com/hellofresh/goengine/strategy/protobuf"
 
 	"github.com/hellofresh/goengine"
 	"github.com/hellofresh/goengine/driver/sql/postgres"
 	"github.com/hellofresh/goengine/metadata"
 	"github.com/hellofresh/goengine/mocks"
 
-	"github.com/hellofresh/goengine/strategy/json"
-	strategySQLJSON "github.com/hellofresh/goengine/strategy/json/sql"
-	strategyPostgresJSON "github.com/hellofresh/goengine/strategy/json/sql/postgres"
-
-	strategySQLProtobuf "github.com/hellofresh/goengine/strategy/protobuf/sql"
-	strategyPostgresProtobuf "github.com/hellofresh/goengine/strategy/protobuf/sql/postgres"
+	"github.com/hellofresh/goengine/strategy"
+	strategySQL "github.com/hellofresh/goengine/strategy/sql"
+	strategyPostgres "github.com/hellofresh/goengine/strategy/sql/postgres"
 
 	"github.com/hellofresh/goengine/test/internal"
 	"github.com/stretchr/testify/suite"
 )
 
 type (
-	eventStoreTestSuite struct {
+	EventStoreTestSuite struct {
 		internal.PostgresSuite
 
-		createEventStore func(s *eventStoreTestSuite) goengine.EventStore
-		createPayload    func(s *eventStoreTestSuite, i int32) interface{}
-		equalPayload     func(s *eventStoreTestSuite, a interface{}, b interface{})
+		createEventStore func(s *EventStoreTestSuite) goengine.EventStore
+		createPayload    func(s *EventStoreTestSuite, i int32) interface{}
+		equalPayload     func(s *EventStoreTestSuite, a interface{}, b interface{})
 
 		eventStore goengine.EventStore
 	}
@@ -44,18 +40,18 @@ type (
 	}
 )
 
-func TestEventStoreSuite(t *testing.T) {
-	suite.Run(t, &eventStoreTestSuite{
-		createEventStore: func(s *eventStoreTestSuite) goengine.EventStore {
-			transformer := json.NewPayloadTransformer()
+func NewJSONEventStoreTestSuite() *EventStoreTestSuite {
+	return &EventStoreTestSuite{
+		createEventStore: func(s *EventStoreTestSuite) goengine.EventStore {
+			transformer := strategy.NewJSONPayloadTransformer()
 			s.Require().NoError(
 				transformer.RegisterPayload("tests", func() interface{} { return &payloadData{} }),
 			)
 
-			persistenceStrategy, err := strategyPostgresJSON.NewSingleStreamStrategy(transformer)
+			persistenceStrategy, err := strategyPostgres.NewSingleStreamStrategy(transformer)
 			s.Require().NoError(err, "failed initializing persistent strategy")
 
-			messageFactory, err := strategySQLJSON.NewAggregateChangedFactory(transformer)
+			messageFactory, err := strategySQL.NewAggregateChangedFactory(transformer)
 			s.Require().NoError(err, "failed on dependencies load")
 
 			eventStore, err := postgres.NewEventStore(persistenceStrategy, s.DB(), messageFactory, nil)
@@ -63,24 +59,27 @@ func TestEventStoreSuite(t *testing.T) {
 
 			return eventStore
 		},
-		createPayload: func(s *eventStoreTestSuite, i int32) interface{} {
+		createPayload: func(s *EventStoreTestSuite, i int32) interface{} {
 			return &payloadData{Name: "json", Balance: i * 11}
 		},
-		equalPayload: func(s *eventStoreTestSuite, a interface{}, b interface{}) {
+		equalPayload: func(s *EventStoreTestSuite, a interface{}, b interface{}) {
 			s.Equal(a, b)
 		},
-	})
-	suite.Run(t, &eventStoreTestSuite{
-		createEventStore: func(s *eventStoreTestSuite) goengine.EventStore {
-			transformer := protobuf.NewPayloadTransformer()
+	}
+}
+
+func NewProtobufEventStoreTestSuite() *EventStoreTestSuite {
+	return &EventStoreTestSuite{
+		createEventStore: func(s *EventStoreTestSuite) goengine.EventStore {
+			transformer := strategy.NewProtobufPayloadTransformer()
 			s.Require().NoError(
 				transformer.RegisterPayload("tests", func() interface{} { return &internal.Payload{} }),
 			)
 
-			persistenceStrategy, err := strategyPostgresProtobuf.NewSingleStreamStrategy(transformer)
+			persistenceStrategy, err := strategyPostgres.NewSingleStreamStrategy(transformer)
 			s.Require().NoError(err, "failed initializing persistent strategy")
 
-			messageFactory, err := strategySQLProtobuf.NewAggregateChangedFactory(transformer)
+			messageFactory, err := strategySQL.NewAggregateChangedFactory(transformer)
 			s.Require().NoError(err, "failed on dependencies load")
 
 			eventStore, err := postgres.NewEventStore(persistenceStrategy, s.DB(), messageFactory, nil)
@@ -88,28 +87,33 @@ func TestEventStoreSuite(t *testing.T) {
 
 			return eventStore
 		},
-		createPayload: func(s *eventStoreTestSuite, i int32) interface{} {
+		createPayload: func(s *EventStoreTestSuite, i int32) interface{} {
 			t := &internal.Payload{Name: "protobuf", Balance: i * 11}
 			return t
 		},
-		equalPayload: func(s *eventStoreTestSuite, a interface{}, b interface{}) {
+		equalPayload: func(s *EventStoreTestSuite, a interface{}, b interface{}) {
 			s.True(proto.Equal(a.(proto.Message), b.(proto.Message)))
 		},
-	})
+	}
 }
 
-func (s *eventStoreTestSuite) SetupTest() {
+func TestEventStoreSuite(t *testing.T) {
+	suite.Run(t, NewJSONEventStoreTestSuite())
+	suite.Run(t, NewProtobufEventStoreTestSuite())
+}
+
+func (s *EventStoreTestSuite) SetupTest() {
 	s.PostgresSuite.SetupTest()
 
 	s.eventStore = s.createEventStore(s)
 }
 
-func (s *eventStoreTestSuite) TearDownTest() {
+func (s *EventStoreTestSuite) TearDownTest() {
 	s.eventStore = nil
 	s.PostgresSuite.TearDownTest()
 }
 
-func (s *eventStoreTestSuite) TestCreate() {
+func (s *EventStoreTestSuite) TestCreate() {
 	ctx := context.Background()
 
 	err := s.eventStore.Create(ctx, "orders")
@@ -126,7 +130,7 @@ func (s *eventStoreTestSuite) TestCreate() {
 	s.Equal(4, indexesCount)
 }
 
-func (s *eventStoreTestSuite) TestHasStream() {
+func (s *EventStoreTestSuite) TestHasStream() {
 	ctx := context.Background()
 
 	streamName := goengine.StreamName("orders")
@@ -145,7 +149,7 @@ func (s *eventStoreTestSuite) TestHasStream() {
 	s.False(exists)
 }
 
-func (s *eventStoreTestSuite) TestAppendTo() {
+func (s *EventStoreTestSuite) TestAppendTo() {
 	agregateID := goengine.GenerateUUID()
 	ctx := context.Background()
 	streamName := goengine.StreamName("orders_my")
@@ -176,7 +180,7 @@ func (s *eventStoreTestSuite) TestAppendTo() {
 	s.Equal(len(messages), count)
 }
 
-func (s *eventStoreTestSuite) TestLoad() {
+func (s *EventStoreTestSuite) TestLoad() {
 	aggregateIDFirst := goengine.GenerateUUID()
 	aggregateIDSecond := goengine.GenerateUUID()
 	messages := s.generateAppendMessages([]goengine.UUID{aggregateIDFirst, aggregateIDSecond})
@@ -376,7 +380,7 @@ func (s *eventStoreTestSuite) TestLoad() {
 	}
 }
 
-func (s *eventStoreTestSuite) generateAppendMessages(aggregateIDs []goengine.UUID) []goengine.Message {
+func (s *EventStoreTestSuite) generateAppendMessages(aggregateIDs []goengine.UUID) []goengine.Message {
 	var messages []goengine.Message
 	for _, aggregateID := range aggregateIDs {
 		for i := int32(0); i < 5; i++ {
@@ -406,7 +410,7 @@ func (s *eventStoreTestSuite) generateAppendMessages(aggregateIDs []goengine.UUI
 	return messages
 }
 
-func (s *eventStoreTestSuite) appendMeta(metadataInfo map[string]interface{}) metadata.Metadata {
+func (s *EventStoreTestSuite) appendMeta(metadataInfo map[string]interface{}) metadata.Metadata {
 	meta := metadata.New()
 	for key, val := range metadataInfo {
 		meta = metadata.WithValue(meta, key, val)

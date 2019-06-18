@@ -1,8 +1,0 @@
-syntax = "proto3";
-
-package internal;
-
-message Simple {
-    string Test = 1; 
-    int32 Order = 2;
-}
