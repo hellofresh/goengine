@@ -52,6 +52,10 @@ test-examples:
 	go run -race example/aggregate/*.go
 	go run -race example/repository/*.go
 
+test-benchmark:
+	$(call title, "Running benchmarks")
+	POSTGRES_DSN=$(POSTGRES_DSN) go test -bench=. -tags=unit ./...
+
 ###-----------------------------------------------------------------------------------------------------------------------
 ### Functions
 ### (https://www.gnu.org/software/make/manual/html_node/Call-Function.html#Call-Function)
