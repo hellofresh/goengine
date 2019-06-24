@@ -1,0 +1,7 @@
+syntax = "proto3";
+
+package internal;
+
+message GogoAccountCredited{
+    int32 amount = 1;
+}

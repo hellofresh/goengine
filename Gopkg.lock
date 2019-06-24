@@ -26,6 +26,14 @@
   version = "v1.1.0"
 
 [[projects]]
+  digest = "1:48092bf6632f55839850666c33469f546f6d45fdbd59a66759ec12e84d853dc2"
+  name = "github.com/gogo/protobuf"
+  packages = ["proto"]
+  pruneopts = "UT"
+  revision = "ba06b47c162d49f2af050fb4c75bcbc86a159d5c"
+  version = "v1.2.1"
+
+[[projects]]
   digest = "1:552a143cfb2692a4a8cbae568a9b4633ec4e7ce9269cfe74c07ea08ce50d866f"
   name = "github.com/golang/mock"
   packages = [
@@ -222,6 +230,7 @@
   analyzer-version = 1
   input-imports = [
     "github.com/DATA-DOG/go-sqlmock",
+    "github.com/gogo/protobuf/proto",
     "github.com/golang/mock/gomock",
     "github.com/golang/mock/mockgen",
     "github.com/golang/protobuf/proto",

@@ -65,6 +65,9 @@ func (p *DepositedProjection) Handlers() map[string]goengine.MessageHandler {
 			case internal.AccountDeposited:
 				projectionState.Total++
 				projectionState.TotalAmount += uint64(event.Amount)
+			case internal.GogoAccountDeposited:
+				projectionState.Total++
+				projectionState.TotalAmount += uint64(event.Amount)
 			default:
 				return state, errors.New("unexpected message payload type")
 			}

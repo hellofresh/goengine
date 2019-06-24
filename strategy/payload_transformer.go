@@ -19,6 +19,8 @@ var (
 	ErrUnknownPayloadType = errors.New("goengine: unknown payload type provided")
 	// ErrNotProtobufPayload occurs when a PayloadInitiator is not implementing proto.Message
 	ErrNotProtobufPayload = errors.New("goengine: payload not implementing proto.Message")
+	// ErrNotMarshalerPayload occurs when a PayloadInitiator is not implementing Marshaler interface
+	ErrNotMarshalerPayload = errors.New("goengine: payload not implementing Marshaler interface")
 	// ErrInitiatorInvalidResult occurs when a PayloadInitiator returns a reference to nil
 	ErrInitiatorInvalidResult = errors.New("goengine: initializer must return a pointer that is not nil")
 	// ErrDuplicatePayloadType occurs when a payload type is already registered

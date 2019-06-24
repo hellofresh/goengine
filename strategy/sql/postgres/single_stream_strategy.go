@@ -40,15 +40,19 @@ func NewSingleStreamStrategy(converter goengine.MessagePayloadConverter) (sql.Pe
 func (s *SingleStreamStrategy) CreateSchema(tableName string) []string {
 	tableName = postgres.QuoteIdentifier(tableName)
 
+	const BYTEA = "BYTEA"
+	const JSONB = "JSONB"
 	var payloadDataType string
 	switch s.converter.(type) {
 	case *strategy.ProtobufPayloadTransformer:
-		payloadDataType = "BYTEA"
+		payloadDataType = BYTEA
+	case *strategy.MarshalPayloadTransformer:
+		payloadDataType = BYTEA
 	case *strategy.JSONPayloadTransformer:
-		payloadDataType = "JSONB"
+		payloadDataType = JSONB
 	default:
 		// Let the payloadTransformer deal with []byte data
-		payloadDataType = "JSONB"
+		payloadDataType = BYTEA
 	}
 
 	statements := make([]string, 3)

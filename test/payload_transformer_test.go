@@ -50,6 +50,32 @@ var suites = map[string]BenchmarkSuite{
 		},
 		wireData: []byte{10, 10, 72, 105, 116, 99, 104, 104, 105, 107, 101, 114, 16, 42},
 	},
+	"GogoProtobuf with pointer": {
+		transformer: func() strategy.PayloadTransformer {
+			return strategy.NewMarshalPayloadTransformer()
+		},
+		payloadCreator: func() interface{} {
+			return &internal.GogoPayload{}
+		},
+		payload: &internal.GogoPayload{
+			Name:    "Hitchhiker",
+			Balance: 42,
+		},
+		wireData: []byte{10, 10, 72, 105, 116, 99, 104, 104, 105, 107, 101, 114, 16, 42},
+	},
+	"GogoProtobuf with non-pointer": {
+		transformer: func() strategy.PayloadTransformer {
+			return strategy.NewMarshalPayloadTransformer()
+		},
+		payloadCreator: func() interface{} {
+			return internal.GogoPayload{}
+		},
+		payload: internal.GogoPayload{
+			Name:    "Hitchhiker",
+			Balance: 42,
+		},
+		wireData: []byte{10, 10, 72, 105, 116, 99, 104, 104, 105, 107, 101, 114, 16, 42},
+	},
 	"JSON with pointer": {
 		transformer: func() strategy.PayloadTransformer {
 			return strategy.NewJSONPayloadTransformer()

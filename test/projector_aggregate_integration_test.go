@@ -4,6 +4,7 @@ package test_test
 
 import (
 	"context"
+	"fmt"
 	"regexp"
 	"runtime"
 	"sync"
@@ -43,14 +44,16 @@ type (
 		position int64
 		state    string
 	}
+
+	AggregateProjectorStorageBuilder func(
+		eventStoreTable,
+		projectionTable string,
+		projectionStateSerialization driverSQL.ProjectionStateSerialization,
+		logger goengine.Logger,
+	) (driverSQL.AggregateProjectorStorage, error)
 )
 
-func NewJSONAggregateProjectorTestSuite(createProjectionStorage func(
-	eventStoreTable,
-	projectionTable string,
-	projectionStateSerialization driverSQL.ProjectionStateSerialization,
-	logger goengine.Logger,
-) (driverSQL.AggregateProjectorStorage, error)) *AggregateProjectorTestSuite {
+func NewJSONAggregateProjectorTestSuite(createProjectionStorage AggregateProjectorStorageBuilder) *AggregateProjectorTestSuite {
 	return &AggregateProjectorTestSuite{
 		createProjectionStorage: createProjectionStorage,
 		payloadTransformerConstructor: func() strategy.PayloadTransformer {
@@ -70,12 +73,7 @@ func NewJSONAggregateProjectorTestSuite(createProjectionStorage func(
 	}
 }
 
-func NewProtobufAggregateProjectorTestSuite(createProjectionStorage func(
-	eventStoreTable,
-	projectionTable string,
-	projectionStateSerialization driverSQL.ProjectionStateSerialization,
-	logger goengine.Logger,
-) (driverSQL.AggregateProjectorStorage, error)) *AggregateProjectorTestSuite {
+func NewProtobufAggregateProjectorTestSuite(createProjectionStorage AggregateProjectorStorageBuilder) *AggregateProjectorTestSuite {
 	return &AggregateProjectorTestSuite{
 		createProjectionStorage: createProjectionStorage,
 		payloadTransformerConstructor: func() strategy.PayloadTransformer {
@@ -101,35 +99,55 @@ func NewProtobufAggregateProjectorTestSuite(createProjectionStorage func(
 	}
 }
 
+func NewGogoProtobufAggregateProjectorTestSuite(createProjectionStorage AggregateProjectorStorageBuilder) *AggregateProjectorTestSuite {
+	return &AggregateProjectorTestSuite{
+		createProjectionStorage: createProjectionStorage,
+		payloadTransformerConstructor: func() strategy.PayloadTransformer {
+			return strategy.NewProtobufPayloadTransformer()
+		},
+		eventConverter: func(event interface{}) interface{} {
+			switch event := event.(type) {
+			case AccountCredited:
+				return internal.GogoAccountCredited{Amount: int32(event.Amount)}
+			case AccountDeposited:
+				return internal.GogoAccountDeposited{Amount: int32(event.Amount)}
+			}
+			panic("Unknown payload type given.")
+		},
+		payloads: map[string]strategy.PayloadInitiator{
+			"account_debited": func() interface{} {
+				return internal.GogoAccountDeposited{}
+			},
+			"account_credited": func() interface{} {
+				return internal.GogoAccountCredited{}
+			},
+		},
+	}
+}
+
 func TestAggregateProjectorSuite(t *testing.T) {
-	t.Run("AdvisoryLock with JSON strategy", func(t *testing.T) {
-		suite.Run(t, NewJSONAggregateProjectorTestSuite(
-			func(eventStoreTable, projectionTable string, serialization driverSQL.ProjectionStateSerialization, logger goengine.Logger) (storage driverSQL.AggregateProjectorStorage, e error) {
-				return postgres.NewAdvisoryLockAggregateProjectionStorage(eventStoreTable, projectionTable, serialization, true, logger)
-			},
-		))
-	})
-	t.Run("AdvisoryLock with Protobuf strategy", func(t *testing.T) {
-		suite.Run(t, NewProtobufAggregateProjectorTestSuite(
-			func(eventStoreTable, projectionTable string, serialization driverSQL.ProjectionStateSerialization, logger goengine.Logger) (storage driverSQL.AggregateProjectorStorage, e error) {
-				return postgres.NewAdvisoryLockAggregateProjectionStorage(eventStoreTable, projectionTable, serialization, true, logger)
-			},
-		))
-	})
-	t.Run("AdvisoryLock without locked field with JSON strategy", func(t *testing.T) {
-		suite.Run(t, NewJSONAggregateProjectorTestSuite(
-			func(eventStoreTable, projectionTable string, serialization driverSQL.ProjectionStateSerialization, logger goengine.Logger) (storage driverSQL.AggregateProjectorStorage, e error) {
-				return postgres.NewAdvisoryLockAggregateProjectionStorage(eventStoreTable, projectionTable, serialization, false, logger)
-			},
-		))
-	})
-	t.Run("AdvisoryLock without locked field with Protobuf strategy", func(t *testing.T) {
-		suite.Run(t, NewJSONAggregateProjectorTestSuite(
-			func(eventStoreTable, projectionTable string, serialization driverSQL.ProjectionStateSerialization, logger goengine.Logger) (storage driverSQL.AggregateProjectorStorage, e error) {
-				return postgres.NewAdvisoryLockAggregateProjectionStorage(eventStoreTable, projectionTable, serialization, false, logger)
-			},
-		))
-	})
+	testCases := map[string]AggregateProjectorStorageBuilder{
+		"AdvisoryLock with %s strategy": func(eventStoreTable, projectionTable string, serialization driverSQL.ProjectionStateSerialization, logger goengine.Logger) (storage driverSQL.AggregateProjectorStorage, e error) {
+			return postgres.NewAdvisoryLockAggregateProjectionStorage(eventStoreTable, projectionTable, serialization, true, logger)
+		},
+		"AdvisoryLock without locked field with % strategy": func(eventStoreTable, projectionTable string, serialization driverSQL.ProjectionStateSerialization, logger goengine.Logger) (storage driverSQL.AggregateProjectorStorage, e error) {
+			return postgres.NewAdvisoryLockAggregateProjectionStorage(eventStoreTable, projectionTable, serialization, false, logger)
+		},
+	}
+	testSuites := map[string]func(createProjectionStorage AggregateProjectorStorageBuilder) *AggregateProjectorTestSuite{
+		"JSON":         NewJSONAggregateProjectorTestSuite,
+		"Protobuf":     NewProtobufAggregateProjectorTestSuite,
+		"GogoProtobuf": NewGogoProtobufAggregateProjectorTestSuite,
+	}
+
+	for caseName, testCase := range testCases {
+		for suiteName, testSuite := range testSuites {
+			testName := fmt.Sprintf(caseName, suiteName)
+			t.Run(testName, func(t *testing.T) {
+				suite.Run(t, testSuite(testCase))
+			})
+		}
+	}
 }
 
 func (s *AggregateProjectorTestSuite) SetupTest() {
