@@ -18,6 +18,7 @@ import (
 	"github.com/hellofresh/goengine/driver/sql/postgres"
 	"github.com/hellofresh/goengine/extension/pq"
 	"github.com/hellofresh/goengine/strategy"
+	"github.com/hellofresh/goengine/strategy/protobuf"
 	strategyPostgres "github.com/hellofresh/goengine/strategy/sql/postgres"
 	"github.com/hellofresh/goengine/test/internal"
 	"github.com/sirupsen/logrus"
@@ -77,7 +78,7 @@ func NewProtobufAggregateProjectorTestSuite(createProjectionStorage AggregatePro
 	return &AggregateProjectorTestSuite{
 		createProjectionStorage: createProjectionStorage,
 		payloadTransformerConstructor: func() strategy.PayloadTransformer {
-			return strategy.NewProtobufPayloadTransformer()
+			return protobuf.NewPayloadTransformer()
 		},
 		eventConverter: func(event interface{}) interface{} {
 			switch event := event.(type) {
@@ -103,7 +104,7 @@ func NewGogoProtobufAggregateProjectorTestSuite(createProjectionStorage Aggregat
 	return &AggregateProjectorTestSuite{
 		createProjectionStorage: createProjectionStorage,
 		payloadTransformerConstructor: func() strategy.PayloadTransformer {
-			return strategy.NewProtobufPayloadTransformer()
+			return protobuf.NewPayloadTransformer()
 		},
 		eventConverter: func(event interface{}) interface{} {
 			switch event := event.(type) {

@@ -16,6 +16,7 @@ import (
 	"github.com/hellofresh/goengine/mocks"
 
 	"github.com/hellofresh/goengine/strategy"
+	"github.com/hellofresh/goengine/strategy/protobuf"
 	strategySQL "github.com/hellofresh/goengine/strategy/sql"
 	strategyPostgres "github.com/hellofresh/goengine/strategy/sql/postgres"
 
@@ -71,7 +72,7 @@ func NewJSONEventStoreTestSuite() *EventStoreTestSuite {
 func NewProtobufEventStoreTestSuite() *EventStoreTestSuite {
 	return &EventStoreTestSuite{
 		createEventStore: func(s *EventStoreTestSuite) goengine.EventStore {
-			transformer := strategy.NewProtobufPayloadTransformer()
+			transformer := protobuf.NewPayloadTransformer()
 			s.Require().NoError(
 				transformer.RegisterPayload("tests", func() interface{} { return &internal.Payload{} }),
 			)

@@ -17,10 +17,6 @@ var (
 	ErrPayloadNotRegistered = errors.New("goengine: payload is not registered")
 	// ErrUnknownPayloadType occurs when a payload type is unknown
 	ErrUnknownPayloadType = errors.New("goengine: unknown payload type provided")
-	// ErrNotProtobufPayload occurs when a PayloadInitiator is not implementing proto.Message
-	ErrNotProtobufPayload = errors.New("goengine: payload not implementing proto.Message")
-	// ErrNotMarshalerPayload occurs when a PayloadInitiator is not implementing Marshaler interface
-	ErrNotMarshalerPayload = errors.New("goengine: payload not implementing Marshaler interface")
 	// ErrInitiatorInvalidResult occurs when a PayloadInitiator returns a reference to nil
 	ErrInitiatorInvalidResult = errors.New("goengine: initializer must return a pointer that is not nil")
 	// ErrDuplicatePayloadType occurs when a payload type is already registered
@@ -63,6 +59,29 @@ type (
 		goengine.MessagePayloadConverter
 	}
 )
+
+// Initiator initates a new payload from the PayloadType
+func (p *PayloadType) Initiator() interface{} {
+	return p.initiator()
+}
+
+// IsPointer returns if the PayloadType is a pointer type
+func (p *PayloadType) IsPointer() bool {
+	return p.isPtr
+}
+
+// ReflectionType returns the PayloadType's reflection type
+func (p *PayloadType) ReflectionType() reflect.Type {
+	return p.reflectionType
+}
+
+// NewPayloadRegistryImplementation returns a new PayloadRegistryImplementation instance
+func NewPayloadRegistryImplementation() *PayloadRegistryImplementation {
+	return &PayloadRegistryImplementation{
+		types: map[string]PayloadType{},
+		names: map[string]string{},
+	}
+}
 
 // RegisterPayload registers a payload type and the way to initialize it with the factory
 func (p *PayloadRegistryImplementation) RegisterPayload(payloadType string, initiator PayloadInitiator) error {
@@ -111,4 +130,13 @@ func (p *PayloadRegistryImplementation) ResolveName(payload interface{}) (string
 	}
 
 	return payloadName, nil
+}
+
+// FindPayloadType finds PayloadType by type name
+func (p *PayloadRegistryImplementation) FindPayloadType(typeName string) (PayloadType, error) {
+	payloadType, found := p.types[typeName]
+	if !found {
+		return payloadType, ErrUnknownPayloadType
+	}
+	return payloadType, nil
 }

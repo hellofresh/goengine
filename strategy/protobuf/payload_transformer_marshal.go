@@ -1,16 +1,22 @@
-package strategy
+package protobuf
 
 import (
 	"bytes"
+	"errors"
 	"reflect"
+
+	"github.com/hellofresh/goengine/strategy"
 )
 
+// ErrNotMarshalerPayload occurs when a PayloadInitiator is not implementing Marshaler interface
+var ErrNotMarshalerPayload = errors.New("goengine: payload not implementing Marshaler interface")
+
 // Ensure that MarshalPayloadTransformer satisfies the PayloadTransformer interface
-var _ PayloadTransformer = &MarshalPayloadTransformer{}
+var _ strategy.PayloadTransformer = &MarshalPayloadTransformer{}
 
 // MarshalPayloadTransformer is a payload factory that can reconstruct payload from and to JSON
 type MarshalPayloadTransformer struct {
-	PayloadRegistryImplementation
+	strategy.PayloadRegistryImplementation
 }
 
 // MarshablePayload ...
@@ -22,10 +28,7 @@ type MarshablePayload interface {
 // NewMarshalPayloadTransformer returns a new instance of the PayloadTransformer
 func NewMarshalPayloadTransformer() *MarshalPayloadTransformer {
 	return &MarshalPayloadTransformer{
-		PayloadRegistryImplementation: PayloadRegistryImplementation{
-			types: map[string]PayloadType{},
-			names: map[string]string{},
-		},
+		PayloadRegistryImplementation: *strategy.NewPayloadRegistryImplementation(),
 	}
 }
 
@@ -36,12 +39,12 @@ func (p *MarshalPayloadTransformer) ConvertPayload(payload interface{}) (string,
 		return "", nil, err
 	}
 
-	payloadType, found := p.types[payloadName]
-	if !found {
-		return "", nil, ErrUnknownPayloadType
+	payloadType, err := p.FindPayloadType(payloadName)
+	if err != nil {
+		return "", nil, err
 	}
 
-	if !payloadType.isPtr {
+	if !payloadType.IsPointer() {
 		val := reflect.ValueOf(payload)
 		vp := reflect.New(val.Type())
 		vp.Elem().Set(val)
@@ -55,7 +58,7 @@ func (p *MarshalPayloadTransformer) ConvertPayload(payload interface{}) (string,
 
 	data, err := m.Marshal()
 	if err != nil {
-		return "", nil, ErrPayloadCannotBeSerialized
+		return "", nil, strategy.ErrPayloadCannotBeSerialized
 	}
 
 	return payloadName, data, nil
@@ -70,17 +73,17 @@ func (p *MarshalPayloadTransformer) CreatePayload(typeName string, data interfac
 	case string:
 		dataBytes = bytes.NewBufferString(d).Bytes()
 	default:
-		return nil, ErrUnsupportedPayloadData
+		return nil, strategy.ErrUnsupportedPayloadData
 	}
 
-	payloadType, found := p.types[typeName]
-	if !found {
-		return nil, ErrUnknownPayloadType
+	payloadType, err := p.FindPayloadType(typeName)
+	if err != nil {
+		return nil, err
 	}
 
-	if payloadType.isPtr {
+	if payloadType.IsPointer() {
 
-		payload, ok := payloadType.initiator().(MarshablePayload)
+		payload, ok := payloadType.Initiator().(MarshablePayload)
 		if !ok {
 			return nil, ErrNotMarshalerPayload
 		}
@@ -91,7 +94,7 @@ func (p *MarshalPayloadTransformer) CreatePayload(typeName string, data interfac
 		return payload, nil
 	}
 
-	val := reflect.ValueOf(payloadType.initiator())
+	val := reflect.ValueOf(payloadType.Initiator())
 	vp := reflect.New(val.Type())
 	vp.Elem().Set(val)
 	payload, ok := vp.Interface().(MarshablePayload)

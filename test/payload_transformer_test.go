@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/hellofresh/goengine/strategy"
+	"github.com/hellofresh/goengine/strategy/protobuf"
 	"github.com/hellofresh/goengine/test/internal"
 )
 
@@ -26,7 +27,7 @@ type BenchmarkSuite struct {
 var suites = map[string]BenchmarkSuite{
 	"Protobuf with pointer": {
 		transformer: func() strategy.PayloadTransformer {
-			return strategy.NewProtobufPayloadTransformer()
+			return protobuf.NewPayloadTransformer()
 		},
 		payloadCreator: func() interface{} {
 			return &internal.Payload{}
@@ -39,7 +40,7 @@ var suites = map[string]BenchmarkSuite{
 	},
 	"Protobuf with non-pointer": {
 		transformer: func() strategy.PayloadTransformer {
-			return strategy.NewProtobufPayloadTransformer()
+			return protobuf.NewPayloadTransformer()
 		},
 		payloadCreator: func() interface{} {
 			return internal.Payload{}
@@ -52,7 +53,7 @@ var suites = map[string]BenchmarkSuite{
 	},
 	"GogoProtobuf with pointer": {
 		transformer: func() strategy.PayloadTransformer {
-			return strategy.NewMarshalPayloadTransformer()
+			return protobuf.NewMarshalPayloadTransformer()
 		},
 		payloadCreator: func() interface{} {
 			return &internal.GogoPayload{}
@@ -65,7 +66,7 @@ var suites = map[string]BenchmarkSuite{
 	},
 	"GogoProtobuf with non-pointer": {
 		transformer: func() strategy.PayloadTransformer {
-			return strategy.NewMarshalPayloadTransformer()
+			return protobuf.NewMarshalPayloadTransformer()
 		},
 		payloadCreator: func() interface{} {
 			return internal.GogoPayload{}
