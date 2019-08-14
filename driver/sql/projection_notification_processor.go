@@ -4,6 +4,7 @@ import (
 	"context"
 	"runtime"
 	"sync"
+	"time"
 
 	"github.com/hellofresh/goengine"
 	"github.com/pkg/errors"
@@ -116,6 +117,7 @@ func (b *projectionNotificationProcessor) Queue(ctx context.Context, notificatio
 }
 
 func (b *projectionNotificationProcessor) startProcessor(ctx context.Context, handler ProcessHandler) {
+ProcessorLoop:
 	for {
 		select {
 		case <-b.done:
@@ -123,6 +125,11 @@ func (b *projectionNotificationProcessor) startProcessor(ctx context.Context, ha
 		case <-ctx.Done():
 			return
 		case notification := <-b.queue:
+			if notification != nil && notification.ValidAfter.After(time.Now()) {
+				b.queue <- notification
+				continue ProcessorLoop
+			}
+
 			// Execute the notification
 			b.metrics.StartNotificationProcessing(notification)
 			if err := handler(ctx, notification, b.Queue); err != nil {
