@@ -125,6 +125,13 @@ func (b *projectionNotificationProcessor) Queue(ctx context.Context, notificatio
 	return nil
 }
 
+// ReQueue puts the notification again on the queue to be processed with a ValidAfter set
+func (b *projectionNotificationProcessor) ReQueue(ctx context.Context, notification *ProjectionNotification) error {
+	notification.ValidAfter = time.Now().Add(b.retryDelay)
+
+	return b.Queue(ctx, notification)
+}
+
 func (b *projectionNotificationProcessor) startProcessor(ctx context.Context, handler ProcessHandler) {
 ProcessorLoop:
 	for {
@@ -134,14 +141,21 @@ ProcessorLoop:
 		case <-ctx.Done():
 			return
 		case notification := <-b.queue:
-			if notification != nil && notification.ValidAfter.After(time.Now()) {
-				b.queue <- notification
-				continue ProcessorLoop
+			var queueFunc ProjectionTrigger
+			if notification == nil {
+				queueFunc = b.Queue
+			} else {
+				queueFunc = b.ReQueue
+
+				if notification.ValidAfter.After(time.Now()) {
+					b.queue <- notification
+					continue ProcessorLoop
+				}
 			}
 
 			// Execute the notification
 			b.metrics.StartNotificationProcessing(notification)
-			if err := handler(ctx, notification, b.Queue); err != nil {
+			if err := handler(ctx, notification, queueFunc); err != nil {
 				b.logger.Error("the ProcessHandler produced an error", func(e goengine.LoggerEntry) {
 					e.Error(err)
 					e.Any("notification", notification)
