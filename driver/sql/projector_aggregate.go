@@ -25,8 +25,6 @@ type AggregateProjector struct {
 	db *sql.DB
 
 	logger goengine.Logger
-
-	retryDelay time.Duration
 }
 
 // NewAggregateProjector creates a new projector for a projection
@@ -63,7 +61,7 @@ func NewAggregateProjector(
 		e.String("projection", projection.Name())
 	})
 
-	processor, err := newBackgroundProcessor(10, 32, logger, metrics)
+	processor, err := newBackgroundProcessor(10, 32, logger, metrics, retryDelay)
 	if err != nil {
 		return nil, err
 	}
@@ -96,8 +94,6 @@ func NewAggregateProjector(
 		db: db,
 
 		logger: logger,
-
-		retryDelay: retryDelay,
 	}, nil
 }
 
@@ -166,7 +162,6 @@ func (a *AggregateProjector) processNotification(
 		return nil
 	case errorRetry:
 		a.logger.Debug("ProcessHandler->ErrorHandler: re-queueing notification", logFields)
-		notification.ValidAfter = time.Now().Add(a.retryDelay)
 		return queue(ctx, notification)
 	}
 

@@ -23,6 +23,8 @@ type (
 
 		logger  goengine.Logger
 		metrics Metrics
+
+		retryDelay time.Duration
 	}
 
 	// ProcessHandler is a func used to trigger a notification but with the addition of providing a Trigger func so
@@ -31,7 +33,13 @@ type (
 )
 
 // newBackgroundProcessor create a new projectionNotificationProcessor
-func newBackgroundProcessor(queueProcessors, queueBuffer int, logger goengine.Logger, metrics Metrics) (*projectionNotificationProcessor, error) {
+func newBackgroundProcessor(
+	queueProcessors,
+	queueBuffer int,
+	logger goengine.Logger,
+	metrics Metrics,
+	retryDelay time.Duration,
+) (*projectionNotificationProcessor, error) {
 	if queueProcessors <= 0 {
 		return nil, errors.New("queueProcessors must be greater then zero")
 	}
@@ -50,6 +58,7 @@ func newBackgroundProcessor(queueProcessors, queueBuffer int, logger goengine.Lo
 		queueBuffer:     queueBuffer,
 		logger:          logger,
 		metrics:         metrics,
+		retryDelay:      retryDelay,
 	}, nil
 }
 
