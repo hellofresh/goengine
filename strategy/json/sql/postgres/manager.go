@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"database/sql"
+	"time"
 
 	"github.com/hellofresh/goengine"
 	driverSQL "github.com/hellofresh/goengine/driver/sql"
@@ -120,6 +121,7 @@ func (m *SingleStreamManager) NewAggregateProjector(
 	projection goengine.Projection,
 	projectionErrorHandler driverSQL.ProjectionErrorCallback,
 	useLockedField bool,
+	retryDelay time.Duration,
 ) (*driverSQL.AggregateProjector, error) {
 	eventStore, err := m.NewEventStore()
 	if err != nil {
@@ -151,5 +153,6 @@ func (m *SingleStreamManager) NewAggregateProjector(
 		projectionErrorHandler,
 		m.logger,
 		m.metrics,
+		retryDelay,
 	)
 }

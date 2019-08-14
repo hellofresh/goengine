@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"sync"
+	"time"
 
 	"github.com/hellofresh/goengine/aggregate"
 	"github.com/hellofresh/goengine/metadata"
@@ -24,6 +25,8 @@ type AggregateProjector struct {
 	db *sql.DB
 
 	logger goengine.Logger
+
+	retryDelay time.Duration
 }
 
 // NewAggregateProjector creates a new projector for a projection
@@ -36,6 +39,7 @@ func NewAggregateProjector(
 	projectionErrorHandler ProjectionErrorCallback,
 	logger goengine.Logger,
 	metrics Metrics,
+	retryDelay time.Duration,
 ) (*AggregateProjector, error) {
 	switch {
 	case db == nil:
@@ -76,6 +80,13 @@ func NewAggregateProjector(
 		return nil, err
 	}
 
+	if retryDelay == 0 {
+		retryDelay, err = time.ParseDuration("50ms")
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return &AggregateProjector{
 		backgroundProcessor:    processor,
 		executor:               executor,
@@ -85,6 +96,8 @@ func NewAggregateProjector(
 		db: db,
 
 		logger: logger,
+
+		retryDelay: retryDelay,
 	}, nil
 }
 
@@ -153,6 +166,7 @@ func (a *AggregateProjector) processNotification(
 		return nil
 	case errorRetry:
 		a.logger.Debug("ProcessHandler->ErrorHandler: re-queueing notification", logFields)
+		notification.ValidAfter = time.Now().Add(a.retryDelay)
 		return queue(ctx, notification)
 	}
 
