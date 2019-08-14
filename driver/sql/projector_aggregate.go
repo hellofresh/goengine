@@ -78,13 +78,6 @@ func NewAggregateProjector(
 		return nil, err
 	}
 
-	if retryDelay == 0 {
-		retryDelay, err = time.ParseDuration("50ms")
-		if err != nil {
-			return nil, err
-		}
-	}
-
 	return &AggregateProjector{
 		backgroundProcessor:    processor,
 		executor:               executor,

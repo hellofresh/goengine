@@ -53,6 +53,10 @@ func newBackgroundProcessor(
 		metrics = NopMetrics
 	}
 
+	if retryDelay == 0 {
+		retryDelay = time.Millisecond * 50
+	}
+
 	return &projectionNotificationProcessor{
 		queueProcessors: queueProcessors,
 		queueBuffer:     queueBuffer,
