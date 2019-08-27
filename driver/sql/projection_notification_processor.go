@@ -33,7 +33,6 @@ func NewBackgroundProcessor(
 	queueBuffer int,
 	logger goengine.Logger,
 	metrics Metrics,
-	retryDelay time.Duration,
 	notificationQueue NotificationQueuer,
 ) (*ProjectionNotificationProcessor, error) {
 	if queueProcessors <= 0 {
@@ -49,7 +48,7 @@ func NewBackgroundProcessor(
 		metrics = NopMetrics
 	}
 	if notificationQueue == nil {
-		notificationQueue = newNotificationQueue(queueBuffer, retryDelay, metrics)
+		notificationQueue = newNotificationQueue(queueBuffer, 0, metrics)
 	}
 
 	return &ProjectionNotificationProcessor{

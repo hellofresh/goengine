@@ -61,7 +61,7 @@ func NewAggregateProjector(
 		e.String("projection", projection.Name())
 	})
 
-	processor, err := NewBackgroundProcessor(10, 32, logger, metrics, retryDelay, nil)
+	processor, err := NewBackgroundProcessor(10, 32, logger, metrics, nil)
 	if err != nil {
 		return nil, err
 	}

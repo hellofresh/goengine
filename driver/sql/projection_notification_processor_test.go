@@ -79,8 +79,7 @@ func TestStartProcessor(t *testing.T) {
 
 			bufferSize := 1
 			queueProcessorsCount := 1
-			retryDelay := time.Millisecond * 0
-			processor, err := sql.NewBackgroundProcessor(queueProcessorsCount, bufferSize, nil, nil, retryDelay, nqMock)
+			processor, err := sql.NewBackgroundProcessor(queueProcessorsCount, bufferSize, nil, nil, nqMock)
 			require.NoError(t, err)
 
 			var wg sync.WaitGroup
