@@ -13,8 +13,8 @@ var _ ProjectionTrigger = (&NotificationQueue{}).Queue
 var _ ProjectionTrigger = (&NotificationQueue{}).ReQueue
 
 type (
-	// NotificationQueueInterface describes a smart queue for projection notifications
-	NotificationQueueInterface interface {
+	// NotificationQueuer describes a smart queue for projection notifications
+	NotificationQueuer interface {
 		Channel() chan *ProjectionNotification
 		Close()
 		Empty() bool

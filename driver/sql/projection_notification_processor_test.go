@@ -52,7 +52,7 @@ func TestStartProcessor(t *testing.T) {
 		t.Run(testCase.title, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
 
-			nqMock := mocks.NewMockNotificationQueueInterface(ctrl)
+			nqMock := mocks.NewNotificationQueuer(ctrl)
 			ctx := context.Background()
 			notification := testCase.notification()
 
