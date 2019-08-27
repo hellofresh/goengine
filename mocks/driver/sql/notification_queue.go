@@ -75,15 +75,17 @@ func (mr *NotificationQueuerMockRecorder) Empty() *gomock.Call {
 }
 
 // Open mocks base method
-func (m *NotificationQueuer) Open(arg0 chan struct{}) {
+func (m *NotificationQueuer) Open() chan struct{} {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "Open", arg0)
+	ret := m.ctrl.Call(m, "Open")
+	ret0, _ := ret[0].(chan struct{})
+	return ret0
 }
 
 // Open indicates an expected call of Open
-func (mr *NotificationQueuerMockRecorder) Open(arg0 interface{}) *gomock.Call {
+func (mr *NotificationQueuerMockRecorder) Open() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Open", reflect.TypeOf((*NotificationQueuer)(nil).Open), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Open", reflect.TypeOf((*NotificationQueuer)(nil).Open))
 }
 
 // PutBack mocks base method

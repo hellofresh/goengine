@@ -18,7 +18,7 @@ type (
 		Channel() chan *ProjectionNotification
 		Close()
 		Empty() bool
-		Open(chan struct{})
+		Open() chan struct{}
 		PutBack(*ProjectionNotification)
 		Queue(context.Context, *ProjectionNotification) error
 		ReQueue(context.Context, *ProjectionNotification) error
@@ -90,7 +90,9 @@ func (nq *NotificationQueue) ReQueue(ctx context.Context, notification *Projecti
 }
 
 // Open enables the queue for business
-func (nq *NotificationQueue) Open(done chan struct{}) {
-	nq.done = done
+func (nq *NotificationQueue) Open() chan struct{} {
+	nq.done = make(chan struct{})
 	nq.queue = make(chan *ProjectionNotification, nq.queueBuffer)
+
+	return nq.done
 }

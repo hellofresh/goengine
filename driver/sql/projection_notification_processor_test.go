@@ -68,14 +68,19 @@ func TestStartProcessor(t *testing.T) {
 
 			e.Queue(gomock.Eq(ctx), gomock.Eq(notification)).Times(queueCallCount)
 			e.ReQueue(gomock.Eq(ctx), gomock.Eq(notification)).Times(reQueueCallCount)
-			e.Open(gomock.Any()).AnyTimes()
+			done := make(chan struct{})
+			e.Open().DoAndReturn(func() chan struct{} {
+				return done
+			}).AnyTimes()
 			channel := make(chan *sql.ProjectionNotification, 1)
 			channel <- notification
 			e.Channel().Return(channel).AnyTimes()
 			e.PutBack(gomock.Eq(notification)).Do(func(notification *sql.ProjectionNotification) {
 				channel <- notification
 			}).AnyTimes()
-			e.Close()
+			e.Close().Do(func() {
+				close(channel)
+			})
 
 			bufferSize := 1
 			queueProcessorsCount := 1

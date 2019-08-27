@@ -84,9 +84,7 @@ func (b *ProjectionNotificationProcessor) Execute(ctx context.Context, handler P
 
 // Start starts the background processes that will call the ProcessHandler based on the notification queued by Exec
 func (b *ProjectionNotificationProcessor) Start(ctx context.Context, handler ProcessHandler) func() {
-	b.done = make(chan struct{})
-
-	b.notificationQueue.Open(b.done)
+	b.done = b.notificationQueue.Open()
 
 	var wg sync.WaitGroup
 	wg.Add(b.queueProcessors)
