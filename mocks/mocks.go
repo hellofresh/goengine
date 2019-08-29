@@ -22,6 +22,7 @@ import (
 //go:generate go run ../vendor/github.com/golang/mock/mockgen/ -package=sql -destination driver/sql/persistence_strategy.go -mock_names PersistenceStrategy=PersistenceStrategy github.com/hellofresh/goengine/driver/sql PersistenceStrategy
 //go:generate go run ../vendor/github.com/golang/mock/mockgen/ -package=sql -destination driver/sql/projection_state_serialization.go -mock_names ProjectionStateSerialization=ProjectionStateSerialization github.com/hellofresh/goengine/driver/sql ProjectionStateSerialization
 //go:generate go run ../vendor/github.com/golang/mock/mockgen/ -package=sql -destination driver/sql/message_factory.go -mock_names MessageFactory=MessageFactory github.com/hellofresh/goengine/driver/sql MessageFactory
+//go:generate go run ../vendor/github.com/golang/mock/mockgen/ -package sql -destination driver/sql/notification_queue.go -mock_names NotificationQueuer=NotificationQueuer github.com/hellofresh/goengine/driver/sql NotificationQueuer
 
 var _ goengine.Message = &DummyMessage{}
 

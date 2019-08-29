@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"sync"
+	"time"
 
 	"github.com/hellofresh/goengine/aggregate"
 	"github.com/hellofresh/goengine/metadata"
@@ -15,7 +16,7 @@ import (
 type AggregateProjector struct {
 	sync.Mutex
 
-	backgroundProcessor *projectionNotificationProcessor
+	backgroundProcessor *ProjectionNotificationProcessor
 	executor            *notificationProjector
 	storage             AggregateProjectorStorage
 
@@ -36,6 +37,7 @@ func NewAggregateProjector(
 	projectionErrorHandler ProjectionErrorCallback,
 	logger goengine.Logger,
 	metrics Metrics,
+	retryDelay time.Duration,
 ) (*AggregateProjector, error) {
 	switch {
 	case db == nil:
@@ -59,7 +61,7 @@ func NewAggregateProjector(
 		e.String("projection", projection.Name())
 	})
 
-	processor, err := newBackgroundProcessor(10, 32, logger, metrics)
+	processor, err := NewBackgroundProcessor(10, 32, logger, metrics, nil)
 	if err != nil {
 		return nil, err
 	}

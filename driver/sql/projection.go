@@ -3,6 +3,7 @@ package sql
 import (
 	"context"
 	"database/sql"
+	"time"
 
 	"github.com/hellofresh/goengine"
 	"github.com/mailru/easyjson/jlexer"
@@ -12,8 +13,9 @@ import (
 type (
 	// ProjectionNotification is a representation of the data provided by database notify
 	ProjectionNotification struct {
-		No          int64  `json:"no"`
-		AggregateID string `json:"aggregate_id"`
+		No          int64     `json:"no"`
+		AggregateID string    `json:"aggregate_id"`
+		ValidAfter  time.Time `json:"valid_after"`
 	}
 
 	// ProjectionTrigger triggers the notification for processing

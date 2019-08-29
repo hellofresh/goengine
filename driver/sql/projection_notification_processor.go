@@ -4,24 +4,22 @@ import (
 	"context"
 	"runtime"
 	"sync"
+	"time"
 
 	"github.com/hellofresh/goengine"
 	"github.com/pkg/errors"
 )
 
-// Ensure the projectionNotificationProcessor.Queue is a ProjectionTrigger
-var _ ProjectionTrigger = (&projectionNotificationProcessor{}).Queue
-
 type (
-	// projectionNotificationProcessor provides a way to Trigger a notification using a set of background processes.
-	projectionNotificationProcessor struct {
+	// ProjectionNotificationProcessor provides a way to Trigger a notification using a set of background processes.
+	ProjectionNotificationProcessor struct {
 		done            chan struct{}
-		queue           chan *ProjectionNotification
 		queueProcessors int
-		queueBuffer     int
 
 		logger  goengine.Logger
 		metrics Metrics
+
+		notificationQueue NotificationQueuer
 	}
 
 	// ProcessHandler is a func used to trigger a notification but with the addition of providing a Trigger func so
@@ -29,8 +27,14 @@ type (
 	ProcessHandler func(context.Context, *ProjectionNotification, ProjectionTrigger) error
 )
 
-// newBackgroundProcessor create a new projectionNotificationProcessor
-func newBackgroundProcessor(queueProcessors, queueBuffer int, logger goengine.Logger, metrics Metrics) (*projectionNotificationProcessor, error) {
+// NewBackgroundProcessor create a new projectionNotificationProcessor
+func NewBackgroundProcessor(
+	queueProcessors,
+	queueBuffer int,
+	logger goengine.Logger,
+	metrics Metrics,
+	notificationQueue NotificationQueuer,
+) (*ProjectionNotificationProcessor, error) {
 	if queueProcessors <= 0 {
 		return nil, errors.New("queueProcessors must be greater then zero")
 	}
@@ -43,17 +47,20 @@ func newBackgroundProcessor(queueProcessors, queueBuffer int, logger goengine.Lo
 	if metrics == nil {
 		metrics = NopMetrics
 	}
+	if notificationQueue == nil {
+		notificationQueue = newNotificationQueue(queueBuffer, 0, metrics)
+	}
 
-	return &projectionNotificationProcessor{
-		queueProcessors: queueProcessors,
-		queueBuffer:     queueBuffer,
-		logger:          logger,
-		metrics:         metrics,
+	return &ProjectionNotificationProcessor{
+		queueProcessors:   queueProcessors,
+		logger:            logger,
+		metrics:           metrics,
+		notificationQueue: notificationQueue,
 	}, nil
 }
 
 // Execute starts the background worker and wait for the notification to be executed
-func (b *projectionNotificationProcessor) Execute(ctx context.Context, handler ProcessHandler, notification *ProjectionNotification) error {
+func (b *ProjectionNotificationProcessor) Execute(ctx context.Context, handler ProcessHandler, notification *ProjectionNotification) error {
 	// Wrap the processNotification in order to know that the first trigger finished
 	handler, handlerDone := b.wrapProcessHandlerForSingleRun(handler)
 
@@ -62,7 +69,7 @@ func (b *projectionNotificationProcessor) Execute(ctx context.Context, handler P
 	defer stopExecutor()
 
 	// Execute a run of the internal.
-	if err := b.Queue(ctx, nil); err != nil {
+	if err := b.notificationQueue.Queue(ctx, nil); err != nil {
 		return err
 	}
 
@@ -76,9 +83,8 @@ func (b *projectionNotificationProcessor) Execute(ctx context.Context, handler P
 }
 
 // Start starts the background processes that will call the ProcessHandler based on the notification queued by Exec
-func (b *projectionNotificationProcessor) Start(ctx context.Context, handler ProcessHandler) func() {
-	b.done = make(chan struct{})
-	b.queue = make(chan *ProjectionNotification, b.queueBuffer)
+func (b *ProjectionNotificationProcessor) Start(ctx context.Context, handler ProcessHandler) func() {
+	b.done = b.notificationQueue.Open()
 
 	var wg sync.WaitGroup
 	wg.Add(b.queueProcessors)
@@ -95,37 +101,39 @@ func (b *projectionNotificationProcessor) Start(ctx context.Context, handler Pro
 	return func() {
 		close(b.done)
 		wg.Wait()
-		close(b.queue)
+		b.notificationQueue.Close()
 	}
 }
 
 // Queue puts the notification on the queue to be processed
-func (b *projectionNotificationProcessor) Queue(ctx context.Context, notification *ProjectionNotification) error {
-	select {
-	default:
-	case <-ctx.Done():
-		return context.Canceled
-	case <-b.done:
-		return errors.New("goengine: unable to queue notification because the processor was stopped")
-	}
-
-	b.metrics.QueueNotification(notification)
-
-	b.queue <- notification
-	return nil
+func (b *ProjectionNotificationProcessor) Queue(ctx context.Context, notification *ProjectionNotification) error {
+	return b.notificationQueue.Queue(ctx, notification)
 }
 
-func (b *projectionNotificationProcessor) startProcessor(ctx context.Context, handler ProcessHandler) {
+func (b *ProjectionNotificationProcessor) startProcessor(ctx context.Context, handler ProcessHandler) {
+ProcessorLoop:
 	for {
 		select {
 		case <-b.done:
 			return
 		case <-ctx.Done():
 			return
-		case notification := <-b.queue:
+		case notification := <-b.notificationQueue.Channel():
+			var queueFunc ProjectionTrigger
+			if notification == nil {
+				queueFunc = b.notificationQueue.Queue
+			} else {
+				queueFunc = b.notificationQueue.ReQueue
+
+				if notification.ValidAfter.After(time.Now()) {
+					b.notificationQueue.PutBack(notification)
+					continue ProcessorLoop
+				}
+			}
+
 			// Execute the notification
 			b.metrics.StartNotificationProcessing(notification)
-			if err := handler(ctx, notification, b.Queue); err != nil {
+			if err := handler(ctx, notification, queueFunc); err != nil {
 				b.logger.Error("the ProcessHandler produced an error", func(e goengine.LoggerEntry) {
 					e.Error(err)
 					e.Any("notification", notification)
@@ -142,7 +150,7 @@ func (b *projectionNotificationProcessor) startProcessor(ctx context.Context, ha
 
 // wrapProcessHandlerForSingleRun returns a wrapped ProcessHandler with a done channel that is closed after the
 // provided ProcessHandler it's first call and related messages are finished or when the context is done.
-func (b *projectionNotificationProcessor) wrapProcessHandlerForSingleRun(handler ProcessHandler) (ProcessHandler, chan struct{}) {
+func (b *ProjectionNotificationProcessor) wrapProcessHandlerForSingleRun(handler ProcessHandler) (ProcessHandler, chan struct{}) {
 	done := make(chan struct{})
 
 	var m sync.Mutex
@@ -169,7 +177,7 @@ func (b *projectionNotificationProcessor) wrapProcessHandlerForSingleRun(handler
 				close(done)
 			default:
 				// No more queued messages to close the run
-				if len(b.queue) == 0 {
+				if b.notificationQueue.Empty() {
 					close(done)
 				}
 			}
