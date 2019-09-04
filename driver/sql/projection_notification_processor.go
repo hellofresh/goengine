@@ -4,7 +4,6 @@ import (
 	"context"
 	"runtime"
 	"sync"
-	"time"
 
 	"github.com/hellofresh/goengine"
 	"github.com/pkg/errors"
@@ -111,39 +110,31 @@ func (b *ProjectionNotificationProcessor) Queue(ctx context.Context, notificatio
 }
 
 func (b *ProjectionNotificationProcessor) startProcessor(ctx context.Context, handler ProcessHandler) {
-ProcessorLoop:
 	for {
-		select {
-		case <-b.done:
+		notification, stopped := b.notificationQueue.Next(ctx)
+		if stopped {
 			return
-		case <-ctx.Done():
-			return
-		case notification := <-b.notificationQueue.Channel():
-			var queueFunc ProjectionTrigger
-			if notification == nil {
-				queueFunc = b.notificationQueue.Queue
-			} else {
-				queueFunc = b.notificationQueue.ReQueue
+		}
 
-				if notification.ValidAfter.After(time.Now()) {
-					b.notificationQueue.PutBack(notification)
-					continue ProcessorLoop
-				}
-			}
+		var queueFunc ProjectionTrigger
+		if notification == nil {
+			queueFunc = b.notificationQueue.Queue
+		} else {
+			queueFunc = b.notificationQueue.ReQueue
+		}
 
-			// Execute the notification
-			b.metrics.StartNotificationProcessing(notification)
-			if err := handler(ctx, notification, queueFunc); err != nil {
-				b.logger.Error("the ProcessHandler produced an error", func(e goengine.LoggerEntry) {
-					e.Error(err)
-					e.Any("notification", notification)
-				})
+		// Execute the notification
+		b.metrics.StartNotificationProcessing(notification)
+		if err := handler(ctx, notification, queueFunc); err != nil {
+			b.logger.Error("the ProcessHandler produced an error", func(e goengine.LoggerEntry) {
+				e.Error(err)
+				e.Any("notification", notification)
+			})
 
-				b.metrics.FinishNotificationProcessing(notification, false)
+			b.metrics.FinishNotificationProcessing(notification, false)
 
-			} else {
-				b.metrics.FinishNotificationProcessing(notification, true)
-			}
+		} else {
+			b.metrics.FinishNotificationProcessing(notification, true)
 		}
 	}
 }

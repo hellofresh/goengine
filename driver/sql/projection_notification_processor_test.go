@@ -51,40 +51,43 @@ func TestStartProcessor(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.title, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
-
-			nqMock := mocks.NewNotificationQueuer(ctrl)
+			queueBufferSize := 1
+			queueProcessorsCount := 1
 			ctx := context.Background()
 			notification := testCase.notification()
 
-			e := nqMock.EXPECT()
-			queueCallCount := 0
-			reQueueCallCount := 0
+			notificationQueue := mocks.NewNotificationQueuer(ctrl)
+			expect := notificationQueue.EXPECT()
+
 			switch testCase.queueFunc {
 			case "Queue":
-				queueCallCount++
+				expect.Queue(gomock.Eq(ctx), gomock.Eq(notification)).Times(1)
 			case "ReQueue":
-				reQueueCallCount++
+				expect.ReQueue(gomock.Eq(ctx), gomock.Eq(notification)).Times(1)
 			}
 
-			e.Queue(gomock.Eq(ctx), gomock.Eq(notification)).Times(queueCallCount)
-			e.ReQueue(gomock.Eq(ctx), gomock.Eq(notification)).Times(reQueueCallCount)
 			done := make(chan struct{})
-			e.Open().DoAndReturn(func() chan struct{} {
+			channel := make(chan *sql.ProjectionNotification, queueBufferSize)
+			channel <- notification
+			called := false
+
+			expect.Open().DoAndReturn(func() chan struct{} {
 				return done
 			}).AnyTimes()
-			channel := make(chan *sql.ProjectionNotification, 1)
-			channel <- notification
-			e.Channel().Return(channel).AnyTimes()
-			e.PutBack(gomock.Eq(notification)).Do(func(notification *sql.ProjectionNotification) {
-				channel <- notification
+
+			expect.Next(gomock.Eq(ctx)).DoAndReturn(func(ctx context.Context) (*sql.ProjectionNotification, bool) {
+				if called {
+					return nil, true
+				}
+				called = true
+				return notification, false
 			}).AnyTimes()
-			e.Close().Do(func() {
+
+			expect.Close().Do(func() {
 				close(channel)
 			})
 
-			bufferSize := 1
-			queueProcessorsCount := 1
-			processor, err := sql.NewBackgroundProcessor(queueProcessorsCount, bufferSize, nil, nil, nqMock)
+			processor, err := sql.NewBackgroundProcessor(queueProcessorsCount, queueBufferSize, nil, nil, notificationQueue)
 			require.NoError(t, err)
 
 			var wg sync.WaitGroup

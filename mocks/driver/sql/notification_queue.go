@@ -34,20 +34,6 @@ func (m *NotificationQueuer) EXPECT() *NotificationQueuerMockRecorder {
 	return m.recorder
 }
 
-// Channel mocks base method
-func (m *NotificationQueuer) Channel() chan *sql.ProjectionNotification {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Channel")
-	ret0, _ := ret[0].(chan *sql.ProjectionNotification)
-	return ret0
-}
-
-// Channel indicates an expected call of Channel
-func (mr *NotificationQueuerMockRecorder) Channel() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Channel", reflect.TypeOf((*NotificationQueuer)(nil).Channel))
-}
-
 // Close mocks base method
 func (m *NotificationQueuer) Close() {
 	m.ctrl.T.Helper()
@@ -74,6 +60,21 @@ func (mr *NotificationQueuerMockRecorder) Empty() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Empty", reflect.TypeOf((*NotificationQueuer)(nil).Empty))
 }
 
+// Next mocks base method
+func (m *NotificationQueuer) Next(arg0 context.Context) (*sql.ProjectionNotification, bool) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Next", arg0)
+	ret0, _ := ret[0].(*sql.ProjectionNotification)
+	ret1, _ := ret[1].(bool)
+	return ret0, ret1
+}
+
+// Next indicates an expected call of Next
+func (mr *NotificationQueuerMockRecorder) Next(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Next", reflect.TypeOf((*NotificationQueuer)(nil).Next), arg0)
+}
+
 // Open mocks base method
 func (m *NotificationQueuer) Open() chan struct{} {
 	m.ctrl.T.Helper()
@@ -86,18 +87,6 @@ func (m *NotificationQueuer) Open() chan struct{} {
 func (mr *NotificationQueuerMockRecorder) Open() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Open", reflect.TypeOf((*NotificationQueuer)(nil).Open))
-}
-
-// PutBack mocks base method
-func (m *NotificationQueuer) PutBack(arg0 *sql.ProjectionNotification) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "PutBack", arg0)
-}
-
-// PutBack indicates an expected call of PutBack
-func (mr *NotificationQueuerMockRecorder) PutBack(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PutBack", reflect.TypeOf((*NotificationQueuer)(nil).PutBack), arg0)
 }
 
 // Queue mocks base method
