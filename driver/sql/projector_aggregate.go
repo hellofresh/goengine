@@ -60,8 +60,9 @@ func NewAggregateProjector(
 	logger = logger.WithFields(func(e goengine.LoggerEntry) {
 		e.String("projection", projection.Name())
 	})
-
-	processor, err := NewBackgroundProcessor(10, 32, logger, metrics, nil)
+	queueBuffer := 32
+	notificationQueue := newNotificationQueue(queueBuffer, retryDelay, metrics)
+	processor, err := NewBackgroundProcessor(5, queueBuffer, logger, metrics, notificationQueue)
 	if err != nil {
 		return nil, err
 	}
