@@ -38,6 +38,7 @@ func NewAggregateProjector(
 	logger goengine.Logger,
 	metrics Metrics,
 	retryDelay time.Duration,
+	noOfProcessors int,
 ) (*AggregateProjector, error) {
 	switch {
 	case db == nil:
@@ -62,7 +63,7 @@ func NewAggregateProjector(
 	})
 	queueBuffer := 32
 	notificationQueue := newNotificationQueue(queueBuffer, retryDelay, metrics)
-	processor, err := NewBackgroundProcessor(10, queueBuffer, logger, metrics, notificationQueue)
+	processor, err := NewBackgroundProcessor(noOfProcessors, queueBuffer, logger, metrics, notificationQueue)
 	if err != nil {
 		return nil, err
 	}
