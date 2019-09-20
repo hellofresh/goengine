@@ -62,7 +62,7 @@ func NewAggregateProjector(
 	})
 	queueBuffer := 32
 	notificationQueue := newNotificationQueue(queueBuffer, retryDelay, metrics)
-	processor, err := NewBackgroundProcessor(5, queueBuffer, logger, metrics, notificationQueue)
+	processor, err := NewBackgroundProcessor(10, queueBuffer, logger, metrics, notificationQueue)
 	if err != nil {
 		return nil, err
 	}
