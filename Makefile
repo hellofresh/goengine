@@ -30,7 +30,7 @@ clean:
 
 deps:
 	$(call title, "Installing dependencies")
-	dep ensure -v
+	go mod vendor
 
 #-----------------------------------------------------------------------------------------------------------------------
 # Testing
