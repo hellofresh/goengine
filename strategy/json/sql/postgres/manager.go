@@ -122,6 +122,7 @@ func (m *SingleStreamManager) NewAggregateProjector(
 	projectionErrorHandler driverSQL.ProjectionErrorCallback,
 	useLockedField bool,
 	retryDelay time.Duration,
+	noOfProcessors int,
 ) (*driverSQL.AggregateProjector, error) {
 	eventStore, err := m.NewEventStore()
 	if err != nil {
@@ -154,5 +155,6 @@ func (m *SingleStreamManager) NewAggregateProjector(
 		m.logger,
 		m.metrics,
 		retryDelay,
+		noOfProcessors,
 	)
 }
