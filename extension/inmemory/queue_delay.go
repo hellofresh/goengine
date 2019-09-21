@@ -40,11 +40,13 @@ func NewNotificationDelayQueue(queueBuffer int, retryDelay time.Duration, metric
 }
 
 // Open enables the queue for business
-func (nq *NotificationDelayQueue) Open() chan struct{} {
+func (nq *NotificationDelayQueue) Open() func() {
 	nq.done = make(chan struct{})
 	nq.queue = make(chan timeAwareNotification, nq.queueBuffer)
 
-	return nq.done
+	return func() {
+		close(nq.done)
+	}
 }
 
 // Close closes the queue channel

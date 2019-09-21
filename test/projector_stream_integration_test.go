@@ -1,6 +1,6 @@
 // +build integration
 
-package test_test
+package test
 
 import (
 	"context"
@@ -122,19 +122,24 @@ func (s *streamProjectorTestSuite) TestRunAndListen() {
 	)
 	s.Require().NoError(err, "failed to create projector")
 
+	err = projectorStorage.CreateProjection(context.Background(), s.DB())
+	s.Require().NoError(err)
+
 	// Run the projector in the background
 	wg.Add(1)
 	go func() {
-		if err := project.RunAndListen(projectorCtx, listener); err != nil {
+		err := listener.Listen(projectorCtx, project)
+		if err != nil && err != driverSQL.ErrProjectionFailedToLock {
 			assert.NoError(s.T(), err, "project.Run returned an error")
 		}
 		wg.Done()
 	}()
 
-	// Be evil and start run the projection again to ensure mutex is used and the context is respected
+	// Be evil and start run the projection again
 	wg.Add(1)
 	go func() {
-		if err := project.RunAndListen(projectorCtx, listener); err != nil {
+		err := listener.Listen(projectorCtx, project)
+		if err != nil && err != driverSQL.ErrProjectionFailedToLock {
 			assert.NoError(s.T(), err, "project.Run returned an error")
 		}
 		wg.Done()
@@ -194,7 +199,7 @@ func (s *streamProjectorTestSuite) TestRunAndListen() {
 		)
 		s.Require().NoError(err, "failed to create projector")
 
-		err = project.Run(context.Background())
+		err = project(context.Background(), nil)
 		s.Require().NoError(err, "failed to run projector")
 
 		s.expectProjectionState("deposited_report", 8, `{"Total": 7, "TotalAmount": 317}`)
@@ -249,7 +254,10 @@ func (s *streamProjectorTestSuite) TestRun() {
 	s.Run("Run projections", func() {
 		ctx := context.Background()
 
-		err := project.Run(ctx)
+		err := projectorStorage.CreateProjection(ctx, s.DB())
+		s.Require().NoError(err)
+
+		err = project(ctx, nil)
 		s.Require().NoError(err)
 
 		s.expectProjectionState("deposited_report", 6, `{"Total": 5, "TotalAmount": 216}`)
@@ -261,7 +269,7 @@ func (s *streamProjectorTestSuite) TestRun() {
 				AccountDeposited{Amount: 1},
 			})
 
-			err := project.Run(ctx)
+			err := project(ctx, nil)
 			s.Require().NoError(err)
 
 			s.expectProjectionState("deposited_report", 8, `{"Total": 7, "TotalAmount": 317}`)

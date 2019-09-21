@@ -1,9 +1,10 @@
 // +build integration
 
-package test_test
+package test
 
 import (
 	"context"
+	"github.com/hellofresh/goengine/extension/inmemory"
 	"regexp"
 	"runtime"
 	"sync"
@@ -100,8 +101,11 @@ func (s *aggregateProjectorTestSuite) TestRunAndListen() {
 	projectorStorage, err := s.createProjectionStorage(s.eventStoreTable, "agg_projections", projection, s.GetLogger())
 	s.Require().NoError(err, "failed to create projector storage")
 
+	queue := inmemory.NewNotificationDelayQueue(32, 0, s.Metrics)
+
 	project, err := driverSQL.NewAggregateProjector(
 		s.DB(),
+		queue,
 		driverSQL.AggregateProjectionEventStreamLoader(s.eventStore, projection.FromStream(), accountAggregateTypeName),
 		s.payloadTransformer,
 		projection,
@@ -110,15 +114,13 @@ func (s *aggregateProjectorTestSuite) TestRunAndListen() {
 			return driverSQL.ProjectionFail
 		},
 		s.GetLogger(),
-		s.Metrics,
-		0,
 	)
 	s.Require().NoError(err, "failed to create projector")
 
 	// Run the projector in the background
 	wg.Add(1)
 	go func() {
-		if err := project.RunAndListen(projectorCtx, listener); err != nil {
+		if err := listener.Listen(projectorCtx, project); err != nil {
 			assert.NoError(s.T(), err, "project.Run returned an error")
 		}
 		wg.Done()
@@ -127,7 +129,7 @@ func (s *aggregateProjectorTestSuite) TestRunAndListen() {
 	// Be evil and start run the projection again to ensure mutex is used and the context is respected
 	wg.Add(1)
 	go func() {
-		if err := project.RunAndListen(projectorCtx, listener); err != nil {
+		if err := listener.Listen(projectorCtx, project); err != nil {
 			assert.NoError(s.T(), err, "project.Run returned an error")
 		}
 		wg.Done()
@@ -201,6 +203,7 @@ func (s *aggregateProjectorTestSuite) TestRunAndListen() {
 
 		project, err := driverSQL.NewAggregateProjector(
 			s.DB(),
+			inmemory.NewNotificationDelayQueue(32, 0, s.Metrics),
 			driverSQL.AggregateProjectionEventStreamLoader(s.eventStore, projection.FromStream(), accountAggregateTypeName),
 			s.payloadTransformer,
 			projection,
@@ -209,12 +212,10 @@ func (s *aggregateProjectorTestSuite) TestRunAndListen() {
 				return driverSQL.ProjectionFail
 			},
 			s.GetLogger(),
-			s.Metrics,
-			0,
 		)
 		s.Require().NoError(err, "failed to create projector")
 
-		err = project.Run(context.Background())
+		err = project(context.Background(), nil)
 		s.Require().NoError(err)
 
 		s.assertAggregateProjectionStates(map[aggregate.ID]projectionInfo{
@@ -255,8 +256,11 @@ func (s *aggregateProjectorTestSuite) TestRun() {
 	projectorStorage, err := s.createProjectionStorage(s.eventStoreTable, "agg_projections", projection, s.GetLogger())
 	s.Require().NoError(err, "failed to create projector storage")
 
+	queue := inmemory.NewNotificationDelayQueue(32, 0, s.Metrics)
+
 	project, err := driverSQL.NewAggregateProjector(
 		s.DB(),
+		queue,
 		driverSQL.AggregateProjectionEventStreamLoader(s.eventStore, projection.FromStream(), accountAggregateTypeName),
 		s.payloadTransformer,
 		projection,
@@ -265,15 +269,16 @@ func (s *aggregateProjectorTestSuite) TestRun() {
 			return driverSQL.ProjectionFail
 		},
 		s.GetLogger(),
-		s.Metrics,
-		0,
 	)
 	s.Require().NoError(err, "failed to create projector")
+
+	broker, err := inmemory.NewNotificationBroker(10, 32, s.GetLogger(), s.Metrics)
+	s.Require().NoError(err, "failed to create projector broker")
 
 	s.Run("Run projections", func() {
 		ctx := context.Background()
 
-		err := project.Run(ctx)
+		err := broker.Execute(ctx, queue, project, nil)
 		s.Require().NoError(err)
 
 		s.assertAggregateProjectionStates(map[aggregate.ID]projectionInfo{
@@ -296,7 +301,7 @@ func (s *aggregateProjectorTestSuite) TestRun() {
 				AccountDeposited{Amount: 1},
 			})
 
-			err := project.Run(ctx)
+			err := broker.Execute(ctx, queue, project, nil)
 			s.Require().NoError(err)
 
 			s.assertAggregateProjectionStates(map[aggregate.ID]projectionInfo{

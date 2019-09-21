@@ -8,9 +8,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-// Ensure the notificationProjector.Execute is a ProjectionTrigger
-var _ ProjectionTrigger = (&notificationProjector{}).Execute
-
 // notificationProjector contains the logic for transforming a notification into a set of events and projecting them.
 type notificationProjector struct {
 	db *sql.DB
@@ -23,15 +20,15 @@ type notificationProjector struct {
 	logger goengine.Logger
 }
 
-// newNotificationProjector returns a new notificationProjector
-func newNotificationProjector(
+// NewNotificationProjector returns a new notificationProjector
+func NewNotificationProjector(
 	db *sql.DB,
 	storage ProjectorStorage,
 	eventHandlers map[string]goengine.MessageHandler,
 	eventLoader EventStreamLoader,
 	resolver goengine.MessagePayloadResolver,
 	logger goengine.Logger,
-) (*notificationProjector, error) {
+) (ProjectionTrigger, error) {
 	switch {
 	case db == nil:
 		return nil, goengine.InvalidArgumentError("db")
@@ -49,14 +46,16 @@ func newNotificationProjector(
 		logger = goengine.NopLogger
 	}
 
-	return &notificationProjector{
+	projector := &notificationProjector{
 		db:          db,
 		storage:     storage,
 		handlers:    wrapProjectionHandlers(eventHandlers),
 		eventLoader: eventLoader,
 		resolver:    resolver,
 		logger:      logger,
-	}, nil
+	}
+
+	return projector.Execute, nil
 }
 
 // Execute triggers the projections for the notification

@@ -6,7 +6,7 @@ import (
 
 // NotificationQueuer describes a smart queue for projection notifications
 type NotificationQueuer interface {
-	Open() chan struct{}
+	Open() func()
 	Close()
 
 	Empty() bool
