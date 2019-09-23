@@ -23,16 +23,12 @@ type (
 
 // NewNotificationBroker create a new NotificationBroker
 func NewNotificationBroker(
-	queueProcessors,
-	queueBuffer int,
+	queueProcessors int,
 	logger goengine.Logger,
 	metrics sql.Metrics,
 ) (*NotificationBroker, error) {
 	if queueProcessors <= 0 {
 		return nil, errors.New("queueProcessors must be greater then zero")
-	}
-	if queueBuffer < 0 {
-		return nil, errors.New("queueBuffer must be greater or equal to zero")
 	}
 	if logger == nil {
 		logger = goengine.NopLogger
