@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"github.com/hellofresh/goengine/driver/sql"
+	"sync"
 	"time"
 )
 
@@ -19,6 +20,8 @@ type (
 
 	// NotificationDelayQueue implements a smart queue
 	NotificationDelayQueue struct {
+		sync.Mutex
+
 		retryDelay  time.Duration
 		metrics     sql.Metrics
 		done        chan struct{}
@@ -46,12 +49,12 @@ func (nq *NotificationDelayQueue) Open() func() {
 
 	return func() {
 		close(nq.done)
-	}
-}
 
-// Close closes the queue channel
-func (nq *NotificationDelayQueue) Close() {
-	close(nq.queue)
+		nq.Lock()
+		defer nq.Unlock()
+
+		close(nq.queue)
+	}
 }
 
 // IsEmpty returns whether the queue is empty
@@ -69,7 +72,7 @@ func (nq *NotificationDelayQueue) Next(ctx context.Context) (*sql.ProjectionNoti
 			return nil, true
 		case notification := <-nq.queue:
 			if notification.ValidAfter.After(time.Now()) {
-				nq.queue <- notification
+				nq.queueNotification(notification)
 				continue
 			}
 			return notification.ProjectionNotification, false
@@ -89,9 +92,9 @@ func (nq *NotificationDelayQueue) Queue(ctx context.Context, notification *sql.P
 
 	nq.metrics.QueueNotification(notification)
 
-	nq.queue <- timeAwareNotification{
+	nq.queueNotification(timeAwareNotification{
 		ProjectionNotification: notification,
-	}
+	})
 	return nil
 }
 
@@ -107,9 +110,16 @@ func (nq *NotificationDelayQueue) ReQueue(ctx context.Context, notification *sql
 
 	nq.metrics.QueueNotification(notification)
 
-	nq.queue <- timeAwareNotification{
+	nq.queueNotification(timeAwareNotification{
 		ProjectionNotification: notification,
 		ValidAfter:             time.Now().Add(nq.retryDelay),
-	}
+	})
 	return nil
+}
+
+func (nq *NotificationDelayQueue) queueNotification(notification timeAwareNotification) {
+	nq.Lock()
+	defer nq.Unlock()
+
+	nq.queue <- notification
 }

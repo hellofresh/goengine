@@ -107,7 +107,6 @@ func (b *NotificationBroker) Start(
 	return func() {
 		queueClose()
 		wg.Wait()
-		queue.Close()
 		b.Unlock()
 	}
 }

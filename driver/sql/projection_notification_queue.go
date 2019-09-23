@@ -7,7 +7,6 @@ import (
 // NotificationQueuer describes a smart queue for projection notifications
 type NotificationQueuer interface {
 	Open() func()
-	Close()
 
 	IsEmpty() bool
 	Next(context.Context) (*ProjectionNotification, bool)
