@@ -14,6 +14,9 @@ type NotificationPublisher struct {
 	amqpDSN string
 	queue   string
 	logger  goengine.Logger
+
+	connection *amqp.Connection
+	channel    *amqp.Channel
 }
 
 func NewNotificationPublisher(amqpDSN, queue string, logger goengine.Logger) (*NotificationPublisher, error) {
@@ -27,6 +30,7 @@ func NewNotificationPublisher(amqpDSN, queue string, logger goengine.Logger) (*N
 func (p *NotificationPublisher) Publish(ctx context.Context, notification *sql.ProjectionNotification) error {
 	// Ignore nil notifications since this is not supported
 	if notification == nil {
+		p.logger.Warn("unable to handle nil notification, skipping", nil)
 		return nil
 	}
 
@@ -35,20 +39,28 @@ func (p *NotificationPublisher) Publish(ctx context.Context, notification *sql.P
 		return err
 	}
 
-	// TODO use a persistent connection/channel
-	conn, ch, err := setup(p.amqpDSN, p.queue)
-	if err != nil {
+	for {
+		if p.connection == nil {
+			p.connection, p.channel, err = setup(p.amqpDSN, p.queue)
+			if err != nil {
+				return err
+			}
+		}
+
+		err = p.channel.Publish("", p.queue, true, false, amqp.Publishing{
+			Body: msgBody,
+		})
+		if err == amqp.ErrClosed || err == amqp.ErrFrame || err == amqp.ErrUnexpectedFrame {
+			if err := p.connection.Close(); err != nil {
+				p.logger.Error("failed to close amqp connection", func(entry goengine.LoggerEntry) {
+					entry.Error(err)
+				})
+			}
+			p.connection = nil
+			p.channel = nil
+			continue
+		}
+
 		return err
 	}
-	defer func() {
-		if err := conn.Close(); err != nil {
-			p.logger.Error("failed to close amqp connection", func(entry goengine.LoggerEntry) {
-				entry.Error(err)
-			})
-		}
-	}()
-
-	return ch.Publish("", p.queue, true, false, amqp.Publishing{
-		Body: msgBody,
-	})
 }
