@@ -24,7 +24,7 @@ func main() {
 
 	goengineLogger := goengineZap.Wrap(logger)
 
-	projection := NewAccountAverageProjection(db)
+	projection := lib.NewAccountAverageProjection(db)
 
 	projector, err := manager.NewAggregateProjector(
 		lib.EventStoreStreamName,

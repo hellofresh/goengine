@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"github.com/hellofresh/goengine/driver/sql"
+	"github.com/hellofresh/goengine/driver/sql/postgres"
 	"github.com/hellofresh/goengine/example/broker/lib"
 	"github.com/hellofresh/goengine/extension/amqp"
 	goengineZap "github.com/hellofresh/goengine/extension/zap"
@@ -17,6 +19,13 @@ func main() {
 	listener, err := lib.NewGoEngineListener(goengineLogger)
 	failOnErr(err)
 
+	db, dbCloser, err := lib.NewPostgresDB(logger)
+	failOnErr(err)
+	defer dbCloser()
+
+	manager, err := lib.NewGoEngineManager(db, goengineZap.Wrap(logger))
+	failOnErr(err)
+
 	publisher, err := amqp.NewNotificationPublisher(
 		lib.AMQPDSN,
 		"goengine_example",
@@ -24,10 +33,25 @@ func main() {
 	)
 	failOnErr(err)
 
-	ctx := context.Background();
+	ctx := context.Background()
+
+	eventStoreTableName, err := manager.PersistenceStrategy().GenerateTableName(lib.EventStoreStreamName)
+	failOnErr(err)
+
+	projection := lib.NewAccountAverageProjection(db)
+	projectorStorage, err := postgres.NewAdvisoryLockAggregateProjectionStorage(
+		eventStoreTableName,
+		lib.AggregateProjectionAccountReportTable,
+		sql.GetProjectionStateSerialization(projection),
+		true,
+		goengineLogger,
+	)
+
+	publish, err := sql.NewNotificationAggregateSyncHandler(publisher.Publish, db, projectorStorage, publisher.Publish, goengineLogger)
+	failOnErr(err)
 
 	// TODO os.signal
-	failOnErr(listener.Listen(ctx, publisher.Publish))
+	failOnErr(listener.Listen(ctx, publish))
 }
 
 func failOnErr(err error) {

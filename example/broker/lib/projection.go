@@ -1,4 +1,4 @@
-package main
+package lib
 
 import (
 	"context"
@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"github.com/hellofresh/goengine"
 	"github.com/hellofresh/goengine/aggregate"
-	"github.com/hellofresh/goengine/example/broker/lib"
 )
 
 var _ goengine.ProjectionSaga = &AccountAverageProjection{}
@@ -50,7 +49,7 @@ func (*AccountAverageProjection) Name() string {
 
 // FromStream returns the name of the stream that this projection uses
 func (*AccountAverageProjection) FromStream() goengine.StreamName {
-	return lib.EventStoreStreamName
+	return EventStoreStreamName
 }
 
 // Init initialized the state of the projection in this case the AccountAverageState struct
@@ -61,16 +60,16 @@ func (p *AccountAverageProjection) Init(ctx context.Context) (interface{}, error
 // Handlers return the handlers for the events we want to project
 func (p *AccountAverageProjection) Handlers() map[string]goengine.MessageHandler {
 	return map[string]goengine.MessageHandler{
-		lib.BankAccountOpenedEventName: func(ctx context.Context, state interface{}, message goengine.Message) (interface{}, error) {
+		BankAccountOpenedEventName: func(ctx context.Context, state interface{}, message goengine.Message) (interface{}, error) {
 			_, err := p.db.ExecContext(ctx,
 				"INSERT INTO account_averages (accountID, credit, debit) VALUES ($1, 0, 0)",
-				message.Payload().(lib.BankAccountOpened).AccountID,
+				message.Payload().(BankAccountOpened).AccountID,
 			)
 			return state, err
 		},
-		lib.BankAccountCreditedEventName: func(ctx context.Context, state interface{}, message goengine.Message) (interface{}, error) {
+		BankAccountCreditedEventName: func(ctx context.Context, state interface{}, message goengine.Message) (interface{}, error) {
 			changedMsg := message.(*aggregate.Changed)
-			event := message.Payload().(lib.BankAccountCredited)
+			event := message.Payload().(BankAccountCredited)
 
 			accountState := state.(AccountAverageState)
 			accountState.CreditAmount += event.Amount
@@ -83,9 +82,9 @@ func (p *AccountAverageProjection) Handlers() map[string]goengine.MessageHandler
 			)
 			return accountState, err
 		},
-		lib.BankAccountDebitedEventName: func(ctx context.Context, state interface{}, message goengine.Message) (interface{}, error) {
+		BankAccountDebitedEventName: func(ctx context.Context, state interface{}, message goengine.Message) (interface{}, error) {
 			changedMsg := message.(*aggregate.Changed)
-			event := message.Payload().(lib.BankAccountDebited)
+			event := message.Payload().(BankAccountDebited)
 
 			accountState := state.(AccountAverageState)
 			accountState.DebitAmount += event.Amount
