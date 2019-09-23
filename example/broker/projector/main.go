@@ -35,7 +35,7 @@ func main() {
 			return sql.ProjectionFail
 		},
 		true,
-		0,
+		nil,
 	)
 	failOnErr(err)
 
