@@ -4,9 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	"github.com/hellofresh/goengine/example/broker/lib"
 	"github.com/hellofresh/goengine"
 	"github.com/hellofresh/goengine/aggregate"
+	"github.com/hellofresh/goengine/example/broker/lib"
 )
 
 var _ goengine.ProjectionSaga = &AccountAverageProjection{}
@@ -85,7 +85,7 @@ func (p *AccountAverageProjection) Handlers() map[string]goengine.MessageHandler
 		},
 		lib.BankAccountDebitedEventName: func(ctx context.Context, state interface{}, message goengine.Message) (interface{}, error) {
 			changedMsg := message.(*aggregate.Changed)
-			event := message.Payload().(lib.BankAccountCredited)
+			event := message.Payload().(lib.BankAccountDebited)
 
 			accountState := state.(AccountAverageState)
 			accountState.DebitAmount += event.Amount
