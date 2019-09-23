@@ -117,10 +117,15 @@ func (s *aggregateProjectorTestSuite) TestRunAndListen() {
 	)
 	s.Require().NoError(err, "failed to create projector")
 
+	broker, err := inmemory.NewNotificationBroker(10, 32, s.GetLogger(), s.Metrics)
+	s.Require().NoError(err, "failed to create projector broker")
+
 	// Run the projector in the background
 	wg.Add(1)
 	go func() {
-		if err := listener.Listen(projectorCtx, project); err != nil {
+		brokerStop := broker.Start(projectorCtx, queue, project)
+		defer brokerStop()
+		if err := listener.Listen(projectorCtx, queue.Queue); err != nil {
 			assert.NoError(s.T(), err, "project.Run returned an error")
 		}
 		wg.Done()
@@ -129,7 +134,9 @@ func (s *aggregateProjectorTestSuite) TestRunAndListen() {
 	// Be evil and start run the projection again to ensure mutex is used and the context is respected
 	wg.Add(1)
 	go func() {
-		if err := listener.Listen(projectorCtx, project); err != nil {
+		brokerStop := broker.Start(projectorCtx, queue, project)
+		defer brokerStop()
+		if err := listener.Listen(projectorCtx, queue.Queue); err != nil {
 			assert.NoError(s.T(), err, "project.Run returned an error")
 		}
 		wg.Done()

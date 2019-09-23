@@ -13,6 +13,7 @@ type (
 	NotificationWorker func()
 
 	NotificationBroker struct {
+		sync.Mutex
 		queueProcessors int
 
 		logger  goengine.Logger
@@ -81,6 +82,7 @@ func (b *NotificationBroker) Start(
 	queue sql.NotificationQueuer,
 	handler sql.ProjectionTrigger,
 ) func() {
+	b.Lock()
 	queueClose := queue.Open()
 
 	var wg sync.WaitGroup
@@ -99,6 +101,7 @@ func (b *NotificationBroker) Start(
 		queueClose()
 		wg.Wait()
 		queue.Close()
+		b.Unlock()
 	}
 }
 
