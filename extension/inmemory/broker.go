@@ -83,6 +83,13 @@ func (b *NotificationBroker) Start(
 	handler sql.ProjectionTrigger,
 ) func() {
 	b.Lock()
+
+	select {
+	case <-ctx.Done():
+		return func() { b.Unlock() }
+	default:
+	}
+
 	queueClose := queue.Open()
 
 	var wg sync.WaitGroup
