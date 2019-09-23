@@ -46,18 +46,18 @@ func (mr *NotificationQueuerMockRecorder) Close() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*NotificationQueuer)(nil).Close))
 }
 
-// Empty mocks base method
+// IsEmpty mocks base method
 func (m *NotificationQueuer) Empty() bool {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Empty")
+	ret := m.ctrl.Call(m, "IsEmpty")
 	ret0, _ := ret[0].(bool)
 	return ret0
 }
 
-// Empty indicates an expected call of Empty
+// IsEmpty indicates an expected call of IsEmpty
 func (mr *NotificationQueuerMockRecorder) Empty() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Empty", reflect.TypeOf((*NotificationQueuer)(nil).Empty))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsEmpty", reflect.TypeOf((*NotificationQueuer)(nil).Empty))
 }
 
 // Next mocks base method

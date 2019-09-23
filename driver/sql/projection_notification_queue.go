@@ -9,7 +9,7 @@ type NotificationQueuer interface {
 	Open() func()
 	Close()
 
-	Empty() bool
+	IsEmpty() bool
 	Next(context.Context) (*ProjectionNotification, bool)
 
 	Queue(context.Context, *ProjectionNotification) error

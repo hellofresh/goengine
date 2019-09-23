@@ -153,7 +153,7 @@ func (b *NotificationBroker) wrapProcessHandlerForSingleRun(
 				close(done)
 			default:
 				// No more queued messages to close the run
-				if queue.Empty() {
+				if queue.IsEmpty() {
 					close(done)
 				}
 			}

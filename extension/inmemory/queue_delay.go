@@ -54,8 +54,8 @@ func (nq *NotificationDelayQueue) Close() {
 	close(nq.queue)
 }
 
-// Empty returns whether the queue is empty
-func (nq *NotificationDelayQueue) Empty() bool {
+// IsEmpty returns whether the queue is empty
+func (nq *NotificationDelayQueue) IsEmpty() bool {
 	return len(nq.queue) == 0
 }
 
