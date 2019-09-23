@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"github.com/hellofresh/goengine"
 	"github.com/mailru/easyjson/jlexer"
+	"github.com/mailru/easyjson/jwriter"
 	"github.com/pkg/errors"
 )
 
@@ -123,6 +124,16 @@ func (p *ProjectionNotification) UnmarshalEasyJSON(in *jlexer.Lexer) {
 	if isTopLevel {
 		in.Consumed()
 	}
+}
+
+// MarshalEasyJSON supports easyjson.Marshaler interface
+func (p *ProjectionNotification) MarshalEasyJSON(w *jwriter.Writer) {
+	w.RawByte('{')
+	w.RawString("\"no\":")
+	w.Int64(p.No)
+	w.RawString(",\"aggregate_id\":")
+	w.String(p.AggregateID)
+	w.RawByte('}')
 }
 
 // GetProjectionStateSerialization returns a ProjectionStateSerialization based on the provided projection
