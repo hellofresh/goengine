@@ -129,17 +129,7 @@ func (s *streamProjectorTestSuite) TestRunAndListen() {
 	wg.Add(1)
 	go func() {
 		err := listener.Listen(projectorCtx, project)
-		if err != nil && err != driverSQL.ErrProjectionFailedToLock {
-			assert.NoError(s.T(), err, "project.Run returned an error")
-		}
-		wg.Done()
-	}()
-
-	// Be evil and start run the projection again
-	wg.Add(1)
-	go func() {
-		err := listener.Listen(projectorCtx, project)
-		if err != nil && err != driverSQL.ErrProjectionFailedToLock {
+		if err != nil {
 			assert.NoError(s.T(), err, "project.Run returned an error")
 		}
 		wg.Done()
