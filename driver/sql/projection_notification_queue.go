@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -30,6 +31,7 @@ type (
 		queue       chan *ProjectionNotification
 		queueLock   sync.Mutex
 		queueBuffer int
+		queueCount  int32
 	}
 )
 
@@ -52,6 +54,7 @@ func (nq *NotificationQueue) Open() func() {
 
 	nq.done = make(chan struct{})
 	nq.queue = make(chan *ProjectionNotification, nq.queueBuffer)
+	nq.queueCount = 0
 
 	return func() {
 		close(nq.done)
@@ -65,7 +68,7 @@ func (nq *NotificationQueue) Open() func() {
 
 // Empty returns whether the queue is empty
 func (nq *NotificationQueue) Empty() bool {
-	return len(nq.queue) == 0
+	return atomic.LoadInt32(&nq.queueCount) == 0
 }
 
 // Next yields the next notification on the queue or stopped when processor has stopped
@@ -81,6 +84,8 @@ func (nq *NotificationQueue) Next(ctx context.Context) (*ProjectionNotification,
 				nq.queueNotification(notification)
 				continue
 			}
+
+			atomic.AddInt32(&nq.queueCount, -1)
 			return notification, false
 		}
 	}
@@ -95,6 +100,8 @@ func (nq *NotificationQueue) Queue(ctx context.Context, notification *Projection
 	case <-nq.done:
 		return errors.New("goengine: unable to queue notification because the processor was stopped")
 	}
+
+	atomic.AddInt32(&nq.queueCount, 1)
 
 	nq.metrics.QueueNotification(notification)
 
