@@ -114,5 +114,10 @@ func (nq *NotificationQueue) queueNotification(notification *ProjectionNotificat
 	nq.queueLock.Lock()
 	defer nq.queueLock.Unlock()
 
-	nq.queue <- notification
+	select {
+	case <-nq.done:
+		return
+	default:
+		nq.queue <- notification
+	}
 }
