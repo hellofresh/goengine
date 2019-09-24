@@ -73,8 +73,11 @@ func TestStartProcessor(t *testing.T) {
 			channel <- notification
 			called := false
 
-			expect.Open().DoAndReturn(func() chan struct{} {
-				return done
+			expect.Open().DoAndReturn(func() func() {
+				return func() {
+					close(done)
+					close(channel)
+				}
 			}).AnyTimes()
 
 			expect.Next(gomock.Eq(ctx)).DoAndReturn(func(ctx context.Context) (*sql.ProjectionNotification, bool) {
@@ -84,10 +87,6 @@ func TestStartProcessor(t *testing.T) {
 				called = true
 				return notification, false
 			}).AnyTimes()
-
-			expect.Close().Do(func() {
-				close(channel)
-			})
 
 			processor, err := sql.NewBackgroundProcessor(queueProcessorsCount, queueBufferSize, nil, nil, notificationQueue)
 			require.NoError(t, err)
