@@ -15,6 +15,9 @@ env:
 before_install:
   - docker-compose up -d
 
+install:
+  - make deps
+
 script:
   - env GO111MODULE=on make $MAKE_TASK
 
