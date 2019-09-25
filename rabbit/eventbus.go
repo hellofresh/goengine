@@ -11,6 +11,11 @@ import (
 	"github.com/streadway/amqp"
 )
 
+const (
+	defaultHeartbeat = 10 * time.Second
+	defaultLocale    = "en_US"
+)
+
 // RawVersionedEvent represents the event that goes into rabbitmq
 type RawVersionedEvent struct {
 	ID         string          `bson:"aggregate_id,omitempty"`
@@ -22,20 +27,25 @@ type RawVersionedEvent struct {
 
 // EventBus  ...
 type EventBus struct {
-	brokerDSN string
-	name      string
-	exchange  string
+	brokerDSN      string
+	queue          string
+	exchange       string
+	connectionName string
 }
 
 // NewEventBus ...
-func NewEventBus(brokerDSN string, name string, exchange string) *EventBus {
-	return &EventBus{brokerDSN, name, exchange}
+func NewEventBus(brokerDSN, queue, exchange, connectionName string) *EventBus {
+	return &EventBus{brokerDSN, queue, exchange, connectionName}
 }
 
 // PublishEvents will publish events
 func (bus *EventBus) PublishEvents(events []*goengine.DomainMessage) error {
 	// Connects opens an AMQP connection from the credentials in the URL.
-	conn, err := amqp.Dial(bus.brokerDSN)
+	conn, err := amqp.DialConfig(bus.brokerDSN, amqp.Config{
+		Heartbeat:  defaultHeartbeat,
+		Locale:     defaultLocale,
+		Properties: amqp.Table{"connection_name": bus.connectionName + ".events-publisher"},
+	})
 	if err != nil {
 		return err
 	}
@@ -103,7 +113,7 @@ func (bus *EventBus) ReceiveEvents(options goengine.VersionedEventReceiverOption
 			select {
 			case ch := <-options.Close:
 				defer conn.Close()
-				ch <- c.Cancel(bus.name, false)
+				ch <- c.Cancel(bus.queue, false)
 				return
 
 			case message, more := <-events:
@@ -116,14 +126,18 @@ func (bus *EventBus) ReceiveEvents(options goengine.VersionedEventReceiverOption
 						if nil != err {
 							goengine.Log("EventBus.Cannot find event type", map[string]interface{}{"type": raw.Type}, nil)
 							options.Error <- errors.New("Cannot find event type " + raw.Type)
-							message.Ack(true)
+							if err := message.Ack(true); err != nil {
+								goengine.Log("EventBus.Ack could not ack message", nil, err)
+							}
 						} else {
 							ackCh := make(chan bool)
 
 							goengine.Log("EventBus.Dispatching Message", nil, nil)
 							options.ReceiveEvent <- goengine.VersionedEventTransactedAccept{Event: domainEvent, ProcessedSuccessfully: ackCh}
 							result := <-ackCh
-							message.Ack(result)
+							if err := message.Ack(result); err != nil {
+								goengine.Log("EventBus.Ack could not ack dispatched message", nil, err)
+							}
 						}
 					}
 				} else {
@@ -153,7 +167,11 @@ func (bus *EventBus) ReceiveEvents(options goengine.VersionedEventReceiverOption
 
 // DeleteQueue will delete a queue
 func (bus *EventBus) DeleteQueue(name string) error {
-	conn, err := amqp.Dial(bus.brokerDSN)
+	conn, err := amqp.DialConfig(bus.brokerDSN, amqp.Config{
+		Heartbeat:  defaultHeartbeat,
+		Locale:     defaultLocale,
+		Properties: amqp.Table{"connection_name": bus.connectionName + ".queue-deleter"},
+	})
 	if err != nil {
 		return err
 	}
@@ -168,7 +186,11 @@ func (bus *EventBus) DeleteQueue(name string) error {
 }
 
 func (bus *EventBus) consumeEventsQueue(exclusive bool) (*amqp.Connection, *amqp.Channel, <-chan amqp.Delivery, error) {
-	conn, err := amqp.Dial(bus.brokerDSN)
+	conn, err := amqp.DialConfig(bus.brokerDSN, amqp.Config{
+		Heartbeat:  defaultHeartbeat,
+		Locale:     defaultLocale,
+		Properties: amqp.Table{"connection_name": bus.connectionName + ".events-consumer"},
+	})
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -187,21 +209,21 @@ func (bus *EventBus) consumeEventsQueue(exclusive bool) (*amqp.Connection, *amqp
 		return nil, nil, nil, fmt.Errorf("exchange.declare: %v", err)
 	}
 
-	if _, err = c.QueueDeclare(bus.name, true, false, false, false, nil); err != nil {
+	if _, err = c.QueueDeclare(bus.queue, true, false, false, false, nil); err != nil {
 		return nil, nil, nil, fmt.Errorf("queue.declare: %v", err)
 	}
 
-	if err = c.QueueBind(bus.name, bus.name, bus.exchange, false, nil); err != nil {
+	if err = c.QueueBind(bus.queue, bus.queue, bus.exchange, false, nil); err != nil {
 		return nil, nil, nil, fmt.Errorf("queue.bind: %v", err)
 	}
 
-	events, err := c.Consume(bus.name, bus.name, false, exclusive, false, false, nil)
+	events, err := c.Consume(bus.queue, bus.queue, false, exclusive, false, false, nil)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("basic.consume: %v", err)
 	}
 
 	if err := c.Qos(1, 0, false); err != nil {
-		return nil, nil, nil, fmt.Errorf("Qos: %v", err)
+		return nil, nil, nil, fmt.Errorf("qos: %v", err)
 	}
 
 	return conn, c, events, nil

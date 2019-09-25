@@ -5,10 +5,8 @@ PKG_SRC := github.com/hellofresh/goengine
 
 deps:
 	@echo "$(OK_COLOR)==> Installing dependencies$(NO_COLOR)"
-	@go get -u github.com/golang/dep/cmd/dep
 	@go get -u github.com/onsi/ginkgo/ginkgo
 	@go get -u github.com/onsi/gomega
-	@dep ensure -v -vendor-only
 
 vet:
 	@echo "$(OK_COLOR)==> checking code correctness with 'go vet' tool$(NO_COLOR)"
