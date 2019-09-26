@@ -4,7 +4,7 @@ services:
   - docker
 
 go:
-  - "1.11"
+  - "1.12"
   - "stable"
 
 env:
@@ -18,7 +18,7 @@ install:
   - make deps
 
 script:
-  - make $MAKE_TASK
+  - env GO111MODULE=on make $MAKE_TASK
 
 after_script:
   - docker-compose down -v

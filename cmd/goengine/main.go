@@ -59,7 +59,7 @@ func main() {
 	registry.RegisterType(&RecipeRated{})
 
 	goengine.Log("Setting up the event bus", map[string]interface{}{"dsn": brokerDSN}, nil)
-	bus := rabbit.NewEventBus(brokerDSN, "events", "events")
+	bus := rabbit.NewEventBus(brokerDSN, "events", "events", "goengine-test")
 
 	goengine.Log("Setting up the event store", nil, nil)
 	eventStore := mongodb.NewEventStore(mongoClient.Database("event_store"), registry)
