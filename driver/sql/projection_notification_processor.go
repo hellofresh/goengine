@@ -143,6 +143,7 @@ func (b *ProjectionNotificationProcessor) startProcessor(ctx context.Context, ha
 // provided ProcessHandler it's first call and related messages are finished or when the context is done.
 func (b *ProjectionNotificationProcessor) wrapProcessHandlerForSingleRun(handler ProcessHandler) (ProcessHandler, chan struct{}) {
 	done := make(chan struct{})
+	var doneOnce sync.Once
 
 	var m sync.Mutex
 	var triggers int32
@@ -165,11 +166,15 @@ func (b *ProjectionNotificationProcessor) wrapProcessHandlerForSingleRun(handler
 			case <-done:
 			case <-ctx.Done():
 				// Context is expired
-				close(done)
+				doneOnce.Do(func() {
+					close(done)
+				})
 			default:
 				// No more queued messages to close the run
 				if b.notificationQueue.Empty() {
-					close(done)
+					doneOnce.Do(func() {
+						close(done)
+					})
 				}
 			}
 		}()
