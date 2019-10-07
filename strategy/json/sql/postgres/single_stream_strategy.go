@@ -3,11 +3,13 @@ package postgres
 import (
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/hellofresh/goengine"
 	"github.com/hellofresh/goengine/driver/sql"
 	"github.com/hellofresh/goengine/driver/sql/postgres"
+	"github.com/hellofresh/goengine/metadata"
 	"github.com/hellofresh/goengine/strategy/json/internal"
 )
 
@@ -94,6 +96,36 @@ func (s *SingleStreamStrategy) PrepareData(messages []goengine.Message) ([]inter
 		)
 	}
 	return out, nil
+}
+
+// PrepareSearch returns the where part for searching the event store
+func (s *SingleStreamStrategy) PrepareSearch(matcher metadata.Matcher) ([]byte, []interface{}) {
+	query := make([]byte, 0, 196)
+	params := make([]interface{}, 0, 2)
+
+	paramCount := 1
+	matcher.Iterate(func(c metadata.Constraint) {
+		paramCount++
+		params = append(params, c.Value())
+
+		query = append(query, " AND "...)
+		switch c.Field() {
+		case "_aggregate_type":
+			query = append(query, "aggregate_type ="...)
+		case "_aggregate_id":
+			query = append(query, "aggregate_id ="...)
+		default:
+			query = append(query, "metadata ->> "...)
+			query = append(query, postgres.QuoteString(c.Field())...)
+		}
+
+		query = append(query, ' ')
+		query = append(query, c.Operator()...)
+		query = append(query, " $"...)
+		query = append(query, strconv.Itoa(paramCount)...)
+	})
+
+	return query, params
 }
 
 // GenerateTableName returns a valid table name for postgres

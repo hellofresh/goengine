@@ -174,19 +174,9 @@ func (e *EventStore) loadQuery(
 	params = append(params, fromNumber)
 
 	if matcher != nil {
-		paramCount := 1
-		matcher.Iterate(func(c metadata.Constraint) {
-			paramCount++
-			params = append(params, c.Value())
-
-			// We are doing "metadata ->> %s %s $%d" with a possible AND
-			selectQuery = append(selectQuery, " AND metadata ->> "...)
-			selectQuery = append(selectQuery, QuoteString(c.Field())...)
-			selectQuery = append(selectQuery, ' ')
-			selectQuery = append(selectQuery, c.Operator()...)
-			selectQuery = append(selectQuery, " $"...)
-			selectQuery = append(selectQuery, strconv.Itoa(paramCount)...)
-		})
+		searchPart, searchParams := e.persistenceStrategy.PrepareSearch(matcher)
+		selectQuery = append(selectQuery, searchPart...)
+		params = append(params, searchParams...)
 	}
 	selectQuery = append(selectQuery, " ORDER BY no "...)
 	if count != nil {
