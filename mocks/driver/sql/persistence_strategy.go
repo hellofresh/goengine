@@ -7,6 +7,7 @@ package sql
 import (
 	gomock "github.com/golang/mock/gomock"
 	goengine "github.com/hellofresh/goengine"
+	metadata "github.com/hellofresh/goengine/metadata"
 	reflect "reflect"
 )
 
@@ -61,6 +62,20 @@ func (mr *PersistenceStrategyMockRecorder) CreateSchema(arg0 interface{}) *gomoc
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateSchema", reflect.TypeOf((*PersistenceStrategy)(nil).CreateSchema), arg0)
 }
 
+// EventColumnNames mocks base method
+func (m *PersistenceStrategy) EventColumnNames() []string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EventColumnNames")
+	ret0, _ := ret[0].([]string)
+	return ret0
+}
+
+// EventColumnNames indicates an expected call of EventColumnNames
+func (mr *PersistenceStrategyMockRecorder) EventColumnNames() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EventColumnNames", reflect.TypeOf((*PersistenceStrategy)(nil).EventColumnNames))
+}
+
 // GenerateTableName mocks base method
 func (m *PersistenceStrategy) GenerateTableName(arg0 goengine.StreamName) (string, error) {
 	m.ctrl.T.Helper()
@@ -89,4 +104,19 @@ func (m *PersistenceStrategy) PrepareData(arg0 []goengine.Message) ([]interface{
 func (mr *PersistenceStrategyMockRecorder) PrepareData(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PrepareData", reflect.TypeOf((*PersistenceStrategy)(nil).PrepareData), arg0)
+}
+
+// PrepareSearch mocks base method
+func (m *PersistenceStrategy) PrepareSearch(arg0 metadata.Matcher) ([]byte, []interface{}) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PrepareSearch", arg0)
+	ret0, _ := ret[0].([]byte)
+	ret1, _ := ret[1].([]interface{})
+	return ret0, ret1
+}
+
+// PrepareSearch indicates an expected call of PrepareSearch
+func (mr *PersistenceStrategyMockRecorder) PrepareSearch(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PrepareSearch", reflect.TypeOf((*PersistenceStrategy)(nil).PrepareSearch), arg0)
 }

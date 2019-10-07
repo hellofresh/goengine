@@ -4,7 +4,6 @@ package test
 
 import (
 	"context"
-	"github.com/hellofresh/goengine/extension/inmemory"
 	"regexp"
 	"runtime"
 	"sync"
@@ -16,6 +15,7 @@ import (
 	"github.com/hellofresh/goengine/driver/sql"
 	driverSQL "github.com/hellofresh/goengine/driver/sql"
 	"github.com/hellofresh/goengine/driver/sql/postgres"
+	"github.com/hellofresh/goengine/extension/inmemory"
 	"github.com/hellofresh/goengine/extension/pq"
 	strategyPostgres "github.com/hellofresh/goengine/strategy/json/sql/postgres"
 	"github.com/sirupsen/logrus"
@@ -117,7 +117,7 @@ func (s *aggregateProjectorTestSuite) TestRunAndListen() {
 	)
 	s.Require().NoError(err, "failed to create projector")
 
-	broker, err := inmemory.NewNotificationBroker(10, 32, s.GetLogger(), s.Metrics)
+	broker, err := inmemory.NewNotificationBroker(10, s.GetLogger(), s.Metrics)
 	s.Require().NoError(err, "failed to create projector broker")
 
 	// Run the projector in the background
@@ -279,7 +279,7 @@ func (s *aggregateProjectorTestSuite) TestRun() {
 	)
 	s.Require().NoError(err, "failed to create projector")
 
-	broker, err := inmemory.NewNotificationBroker(10, 32, s.GetLogger(), s.Metrics)
+	broker, err := inmemory.NewNotificationBroker(10, s.GetLogger(), s.Metrics)
 	s.Require().NoError(err, "failed to create projector broker")
 
 	s.Run("Run projections", func() {

@@ -34,20 +34,8 @@ func (m *NotificationQueuer) EXPECT() *NotificationQueuerMockRecorder {
 	return m.recorder
 }
 
-// Close mocks base method
-func (m *NotificationQueuer) Close() {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "Close")
-}
-
-// Close indicates an expected call of Close
-func (mr *NotificationQueuerMockRecorder) Close() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*NotificationQueuer)(nil).Close))
-}
-
 // IsEmpty mocks base method
-func (m *NotificationQueuer) Empty() bool {
+func (m *NotificationQueuer) IsEmpty() bool {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "IsEmpty")
 	ret0, _ := ret[0].(bool)
@@ -55,9 +43,9 @@ func (m *NotificationQueuer) Empty() bool {
 }
 
 // IsEmpty indicates an expected call of IsEmpty
-func (mr *NotificationQueuerMockRecorder) Empty() *gomock.Call {
+func (mr *NotificationQueuerMockRecorder) IsEmpty() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsEmpty", reflect.TypeOf((*NotificationQueuer)(nil).Empty))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsEmpty", reflect.TypeOf((*NotificationQueuer)(nil).IsEmpty))
 }
 
 // Next mocks base method
@@ -76,10 +64,10 @@ func (mr *NotificationQueuerMockRecorder) Next(arg0 interface{}) *gomock.Call {
 }
 
 // Open mocks base method
-func (m *NotificationQueuer) Open() chan struct{} {
+func (m *NotificationQueuer) Open() func() {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Open")
-	ret0, _ := ret[0].(chan struct{})
+	ret0, _ := ret[0].(func())
 	return ret0
 }
 

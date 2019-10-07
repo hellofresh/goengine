@@ -5,7 +5,6 @@ package postgres_test
 import (
 	"context"
 	"database/sql"
-	"github.com/hellofresh/goengine/extension/inmemory"
 	"os"
 	"testing"
 	"time"
@@ -14,6 +13,7 @@ import (
 	"github.com/hellofresh/goengine/aggregate"
 	driverSQL "github.com/hellofresh/goengine/driver/sql"
 	"github.com/hellofresh/goengine/driver/sql/postgres"
+	"github.com/hellofresh/goengine/extension/inmemory"
 	"github.com/hellofresh/goengine/metadata"
 	"github.com/hellofresh/goengine/strategy/json"
 	strategySQL "github.com/hellofresh/goengine/strategy/json/sql"

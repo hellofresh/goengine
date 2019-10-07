@@ -2,12 +2,12 @@ package postgres
 
 import (
 	"database/sql"
-	"github.com/hellofresh/goengine/extension/inmemory"
 	"time"
 
 	"github.com/hellofresh/goengine"
 	driverSQL "github.com/hellofresh/goengine/driver/sql"
 	"github.com/hellofresh/goengine/driver/sql/postgres"
+	"github.com/hellofresh/goengine/extension/inmemory"
 	"github.com/hellofresh/goengine/strategy/json"
 	strategySQL "github.com/hellofresh/goengine/strategy/json/sql"
 )

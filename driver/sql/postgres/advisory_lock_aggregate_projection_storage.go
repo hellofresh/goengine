@@ -60,12 +60,12 @@ func NewAdvisoryLockAggregateProjectionStorage(
 
 		queryOutOfSyncProjections: fmt.Sprintf(
 			`WITH aggregate_position AS (
-			   SELECT e.metadata ->> '_aggregate_id' AS aggregate_id, MAX(e.no) AS no
+			   SELECT e.aggregate_id, MAX(e.no) AS no
 		        FROM %[1]s AS e
 			   GROUP BY aggregate_id
 			 )
 			 SELECT a.aggregate_id, a.no FROM aggregate_position AS a
-			   LEFT JOIN %[2]s AS p ON p.aggregate_id::text = a.aggregate_id
+			   LEFT JOIN %[2]s AS p ON p.aggregate_id = a.aggregate_id
 			 WHERE p.aggregate_id IS NULL OR (a.no > p.position)`,
 			eventStoreTableQuoted,
 			projectionTableQuoted,

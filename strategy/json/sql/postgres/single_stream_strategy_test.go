@@ -134,7 +134,7 @@ func TestGenerateTableName(t *testing.T) {
 }
 
 func TestColumnNames(t *testing.T) {
-	expectedColumns := []string{"event_id", "event_name", "payload", "metadata", "created_at"}
+	expectedColumns := []string{"event_id", "event_name", "payload", "metadata", "aggregate_type", "aggregate_id", "aggregate_version", "created_at"}
 
 	strategy, err := postgres.NewSingleStreamStrategy(&mocks.MessagePayloadConverter{})
 	require.NoError(t, err)
@@ -169,7 +169,7 @@ func TestPrepareData(t *testing.T) {
 
 		pc := mocks.NewMessagePayloadConverter(ctrl)
 		messages := make([]goengine.Message, 3)
-		expectedColumns := make([]interface{}, 0, 3*5)
+		expectedColumns := make([]interface{}, 0, 3*8)
 		for i := range messages {
 			id := goengine.GenerateUUID()
 			payload := []byte(fmt.Sprintf(`{"Name":"%d","Balance":0}`, i))
@@ -190,6 +190,9 @@ func TestPrepareData(t *testing.T) {
 				payloadType,
 				payload,
 				metaJSON,
+				nil,
+				nil,
+				nil,
 				createdAt,
 			)
 		}
