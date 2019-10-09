@@ -128,11 +128,22 @@ func (a *AggregateProjector) processNotification(
 	notification *ProjectionNotification,
 	queue ProjectionTrigger,
 ) error {
-	var err error
+	var (
+		err       error
+		logFields func(e goengine.LoggerEntry)
+	)
 	if notification != nil {
 		err = a.executor.Execute(ctx, notification)
+		logFields = func(e goengine.LoggerEntry) {
+			e.Error(err)
+			e.Int64("notification.no", notification.No)
+			e.String("notification.aggregate_id", notification.AggregateID)
+		}
 	} else {
 		err = a.triggerOutOfSyncProjections(ctx, queue)
+		logFields = func(e goengine.LoggerEntry) {
+			e.Error(err)
+		}
 	}
 
 	// No error occurred during projection so return
@@ -141,11 +152,6 @@ func (a *AggregateProjector) processNotification(
 	}
 
 	// Resolve the action to take based on the error that occurred
-	logFields := func(e goengine.LoggerEntry) {
-		e.Error(err)
-		e.Int64("notification.no", notification.No)
-		e.String("notification.aggregate_id", notification.AggregateID)
-	}
 	switch resolveErrorAction(a.projectionErrorHandler, notification, err) {
 	case errorFail:
 		a.logger.Debug("ProcessHandler->ErrorHandler: marking projection as failed", logFields)
