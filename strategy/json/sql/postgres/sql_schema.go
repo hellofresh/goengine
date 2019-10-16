@@ -19,7 +19,7 @@ BEGIN
       PERFORM (
         WITH payload AS
         (
-          SELECT NEW.no, NEW.event_name, NEW.metadata -> '_aggregate_id' AS aggregate_id
+          SELECT NEW.no, NEW.event_name, NEW.aggregate_id AS aggregate_id
         )
         SELECT pg_notify(channel, row_to_json(payload)::text) FROM payload
       );

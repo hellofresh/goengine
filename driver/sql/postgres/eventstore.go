@@ -33,6 +33,7 @@ type EventStore struct {
 	messageFactory      driverSQL.MessageFactory
 	columns             string
 	columnCount         int
+	eventColumns        string
 	logger              goengine.Logger
 }
 
@@ -56,16 +57,24 @@ func NewEventStore(
 	}
 
 	columns := persistenceStrategy.ColumnNames()
-	for i, c := range persistenceStrategy.ColumnNames() {
-		columns[i] = QuoteIdentifier(c)
+	insertColumns := make([]string, len(columns))
+	for i, c := range columns {
+		insertColumns[i] = QuoteIdentifier(c)
+	}
+
+	columns = persistenceStrategy.EventColumnNames()
+	selectColumns := make([]string, len(columns))
+	for i, c := range columns {
+		selectColumns[i] = QuoteIdentifier(c)
 	}
 
 	return &EventStore{
 		persistenceStrategy: persistenceStrategy,
 		db:                  db,
 		messageFactory:      messageFactory,
-		columns:             strings.Join(columns, ", "),
-		columnCount:         len(columns),
+		columns:             strings.Join(insertColumns, ", "),
+		columnCount:         len(insertColumns),
+		eventColumns:        strings.Join(selectColumns, ", "),
 		logger:              logger,
 	}, nil
 }
@@ -166,7 +175,9 @@ func (e *EventStore) loadQuery(
 	selectQuery := make([]byte, 0, 196)
 	params := make([]interface{}, 0, 4)
 
-	selectQuery = append(selectQuery, "SELECT * FROM "...)
+	selectQuery = append(selectQuery, "SELECT "...)
+	selectQuery = append(selectQuery, e.eventColumns...)
+	selectQuery = append(selectQuery, " FROM "...)
 	selectQuery = append(selectQuery, tableName...)
 
 	// Add conditions to the select query
@@ -174,19 +185,9 @@ func (e *EventStore) loadQuery(
 	params = append(params, fromNumber)
 
 	if matcher != nil {
-		paramCount := 1
-		matcher.Iterate(func(c metadata.Constraint) {
-			paramCount++
-			params = append(params, c.Value())
-
-			// We are doing "metadata ->> %s %s $%d" with a possible AND
-			selectQuery = append(selectQuery, " AND metadata ->> "...)
-			selectQuery = append(selectQuery, QuoteString(c.Field())...)
-			selectQuery = append(selectQuery, ' ')
-			selectQuery = append(selectQuery, c.Operator()...)
-			selectQuery = append(selectQuery, " $"...)
-			selectQuery = append(selectQuery, strconv.Itoa(paramCount)...)
-		})
+		searchPart, searchParams := e.persistenceStrategy.PrepareSearch(matcher)
+		selectQuery = append(selectQuery, searchPart...)
+		params = append(params, searchParams...)
 	}
 	selectQuery = append(selectQuery, " ORDER BY no "...)
 	if count != nil {
