@@ -1,3 +1,5 @@
+// +build unit
+
 package amqp_test
 
 import (
@@ -8,9 +10,6 @@ import (
 	"github.com/hellofresh/goengine"
 	"github.com/hellofresh/goengine/driver/sql"
 	goengineAmqp "github.com/hellofresh/goengine/extension/amqp"
-	goengineLogger "github.com/hellofresh/goengine/extension/logrus"
-	"github.com/sirupsen/logrus"
-	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -60,9 +59,9 @@ func TestNotificationPublisher_Publish(t *testing.T) {
 	})
 }
 
-func getLogger() (goengine.Logger, *test.Hook) {
-	logger, loggerHook := test.NewNullLogger()
-	logger.SetLevel(logrus.DebugLevel)
-
-	return goengineLogger.Wrap(logger), loggerHook
-}
+//func getLogger() (goengine.Logger, *test.Hook) {
+//	logger, loggerHook := test.NewNullLogger()
+//	logger.SetLevel(logrus.DebugLevel)
+//
+//	return goengineLogger.Wrap(logger), loggerHook
+//}

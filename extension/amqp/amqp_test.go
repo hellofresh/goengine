@@ -21,3 +21,18 @@ func (ch mockChannel) Publish(
 ) error {
 	return nil
 }
+
+func (ch mockChannel) Consume(
+	queue,
+	consumer string,
+	autoAck,
+	exclusive,
+	noLocal,
+	noWait bool,
+	args amqp.Table,
+) (<-chan amqp.Delivery, error) {
+	return make(chan amqp.Delivery), nil
+}
+func (ch mockChannel) Qos(prefetchCount, prefetchSize int, global bool) error {
+	return nil
+}
