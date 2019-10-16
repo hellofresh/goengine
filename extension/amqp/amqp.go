@@ -36,10 +36,10 @@ func setup(url, queue string) (io.Closer, NotificationChannel, error) {
 
 // DirectQueueConsume returns a Consume func that will connect to the provided AMQP server and create a queue for direct message delivery
 func DirectQueueConsume(amqpDSN, queue string) (Consume, error) {
-	switch {
-	case len(amqpDSN) == 0:
+	if _, err := amqp.ParseURI(amqpDSN); err != nil {
 		return nil, goengine.InvalidArgumentError("amqpDSN")
-	case len(queue) == 0:
+	}
+	if len(queue) == 0 {
 		return nil, goengine.InvalidArgumentError("queue")
 	}
 
@@ -54,7 +54,7 @@ func DirectQueueConsume(amqpDSN, queue string) (Consume, error) {
 			return nil, nil, err
 		}
 
-		// Exclusive consumer
+		// Since there can be multiple consumers, fair distribution of deliveries is required
 		deliveries, err := ch.Consume(queue, "", true, false, false, false, nil)
 
 		return conn, deliveries, err

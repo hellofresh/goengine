@@ -1,6 +1,15 @@
+// +build unit
+
 package amqp_test
 
-import "github.com/streadway/amqp"
+import (
+	"testing"
+
+	"github.com/hellofresh/goengine"
+	goengineAmqp "github.com/hellofresh/goengine/extension/amqp"
+	"github.com/streadway/amqp"
+	"github.com/stretchr/testify/assert"
+)
 
 type mockConnection struct {
 }
@@ -35,4 +44,21 @@ func (ch mockChannel) Consume(
 }
 func (ch mockChannel) Qos(prefetchCount, prefetchSize int, global bool) error {
 	return nil
+}
+
+func TestDirectQueueConsume(t *testing.T) {
+	t.Run("Invalid arguments", func(t *testing.T) {
+		_, err := goengineAmqp.DirectQueueConsume("http://localhost:5672/", "my-queue")
+		assert.Equal(t, goengine.InvalidArgumentError("amqpDSN"), err)
+
+		_, err = goengineAmqp.DirectQueueConsume("amqp://localhost:5672/", "")
+		assert.Equal(t, goengine.InvalidArgumentError("queue"), err)
+	})
+
+	t.Run("Returns amqp.Consume", func(t *testing.T) {
+		c, err := goengineAmqp.DirectQueueConsume("amqp://localhost:5672/", "my-queue")
+		assert.NoError(t, err)
+		assert.NotNil(t, c)
+		assert.IsType(t, (goengineAmqp.Consume)(nil), c)
+	})
 }

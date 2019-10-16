@@ -58,10 +58,3 @@ func TestNotificationPublisher_Publish(t *testing.T) {
 		ensure.Len(loggerHook.Entries, 0)
 	})
 }
-
-//func getLogger() (goengine.Logger, *test.Hook) {
-//	logger, loggerHook := test.NewNullLogger()
-//	logger.SetLevel(logrus.DebugLevel)
-//
-//	return goengineLogger.Wrap(logger), loggerHook
-//}
