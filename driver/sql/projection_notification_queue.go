@@ -3,20 +3,18 @@ package sql
 import (
 	"context"
 	"errors"
+	"sync"
+	"sync/atomic"
 	"time"
 )
 
-// Ensure the NotificationQueue.Queue is a ProjectionTrigger
-var _ ProjectionTrigger = (&NotificationQueue{}).Queue
-
-// Ensure the NotificationQueue.ReQueue is a ProjectionTrigger
-var _ ProjectionTrigger = (&NotificationQueue{}).ReQueue
+// Ensure the NotificationQueue is a NotificationQueuer
+var _ NotificationQueuer = &NotificationQueue{}
 
 type (
 	// NotificationQueuer describes a smart queue for projection notifications
 	NotificationQueuer interface {
-		Open() chan struct{}
-		Close()
+		Open() func()
 
 		Empty() bool
 		Next(context.Context) (*ProjectionNotification, bool)
@@ -31,7 +29,9 @@ type (
 		metrics     Metrics
 		done        chan struct{}
 		queue       chan *ProjectionNotification
+		queueLock   sync.Mutex
 		queueBuffer int
+		queueCount  int32
 	}
 )
 
@@ -48,21 +48,27 @@ func newNotificationQueue(queueBuffer int, retryDelay time.Duration, metrics Met
 }
 
 // Open enables the queue for business
-func (nq *NotificationQueue) Open() chan struct{} {
+func (nq *NotificationQueue) Open() func() {
+	nq.queueLock.Lock()
+	defer nq.queueLock.Unlock()
+
 	nq.done = make(chan struct{})
 	nq.queue = make(chan *ProjectionNotification, nq.queueBuffer)
+	nq.queueCount = 0
 
-	return nq.done
-}
+	return func() {
+		close(nq.done)
 
-// Close closes the queue channel
-func (nq *NotificationQueue) Close() {
-	close(nq.queue)
+		nq.queueLock.Lock()
+		defer nq.queueLock.Unlock()
+
+		close(nq.queue)
+	}
 }
 
 // Empty returns whether the queue is empty
 func (nq *NotificationQueue) Empty() bool {
-	return len(nq.queue) == 0
+	return atomic.LoadInt32(&nq.queueCount) == 0
 }
 
 // Next yields the next notification on the queue or stopped when processor has stopped
@@ -75,9 +81,11 @@ func (nq *NotificationQueue) Next(ctx context.Context) (*ProjectionNotification,
 			return nil, true
 		case notification := <-nq.queue:
 			if notification != nil && notification.ValidAfter.After(time.Now()) {
-				nq.queue <- notification
+				nq.queueNotification(notification)
 				continue
 			}
+
+			atomic.AddInt32(&nq.queueCount, -1)
 			return notification, false
 		}
 	}
@@ -93,9 +101,12 @@ func (nq *NotificationQueue) Queue(ctx context.Context, notification *Projection
 		return errors.New("goengine: unable to queue notification because the processor was stopped")
 	}
 
+	atomic.AddInt32(&nq.queueCount, 1)
+
 	nq.metrics.QueueNotification(notification)
 
-	nq.queue <- notification
+	nq.queueNotification(notification)
+
 	return nil
 }
 
@@ -104,4 +115,16 @@ func (nq *NotificationQueue) ReQueue(ctx context.Context, notification *Projecti
 	notification.ValidAfter = time.Now().Add(nq.retryDelay)
 
 	return nq.Queue(ctx, notification)
+}
+
+func (nq *NotificationQueue) queueNotification(notification *ProjectionNotification) {
+	nq.queueLock.Lock()
+	defer nq.queueLock.Unlock()
+
+	select {
+	case <-nq.done:
+		return
+	default:
+		nq.queue <- notification
+	}
 }

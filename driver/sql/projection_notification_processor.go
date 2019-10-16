@@ -12,7 +12,6 @@ import (
 type (
 	// ProjectionNotificationProcessor provides a way to Trigger a notification using a set of background processes.
 	ProjectionNotificationProcessor struct {
-		done            chan struct{}
 		queueProcessors int
 
 		logger  goengine.Logger
@@ -83,7 +82,7 @@ func (b *ProjectionNotificationProcessor) Execute(ctx context.Context, handler P
 
 // Start starts the background processes that will call the ProcessHandler based on the notification queued by Exec
 func (b *ProjectionNotificationProcessor) Start(ctx context.Context, handler ProcessHandler) func() {
-	b.done = b.notificationQueue.Open()
+	queueClose := b.notificationQueue.Open()
 
 	var wg sync.WaitGroup
 	wg.Add(b.queueProcessors)
@@ -98,9 +97,8 @@ func (b *ProjectionNotificationProcessor) Start(ctx context.Context, handler Pro
 	runtime.Gosched()
 
 	return func() {
-		close(b.done)
+		queueClose()
 		wg.Wait()
-		b.notificationQueue.Close()
 	}
 }
 
