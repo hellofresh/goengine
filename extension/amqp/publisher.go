@@ -17,16 +17,29 @@ type NotificationPublisher struct {
 	queue   string
 	logger  goengine.Logger
 
-	connection *amqp.Connection
-	channel    *amqp.Channel
+	connection NotificationConnection
+	channel    NotificationChannel
 }
 
 // NewNotificationPublisher returns an instance of NotificationPublisher
-func NewNotificationPublisher(amqpDSN, queue string, logger goengine.Logger) (*NotificationPublisher, error) {
+func NewNotificationPublisher(amqpDSN, queue string,
+	logger goengine.Logger,
+	connection NotificationConnection,
+	channel NotificationChannel,
+) (*NotificationPublisher, error) {
+
+	if _, err := amqp.ParseURI(amqpDSN); err != nil {
+		return nil, goengine.InvalidArgumentError("amqpDSN")
+	}
+	if len(queue) == 0 {
+		return nil, goengine.InvalidArgumentError("queue")
+	}
 	return &NotificationPublisher{
-		amqpDSN: amqpDSN,
-		queue:   queue,
-		logger:  logger,
+		amqpDSN:    amqpDSN,
+		queue:      queue,
+		logger:     logger,
+		connection: connection,
+		channel:    channel,
 	}, nil
 }
 

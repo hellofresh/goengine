@@ -4,8 +4,8 @@ import (
 	"github.com/streadway/amqp"
 )
 
-// setup returns a connection and channel to be used for consumption with the Queue setup
-func setup(url, queue string) (*amqp.Connection, *amqp.Channel, error) {
+// setup returns a connection and channel to be used for the Queue setup
+func setup(url, queue string) (NotificationConnection, NotificationChannel, error) {
 	conn, err := amqp.Dial(url)
 	if err != nil {
 		return nil, nil, err
@@ -21,4 +21,14 @@ func setup(url, queue string) (*amqp.Connection, *amqp.Channel, error) {
 	}
 
 	return conn, ch, nil
+}
+
+// NotificationChannel represents a channel for notifications
+type NotificationChannel interface {
+	Publish(exchange, queue string, mandatory, immediate bool, msg amqp.Publishing) error
+}
+
+// NotificationConnection represents a connection to the notification queue
+type NotificationConnection interface {
+	Close() error
 }
