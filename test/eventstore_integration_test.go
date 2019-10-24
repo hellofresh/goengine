@@ -61,7 +61,7 @@ func (s *eventStoreTestSuite) TestCreate() {
 		`SELECT COUNT(*) FROM pg_indexes WHERE schemaname = 'public' AND tablename = 'events_orders';`,
 	).Scan(&indexesCount)
 	s.Require().NoError(err)
-	s.Equal(4, indexesCount)
+	s.Equal(3, indexesCount)
 }
 
 func (s *eventStoreTestSuite) TestHasStream() {

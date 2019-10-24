@@ -38,7 +38,7 @@ func NewSingleStreamStrategy(converter goengine.MessagePayloadConverter) (sql.Pe
 func (s *SingleStreamStrategy) CreateSchema(tableName string) []string {
 	tableName = postgres.QuoteIdentifier(tableName)
 
-	statements := make([]string, 3)
+	statements := make([]string, 2)
 	statements[0] = fmt.Sprintf(
 		`CREATE TABLE %s (
     no BIGSERIAL,
@@ -55,8 +55,7 @@ func (s *SingleStreamStrategy) CreateSchema(tableName string) []string {
 );`,
 		tableName,
 	)
-	statements[1] = fmt.Sprintf(`CREATE UNIQUE INDEX ON %s (aggregate_type, aggregate_id, no);`, tableName)
-	statements[2] = fmt.Sprintf(`CREATE INDEX ON %s (aggregate_type, aggregate_id, no);`, tableName)
+	statements[1] = fmt.Sprintf(`CREATE UNIQUE INDEX ON %s (no, aggregate_id, aggregate_type);`, tableName)
 	return statements
 }
 
