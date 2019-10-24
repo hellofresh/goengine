@@ -255,18 +255,6 @@ func TestEventStore_Load(t *testing.T) {
 			expectedQuery string
 		}{
 			{
-				"With matcher",
-				1,
-				nil,
-				func() metadata.Matcher {
-					m := metadata.NewMatcher()
-					m = metadata.WithConstraint(m, "version", metadata.GreaterThan, 1)
-					m = metadata.WithConstraint(m, "version", metadata.LowerThan, 100)
-					return m
-				},
-				`SELECT "no", "payload", "metadata" FROM event_stream WHERE no >= \$1 aggregate_version < \$3 ORDER BY no`,
-			},
-			{
 				"Without matcher",
 				1,
 				nil,
@@ -291,7 +279,7 @@ func TestEventStore_Load(t *testing.T) {
 				ctrl := gomock.NewController(t)
 				defer ctrl.Finish()
 
-				matcher := testCase.Matcher()
+				matcher := testCase.matcher()
 
 				expectedStream := &mocks.EventStream{}
 
