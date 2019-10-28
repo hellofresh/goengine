@@ -157,7 +157,7 @@ func TestCreateSchema(t *testing.T) {
 	t.Run("output statement elements count", func(t *testing.T) {
 		cs := strategy.CreateSchema("abc")
 
-		assert.Equal(t, 2, len(cs))
+		assert.Equal(t, 3, len(cs))
 		assert.Contains(t, cs[0], `CREATE TABLE "abc"`)
 	})
 }
