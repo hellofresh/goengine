@@ -212,7 +212,7 @@ func main() {
 	postgresDSN := os.Getenv("POSTGRES_DSN")
 	postgresDB, err := sql.Open("postgres", postgresDSN)
 
-	manager, err := postgres.NewSingleStreamManager(postgresDB, goengine.NopLogger)
+	manager, err := postgres.NewSingleStreamManager(postgresDB, goengine.NopLogger, nil)
 	if err != nil {
 		panic(err)
 	}
