@@ -255,6 +255,18 @@ func TestEventStore_Load(t *testing.T) {
 			expectedQuery string
 		}{
 			{
+				"With matcher",
+				1,
+				nil,
+				func() metadata.Matcher {
+					m := metadata.NewMatcher()
+					m = metadata.WithConstraint(m, "version", metadata.GreaterThan, 1)
+					m = metadata.WithConstraint(m, "version", metadata.LowerThan, 100)
+					return m
+				},
+				`SELECT "no", "payload", "metadata" FROM event_stream WHERE no >= \$1 AND version > \$2 AND version < \$3 ORDER BY no`,
+			},
+			{
 				"Without matcher",
 				1,
 				nil,
@@ -289,7 +301,13 @@ func TestEventStore_Load(t *testing.T) {
 				factory.EXPECT().CreateEventStream(gomock.AssignableToTypeOf(&sql.Rows{})).Return(expectedStream, nil).Times(1)
 
 				strategy := mockSQL.NewPersistenceStrategy(ctrl)
-				strategy.EXPECT().PrepareSearch(matcher).Return([]byte{}, []interface{}{}).AnyTimes()
+
+				if matcher != nil {
+					strategy.EXPECT().PrepareSearch(matcher).Return([]byte(" AND version > $2 AND version < $3"), []interface{}{}).Times(1)
+				} else {
+					strategy.EXPECT().PrepareSearch(matcher).Return([]byte{}, []interface{}{}).AnyTimes()
+				}
+
 				strategy.EXPECT().ColumnNames().Return(columns).AnyTimes()
 				strategy.EXPECT().EventColumnNames().Return(columns).AnyTimes()
 				strategy.EXPECT().GenerateTableName(goengine.StreamName("event_stream")).Return("event_stream", nil).AnyTimes()
