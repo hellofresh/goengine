@@ -2,6 +2,7 @@ package amqp
 
 import (
 	"context"
+	"io"
 
 	"github.com/hellofresh/goengine"
 	"github.com/hellofresh/goengine/driver/sql"
@@ -17,14 +18,14 @@ type NotificationPublisher struct {
 	queue   string
 	logger  goengine.Logger
 
-	connection NotificationConnection
+	connection io.Closer
 	channel    NotificationChannel
 }
 
 // NewNotificationPublisher returns an instance of NotificationPublisher
 func NewNotificationPublisher(amqpDSN, queue string,
 	logger goengine.Logger,
-	connection NotificationConnection,
+	connection io.Closer,
 	channel NotificationChannel,
 ) (*NotificationPublisher, error) {
 
