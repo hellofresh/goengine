@@ -303,12 +303,12 @@ func TestEventStore_Load(t *testing.T) {
 				strategy := mockSQL.NewPersistenceStrategy(ctrl)
 
 				if matcher != nil {
-					strategy.EXPECT().PrepareSearch(matcher).Return([]byte(" AND version > $2 AND version < $3"), []interface{}{}).Times(1)
+					strategy.EXPECT().PrepareSearch(matcher).Return([]byte(" AND version > $2 AND version < $3"), []interface{}{1, 100}).Times(1)
 				} else {
 					strategy.EXPECT().PrepareSearch(matcher).Return([]byte{}, []interface{}{}).AnyTimes()
 				}
 
-				strategy.EXPECT().InsertColumnNames().Return(columns).AnyTimes()
+				strategy.EXPECT().InsertColumnNames().Return([]string{}).AnyTimes()
 				strategy.EXPECT().EventColumnNames().Return(columns).AnyTimes()
 				strategy.EXPECT().GenerateTableName(goengine.StreamName("event_stream")).Return("event_stream", nil).AnyTimes()
 
