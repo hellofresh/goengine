@@ -126,7 +126,7 @@ func TestEventStore_Create(t *testing.T) {
 		defer ctrl.Finish()
 
 		strategy := mockSQL.NewPersistenceStrategy(ctrl)
-		strategy.EXPECT().ColumnNames().Return([]string{}).AnyTimes()
+		strategy.EXPECT().InsertColumnNames().Return([]string{}).AnyTimes()
 		strategy.EXPECT().EventColumnNames().Return([]string{}).AnyTimes()
 		strategy.EXPECT().GenerateTableName(goengine.StreamName("orders")).Return("events_orders", nil).AnyTimes()
 		strategy.EXPECT().CreateSchema("events_orders").Return([]string{}).AnyTimes()
@@ -231,7 +231,7 @@ func TestEventStore_AppendTo(t *testing.T) {
 		persistenceStrategy := mockSQL.NewPersistenceStrategy(ctrl)
 		persistenceStrategy.EXPECT().PrepareData(messages).Return(nil, expectedError).AnyTimes()
 		persistenceStrategy.EXPECT().GenerateTableName(goengine.StreamName("orders")).Return("events_orders", nil).AnyTimes()
-		persistenceStrategy.EXPECT().ColumnNames().Return([]string{"event_id", "event_name"}).AnyTimes()
+		persistenceStrategy.EXPECT().InsertColumnNames().Return([]string{"event_id", "event_name"}).AnyTimes()
 		persistenceStrategy.EXPECT().EventColumnNames().Return([]string{"event_id", "event_name"}).AnyTimes()
 
 		store, err := postgres.NewEventStore(persistenceStrategy, db, &mockSQL.MessageFactory{}, nil)
@@ -308,7 +308,7 @@ func TestEventStore_Load(t *testing.T) {
 					strategy.EXPECT().PrepareSearch(matcher).Return([]byte{}, []interface{}{}).AnyTimes()
 				}
 
-				strategy.EXPECT().ColumnNames().Return(columns).AnyTimes()
+				strategy.EXPECT().InsertColumnNames().Return(columns).AnyTimes()
 				strategy.EXPECT().EventColumnNames().Return(columns).AnyTimes()
 				strategy.EXPECT().GenerateTableName(goengine.StreamName("event_stream")).Return("event_stream", nil).AnyTimes()
 
@@ -341,7 +341,7 @@ func TestEventStore_Load(t *testing.T) {
 				"Empty table name returned",
 				func(ctrl *gomock.Controller) *mockSQL.PersistenceStrategy {
 					strategy := mockSQL.NewPersistenceStrategy(ctrl)
-					strategy.EXPECT().ColumnNames().Return(columns).AnyTimes()
+					strategy.EXPECT().InsertColumnNames().Return(columns).AnyTimes()
 					strategy.EXPECT().EventColumnNames().Return(columns).AnyTimes()
 					strategy.EXPECT().GenerateTableName(goengine.StreamName("event_stream")).
 						Return("", nil).AnyTimes()
@@ -353,7 +353,7 @@ func TestEventStore_Load(t *testing.T) {
 				"Empty table name returned",
 				func(ctrl *gomock.Controller) *mockSQL.PersistenceStrategy {
 					strategy := mockSQL.NewPersistenceStrategy(ctrl)
-					strategy.EXPECT().ColumnNames().Return(columns).AnyTimes()
+					strategy.EXPECT().InsertColumnNames().Return(columns).AnyTimes()
 					strategy.EXPECT().EventColumnNames().Return(columns).AnyTimes()
 					strategy.EXPECT().GenerateTableName(goengine.StreamName("event_stream")).
 						Return("", errors.New("failed gen")).AnyTimes()
@@ -433,7 +433,7 @@ func BenchmarkEventStore_AppendToWithExecer(b *testing.B) {
 	dbExecer.EXPECT().ExecContext(ctx, gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
 
 	persistenceStrategy := mockSQL.NewPersistenceStrategy(ctrl)
-	persistenceStrategy.EXPECT().ColumnNames().Return([]string{"event_id", "event_name", "payload", "metadata", "created_at"}).AnyTimes()
+	persistenceStrategy.EXPECT().InsertColumnNames().Return([]string{"event_id", "event_name", "payload", "metadata", "created_at"}).AnyTimes()
 	persistenceStrategy.EXPECT().GenerateTableName(goengine.StreamName("hello")).Return("hello", nil).AnyTimes()
 	persistenceStrategy.EXPECT().PrepareData(gomock.Any()).Return([]interface{}{
 		"event_id", "event_name", "payload", "metadata", "created_at",
@@ -475,7 +475,7 @@ func BenchmarkEventStore_LoadWithConnection(b *testing.B) {
 	dbQueryer.EXPECT().QueryContext(ctx, gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
 
 	persistenceStrategy := mockSQL.NewPersistenceStrategy(ctrl)
-	persistenceStrategy.EXPECT().ColumnNames().Return([]string{"event_id", "event_name", "payload", "metadata", "created_at"}).AnyTimes()
+	persistenceStrategy.EXPECT().InsertColumnNames().Return([]string{"event_id", "event_name", "payload", "metadata", "created_at"}).AnyTimes()
 	persistenceStrategy.EXPECT().GenerateTableName(goengine.StreamName("hello")).Return("hello", nil).AnyTimes()
 	require.NoError(b, err)
 

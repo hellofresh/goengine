@@ -140,13 +140,13 @@ func TestColumnNames(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("get expected columns", func(t *testing.T) {
-		cols := strategy.ColumnNames()
+		cols := strategy.InsertColumnNames()
 
 		assert.Equal(t, cols, expectedColumns)
 	})
 
 	t.Run("cannot modify data", func(t *testing.T) {
-		assert.Equal(t, strategy.ColumnNames(), expectedColumns)
+		assert.Equal(t, strategy.InsertColumnNames(), expectedColumns)
 	})
 }
 

@@ -56,7 +56,7 @@ func NewEventStore(
 		logger = goengine.NopLogger
 	}
 
-	columns := persistenceStrategy.ColumnNames()
+	columns := persistenceStrategy.InsertColumnNames()
 	insertColumns := make([]string, len(columns))
 	for i, c := range columns {
 		insertColumns[i] = QuoteIdentifier(c)

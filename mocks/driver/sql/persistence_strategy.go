@@ -34,20 +34,6 @@ func (m *PersistenceStrategy) EXPECT() *PersistenceStrategyMockRecorder {
 	return m.recorder
 }
 
-// ColumnNames mocks base method
-func (m *PersistenceStrategy) ColumnNames() []string {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ColumnNames")
-	ret0, _ := ret[0].([]string)
-	return ret0
-}
-
-// ColumnNames indicates an expected call of ColumnNames
-func (mr *PersistenceStrategyMockRecorder) ColumnNames() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ColumnNames", reflect.TypeOf((*PersistenceStrategy)(nil).ColumnNames))
-}
-
 // CreateSchema mocks base method
 func (m *PersistenceStrategy) CreateSchema(arg0 string) []string {
 	m.ctrl.T.Helper()
@@ -89,6 +75,20 @@ func (m *PersistenceStrategy) GenerateTableName(arg0 goengine.StreamName) (strin
 func (mr *PersistenceStrategyMockRecorder) GenerateTableName(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GenerateTableName", reflect.TypeOf((*PersistenceStrategy)(nil).GenerateTableName), arg0)
+}
+
+// InsertColumnNames mocks base method
+func (m *PersistenceStrategy) InsertColumnNames() []string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "InsertColumnNames")
+	ret0, _ := ret[0].([]string)
+	return ret0
+}
+
+// InsertColumnNames indicates an expected call of InsertColumnNames
+func (mr *PersistenceStrategyMockRecorder) InsertColumnNames() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InsertColumnNames", reflect.TypeOf((*PersistenceStrategy)(nil).InsertColumnNames))
 }
 
 // PrepareData mocks base method

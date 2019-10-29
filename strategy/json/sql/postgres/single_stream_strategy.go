@@ -66,8 +66,8 @@ func (s *SingleStreamStrategy) EventColumnNames() []string {
 	return []string{"no", "event_id", "event_name", "payload", "metadata", "created_at"}
 }
 
-// ColumnNames returns the columns that need to be inserted into the table in the correct order
-func (s *SingleStreamStrategy) ColumnNames() []string {
+// InsertColumnNames returns the columns that need to be inserted into the table in the correct order
+func (s *SingleStreamStrategy) InsertColumnNames() []string {
 	return []string{"event_id", "event_name", "payload", "metadata", "aggregate_type", "aggregate_id", "aggregate_version", "created_at"}
 }
 
