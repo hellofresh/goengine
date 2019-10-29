@@ -8,7 +8,7 @@ import (
 // PersistenceStrategy interface describes strategy of persisting messages in the database
 type PersistenceStrategy interface {
 	CreateSchema(tableName string) []string
-	// EventColumns represent the event store columns selected from the event stream table. Used by PrepareSearch
+	// EventColumnsNames represent the event store columns selected from the event stream table. Used by PrepareSearch
 	EventColumnNames() []string
 	// InsertColumnNames represent the ordered event store columns that are used to insert data into the event stream.
 	InsertColumnNames() []string
