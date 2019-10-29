@@ -330,7 +330,8 @@ func TestEventStore_Load(t *testing.T) {
 	})
 
 	t.Run("persistent strategy failures", func(t *testing.T) {
-		columns := []string{"no", "payload"}
+		insertColumns := []string{"no", "payload", "aggregate_id"}
+		eventColumns := []string{"no", "payload"}
 
 		testCases := []struct {
 			title         string
@@ -341,8 +342,8 @@ func TestEventStore_Load(t *testing.T) {
 				"Empty table name returned",
 				func(ctrl *gomock.Controller) *mockSQL.PersistenceStrategy {
 					strategy := mockSQL.NewPersistenceStrategy(ctrl)
-					strategy.EXPECT().InsertColumnNames().Return(columns).AnyTimes()
-					strategy.EXPECT().EventColumnNames().Return(columns).AnyTimes()
+					strategy.EXPECT().InsertColumnNames().Return(insertColumns).AnyTimes()
+					strategy.EXPECT().EventColumnNames().Return(eventColumns).AnyTimes()
 					strategy.EXPECT().GenerateTableName(goengine.StreamName("event_stream")).
 						Return("", nil).AnyTimes()
 					return strategy
@@ -353,8 +354,8 @@ func TestEventStore_Load(t *testing.T) {
 				"Empty table name returned",
 				func(ctrl *gomock.Controller) *mockSQL.PersistenceStrategy {
 					strategy := mockSQL.NewPersistenceStrategy(ctrl)
-					strategy.EXPECT().InsertColumnNames().Return(columns).AnyTimes()
-					strategy.EXPECT().EventColumnNames().Return(columns).AnyTimes()
+					strategy.EXPECT().InsertColumnNames().Return(insertColumns).AnyTimes()
+					strategy.EXPECT().EventColumnNames().Return(eventColumns).AnyTimes()
 					strategy.EXPECT().GenerateTableName(goengine.StreamName("event_stream")).
 						Return("", errors.New("failed gen")).AnyTimes()
 					return strategy

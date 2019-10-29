@@ -31,7 +31,7 @@ type EventStore struct {
 	persistenceStrategy driverSQL.PersistenceStrategy
 	db                  *sql.DB
 	messageFactory      driverSQL.MessageFactory
-	columns             string
+	insertColumns       string
 	columnCount         int
 	eventColumns        string
 	logger              goengine.Logger
@@ -72,7 +72,7 @@ func NewEventStore(
 		persistenceStrategy: persistenceStrategy,
 		db:                  db,
 		messageFactory:      messageFactory,
-		columns:             strings.Join(insertColumns, ", "),
+		insertColumns:       strings.Join(insertColumns, ", "),
 		columnCount:         len(insertColumns),
 		eventColumns:        strings.Join(selectColumns, ", "),
 		logger:              logger,
@@ -225,11 +225,11 @@ func (e *EventStore) AppendToWithExecer(ctx context.Context, conn driverSQL.Exec
 		return err
 	}
 
-	insertQuery := make([]byte, 0, 35+len(e.columns)+(e.columnCount*2)+(eventCount*3))
+	insertQuery := make([]byte, 0, 35+len(e.insertColumns)+(e.columnCount*2)+(eventCount*3))
 	insertQuery = append(insertQuery, "INSERT INTO "...)
 	insertQuery = append(insertQuery, tableName...)
 	insertQuery = append(insertQuery, " ("...)
-	insertQuery = append(insertQuery, e.columns...)
+	insertQuery = append(insertQuery, e.insertColumns...)
 	insertQuery = append(insertQuery, ") VALUES "...)
 	for i := 0; i < eventCount; i++ {
 		if i != 0 {
