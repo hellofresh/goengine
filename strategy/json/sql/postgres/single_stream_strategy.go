@@ -55,8 +55,8 @@ func (s *SingleStreamStrategy) CreateSchema(tableName string) []string {
 );`,
 		tableName,
 	)
-	statements[1] = fmt.Sprintf(`CREATE UNIQUE INDEX ON %s (aggregate_id, aggregate_type, aggregate_version);`, tableName)
-	statements[2] = fmt.Sprintf(`CREATE INDEX ON %s (no, aggregate_id, aggregate_type);`, tableName)
+	statements[1] = fmt.Sprintf(`CREATE UNIQUE INDEX ON %s (aggregate_type, aggregate_id, aggregate_version);`, tableName)
+	statements[2] = fmt.Sprintf(`CREATE INDEX ON %s (aggregate_type, aggregate_id, no);`, tableName)
 
 	return statements
 }
