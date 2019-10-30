@@ -34,18 +34,18 @@ func (m *NotificationQueuer) EXPECT() *NotificationQueuerMockRecorder {
 	return m.recorder
 }
 
-// Empty mocks base method
-func (m *NotificationQueuer) Empty() bool {
+// IsEmpty mocks base method
+func (m *NotificationQueuer) IsEmpty() bool {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Empty")
+	ret := m.ctrl.Call(m, "IsEmpty")
 	ret0, _ := ret[0].(bool)
 	return ret0
 }
 
-// Empty indicates an expected call of Empty
-func (mr *NotificationQueuerMockRecorder) Empty() *gomock.Call {
+// IsEmpty indicates an expected call of IsEmpty
+func (mr *NotificationQueuerMockRecorder) IsEmpty() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Empty", reflect.TypeOf((*NotificationQueuer)(nil).Empty))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsEmpty", reflect.TypeOf((*NotificationQueuer)(nil).IsEmpty))
 }
 
 // Next mocks base method

@@ -16,7 +16,7 @@ type (
 	NotificationQueuer interface {
 		Open() func()
 
-		Empty() bool
+		IsEmpty() bool
 		Next(context.Context) (*ProjectionNotification, bool)
 
 		Queue(context.Context, *ProjectionNotification) error
@@ -67,7 +67,7 @@ func (nq *NotificationQueue) Open() func() {
 }
 
 // Empty returns whether the queue is empty
-func (nq *NotificationQueue) Empty() bool {
+func (nq *NotificationQueue) IsEmpty() bool {
 	return atomic.LoadInt32(&nq.queueCount) == 0
 }
 

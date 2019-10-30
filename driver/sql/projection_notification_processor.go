@@ -169,7 +169,7 @@ func (b *ProjectionNotificationProcessor) wrapProcessHandlerForSingleRun(handler
 				})
 			default:
 				// No more queued messages to close the run
-				if b.notificationQueue.Empty() {
+				if b.notificationQueue.IsEmpty() {
 					doneOnce.Do(func() {
 						close(done)
 					})
