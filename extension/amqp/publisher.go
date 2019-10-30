@@ -3,6 +3,7 @@ package amqp
 import (
 	"context"
 	"io"
+	"sync"
 
 	"github.com/hellofresh/goengine"
 	"github.com/hellofresh/goengine/driver/sql"
@@ -20,6 +21,8 @@ type NotificationPublisher struct {
 
 	connection io.Closer
 	channel    NotificationChannel
+
+	mux sync.Mutex
 }
 
 // NewNotificationPublisher returns an instance of NotificationPublisher
@@ -58,12 +61,14 @@ func (p *NotificationPublisher) Publish(ctx context.Context, notification *sql.P
 	}
 
 	for {
+		p.mux.Lock()
 		if p.connection == nil {
 			p.connection, p.channel, err = setup(p.amqpDSN, p.queue)
 			if err != nil {
 				return err
 			}
 		}
+		p.mux.Unlock()
 
 		err = p.channel.Publish("", p.queue, true, false, amqp.Publishing{
 			Body: msgBody,
