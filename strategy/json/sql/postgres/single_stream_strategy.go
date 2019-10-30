@@ -3,11 +3,13 @@ package postgres
 import (
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/hellofresh/goengine"
 	"github.com/hellofresh/goengine/driver/sql"
 	"github.com/hellofresh/goengine/driver/sql/postgres"
+	"github.com/hellofresh/goengine/metadata"
 	"github.com/hellofresh/goengine/strategy/json/internal"
 )
 
@@ -43,32 +45,30 @@ func (s *SingleStreamStrategy) CreateSchema(tableName string) []string {
     event_id UUID NOT NULL,
     event_name VARCHAR(100) NOT NULL,
     payload JSON NOT NULL,
-    metadata JSONB NOT NULL,
+    metadata JSONB NOT NULL, 
+    aggregate_type VARCHAR(50) NOT NULL,
+	aggregate_id UUID NOT NULL,
+	aggregate_version SMALLINT NOT NULL,
     created_at TIMESTAMP(6) NOT NULL,
     PRIMARY KEY (no),
-    CONSTRAINT aggregate_version_not_null CHECK ((metadata->>'_aggregate_version') IS NOT NULL),
-    CONSTRAINT aggregate_type_not_null CHECK ((metadata->>'_aggregate_type') IS NOT NULL),
-    CONSTRAINT aggregate_id_not_null CHECK ((metadata->>'_aggregate_id') IS NOT NULL),
     UNIQUE (event_id)
 );`,
 		tableName,
 	)
-	statements[1] = fmt.Sprintf(
-		`CREATE UNIQUE INDEX ON %s
-((metadata->>'_aggregate_type'), (metadata->>'_aggregate_id'), (metadata->>'_aggregate_version'));`,
-		tableName,
-	)
-	statements[2] = fmt.Sprintf(
-		`CREATE INDEX ON %s
-((metadata->>'_aggregate_type'), (metadata->>'_aggregate_id'), no);`,
-		tableName,
-	)
+	statements[1] = fmt.Sprintf(`CREATE UNIQUE INDEX ON %s (aggregate_type, aggregate_id, aggregate_version);`, tableName)
+	statements[2] = fmt.Sprintf(`CREATE INDEX ON %s (aggregate_type, aggregate_id, no);`, tableName)
+
 	return statements
 }
 
-// ColumnNames returns the columns that need to be inserted into the table in the correct order
-func (s *SingleStreamStrategy) ColumnNames() []string {
-	return []string{"event_id", "event_name", "payload", "metadata", "created_at"}
+// EventColumnNames returns the columns that need to be select an event from the table
+func (s *SingleStreamStrategy) EventColumnNames() []string {
+	return []string{"no", "event_id", "event_name", "payload", "metadata", "created_at"}
+}
+
+// InsertColumnNames returns the columns that need to be inserted into the table in the correct order
+func (s *SingleStreamStrategy) InsertColumnNames() []string {
+	return []string{"event_id", "event_name", "payload", "metadata", "aggregate_type", "aggregate_id", "aggregate_version", "created_at"}
 }
 
 // PrepareData transforms a slice of messaging into a flat interface slice with the correct column order
@@ -80,7 +80,8 @@ func (s *SingleStreamStrategy) PrepareData(messages []goengine.Message) ([]inter
 			return nil, err
 		}
 
-		meta, err := internal.MarshalJSON(msg.Metadata())
+		msgMetadata := msg.Metadata()
+		meta, err := internal.MarshalJSON(msgMetadata)
 		if err != nil {
 			return nil, err
 		}
@@ -90,10 +91,45 @@ func (s *SingleStreamStrategy) PrepareData(messages []goengine.Message) ([]inter
 			payloadType,
 			payloadData,
 			meta,
+			msgMetadata.Value("_aggregate_type"),
+			msgMetadata.Value("_aggregate_id"),
+			msgMetadata.Value("_aggregate_version"),
 			msg.CreatedAt(),
 		)
 	}
 	return out, nil
+}
+
+// PrepareSearch returns the where part for searching the event store
+func (s *SingleStreamStrategy) PrepareSearch(matcher metadata.Matcher) ([]byte, []interface{}) {
+	query := make([]byte, 0, 196)
+	params := make([]interface{}, 0, 2)
+
+	paramCount := 1
+	matcher.Iterate(func(c metadata.Constraint) {
+		paramCount++
+		params = append(params, c.Value())
+
+		query = append(query, " AND "...)
+		switch c.Field() {
+		case "_aggregate_type":
+			query = append(query, "aggregate_type"...)
+		case "_aggregate_id":
+			query = append(query, "aggregate_id"...)
+		case "_aggregate_version":
+			query = append(query, "aggregate_version"...)
+		default:
+			query = append(query, "metadata ->> "...)
+			query = append(query, postgres.QuoteString(c.Field())...)
+		}
+
+		query = append(query, ' ')
+		query = append(query, c.Operator()...)
+		query = append(query, " $"...)
+		query = append(query, strconv.Itoa(paramCount)...)
+	})
+
+	return query, params
 }
 
 // GenerateTableName returns a valid table name for postgres

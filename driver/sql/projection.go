@@ -5,9 +5,10 @@ import (
 	"database/sql"
 	"time"
 
-	"github.com/hellofresh/goengine"
 	"github.com/mailru/easyjson/jlexer"
 	"github.com/pkg/errors"
+
+	"github.com/hellofresh/goengine"
 )
 
 type (
