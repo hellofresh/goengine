@@ -60,6 +60,7 @@ func NewNotificationPublisher(
 func (p *NotificationPublisher) Publish(ctx context.Context, notification *sql.ProjectionNotification) error {
 	reconnectInterval := p.minReconnectInterval
 	// Ignore nil notifications since this is not supported
+	// Skipping as we may receive a nil notification from dispatcher for the first time
 	if notification == nil {
 		p.logger.Warn("unable to handle nil notification, skipping", nil)
 		return nil
