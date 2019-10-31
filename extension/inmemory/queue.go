@@ -23,6 +23,10 @@ type NotificationQueue struct {
 
 // NewNotificationQueue returns and instance of NotificationQueue
 func NewNotificationQueue(queueBuffer int, metrics sql.Metrics) *NotificationQueue {
+	if metrics == nil {
+		metrics = sql.NopMetrics
+	}
+
 	return &NotificationQueue{
 		metrics:     metrics,
 		queueBuffer: queueBuffer,

@@ -37,6 +37,10 @@ func NewNotificationSmartQueue(queueBuffer int, retryDelay time.Duration, metric
 		retryDelay = time.Millisecond * 50
 	}
 
+	if metrics == nil {
+		metrics = sql.NopMetrics
+	}
+
 	return &NotificationSmartQueue{
 		retryDelay:  retryDelay,
 		metrics:     metrics,
