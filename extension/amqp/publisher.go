@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 	"sync"
+	"time"
 
 	"github.com/hellofresh/goengine"
 	"github.com/hellofresh/goengine/driver/sql"
@@ -15,9 +16,11 @@ var _ sql.ProjectionTrigger = (&NotificationPublisher{}).Publish
 
 // NotificationPublisher is responsible of publishing a notification to queue
 type NotificationPublisher struct {
-	amqpDSN string
-	queue   string
-	logger  goengine.Logger
+	amqpDSN              string
+	queue                string
+	minReconnectInterval time.Duration
+	maxReconnectInterval time.Duration
+	logger               goengine.Logger
 
 	connection io.Closer
 	channel    NotificationChannel
@@ -26,7 +29,11 @@ type NotificationPublisher struct {
 }
 
 // NewNotificationPublisher returns an instance of NotificationPublisher
-func NewNotificationPublisher(amqpDSN, queue string,
+func NewNotificationPublisher(
+	amqpDSN,
+	queue string,
+	minReconnectInterval time.Duration,
+	maxReconnectInterval time.Duration,
 	logger goengine.Logger,
 	connection io.Closer,
 	channel NotificationChannel,
@@ -39,16 +46,19 @@ func NewNotificationPublisher(amqpDSN, queue string,
 		return nil, goengine.InvalidArgumentError("queue")
 	}
 	return &NotificationPublisher{
-		amqpDSN:    amqpDSN,
-		queue:      queue,
-		logger:     logger,
-		connection: connection,
-		channel:    channel,
+		amqpDSN:              amqpDSN,
+		queue:                queue,
+		minReconnectInterval: minReconnectInterval,
+		maxReconnectInterval: maxReconnectInterval,
+		logger:               logger,
+		connection:           connection,
+		channel:              channel,
 	}, nil
 }
 
 // Publish sends a ProjectionNotification to Queue
 func (p *NotificationPublisher) Publish(ctx context.Context, notification *sql.ProjectionNotification) error {
+	reconnectInterval := p.minReconnectInterval
 	// Ignore nil notifications since this is not supported
 	if notification == nil {
 		p.logger.Warn("unable to handle nil notification, skipping", nil)
@@ -79,6 +89,13 @@ func (p *NotificationPublisher) Publish(ctx context.Context, notification *sql.P
 					entry.Error(err)
 				})
 			}
+
+			time.Sleep(reconnectInterval)
+			reconnectInterval *= 2
+			if reconnectInterval > p.maxReconnectInterval {
+				reconnectInterval = p.maxReconnectInterval
+			}
+
 			p.connection = nil
 			p.channel = nil
 			continue
