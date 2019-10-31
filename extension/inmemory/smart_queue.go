@@ -31,6 +31,7 @@ type (
 	}
 )
 
+// NewNotificationSmartQueue returns an instance of NotificationSmartQueue
 func NewNotificationSmartQueue(queueBuffer int, retryDelay time.Duration, metrics sql.Metrics) *NotificationSmartQueue {
 	if retryDelay == 0 {
 		retryDelay = time.Millisecond * 50
@@ -43,7 +44,7 @@ func NewNotificationSmartQueue(queueBuffer int, retryDelay time.Duration, metric
 	}
 }
 
-// Open enables the queue for business
+// Open enables the queue for business and returns close function
 func (nq *NotificationSmartQueue) Open() func() {
 	nq.done = make(chan struct{})
 	nq.queue = make(chan timeAwareNotification, nq.queueBuffer)

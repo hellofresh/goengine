@@ -21,6 +21,7 @@ type NotificationQueue struct {
 	queueBuffer int
 }
 
+// NewNotificationQueue returns and instance of NotificationQueue
 func NewNotificationQueue(queueBuffer int, metrics sql.Metrics) *NotificationQueue {
 	return &NotificationQueue{
 		metrics:     metrics,
@@ -28,7 +29,7 @@ func NewNotificationQueue(queueBuffer int, metrics sql.Metrics) *NotificationQue
 	}
 }
 
-// Open enables the queue for business
+// Open enables the queue for business and returns close function
 func (nq *NotificationQueue) Open() func() {
 	nq.done = make(chan struct{})
 	nq.queue = make(chan *sql.ProjectionNotification, nq.queueBuffer)

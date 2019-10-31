@@ -11,8 +11,7 @@ import (
 )
 
 type (
-	NotificationWorker func()
-
+	// NotificationBroker picks notifications from Queue and starts trigger processor
 	NotificationBroker struct {
 		sync.Mutex
 		queueProcessors int
