@@ -27,16 +27,22 @@ func TestListener_Listen(t *testing.T) {
 		ctx, ctxCancel := context.WithTimeout(context.Background(), time.Second)
 		defer ctxCancel()
 
+		delivery1 := libamqp.Delivery{
+			Body: []byte(`{"no": 1, "aggregate_id": "8150276e-34fe-49d9-aeae-a35af0040a4f"}`),
+		}
+		delivery1.Acknowledger = mockAcknowledger{}
+
+		delivery2 := libamqp.Delivery{
+			Body: []byte(`{"no": 2, "aggregate_id": "8150276e-34fe-49d9-aeae-a35af0040a4f"}`),
+		}
+		delivery2.Acknowledger = mockAcknowledger{}
+
 		consumeCalls := 0
 		consume := func() (io.Closer, <-chan libamqp.Delivery, error) {
 			consumeCalls++
 			ch := make(chan libamqp.Delivery, 2)
-			ch <- libamqp.Delivery{
-				Body: []byte(`{"no": 1, "aggregate_id": "8150276e-34fe-49d9-aeae-a35af0040a4f"}`),
-			}
-			ch <- libamqp.Delivery{
-				Body: []byte(`{"no": 2, "aggregate_id": "8150276e-34fe-49d9-aeae-a35af0040a4f"}`),
-			}
+			ch <- delivery1
+			ch <- delivery2
 			return nil, ch, nil
 		}
 		triggerCalls := 0
@@ -100,7 +106,7 @@ func TestListener_Listen(t *testing.T) {
 			expectedInterval := reconnectIntervals[i-1]
 			interval := consumeCalls[i].Sub(consumeCalls[i-1])
 
-			if expectedInterval > interval || interval > (expectedInterval+time.Millisecond) {
+			if expectedInterval > interval || interval > (expectedInterval+time.Millisecond*2) {
 				assert.Fail(t, fmt.Sprintf("Invalid interval after consume %d (got %s expected between %s and %s)", i, interval, expectedInterval, (expectedInterval+time.Millisecond)))
 			}
 		}
@@ -123,15 +129,20 @@ func TestListener_Listen(t *testing.T) {
 		defer ctxCancel()
 
 		consumeCalls := 0
+		delivery1 := libamqp.Delivery{
+			Body: []byte(`{"no": 1, "aggregate_id": "8150276e-34fe-49d9-aeae-a35af0040a4f"}`),
+		}
+		delivery1.Acknowledger = mockAcknowledger{}
+
+		delivery2 := libamqp.Delivery{
+			Body: []byte(`{"no": 2, "aggregate_id": "8150276e-34fe-49d9-aeae-a35af0040a4f"}`),
+		}
+		delivery2.Acknowledger = mockAcknowledger{}
 		consume := func() (io.Closer, <-chan libamqp.Delivery, error) {
 			consumeCalls++
 			ch := make(chan libamqp.Delivery, 2)
-			ch <- libamqp.Delivery{
-				Body: []byte(`{"no": 1, "aggregate_id": "8150276e-34fe-49d9-aeae-a35af0040a4f"}`),
-			}
-			ch <- libamqp.Delivery{
-				Body: []byte(`{"no": 2, "aggregate_id": "8150276e-34fe-49d9-aeae-a35af0040a4f"}`),
-			}
+			ch <- delivery1
+			ch <- delivery2
 			close(ch)
 			return nil, ch, nil
 		}

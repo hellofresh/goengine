@@ -11,6 +11,21 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+type mockAcknowledger struct {
+}
+
+func (ack mockAcknowledger) Ack(tag uint64, multiple bool) error {
+	return nil
+}
+
+func (ack mockAcknowledger) Nack(tag uint64, multiple bool, requeue bool) error {
+	return nil
+}
+
+func (ack mockAcknowledger) Reject(tag uint64, requeue bool) error {
+	return nil
+}
+
 type mockConnection struct {
 }
 

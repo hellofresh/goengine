@@ -120,6 +120,15 @@ func (l *Listener) consumeMessages(ctx context.Context, conn io.Closer, deliveri
 				continue
 			}
 
+			if err := msg.Ack(false); err != nil {
+				l.logger.Error("failed to acknowledge notification delivery", func(entry goengine.LoggerEntry) {
+					entry.Error(err)
+					entry.Int64("notification.no", notification.No)
+					entry.String("notification.aggregate_id", notification.AggregateID)
+				})
+				continue
+			}
+
 			if err := trigger(ctx, notification); err != nil {
 				l.logger.Error("failed to project notification", func(entry goengine.LoggerEntry) {
 					entry.Error(err)
@@ -127,6 +136,7 @@ func (l *Listener) consumeMessages(ctx context.Context, conn io.Closer, deliveri
 					entry.String("notification.aggregate_id", notification.AggregateID)
 				})
 			}
+
 		}
 	}
 }
