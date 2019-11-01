@@ -55,7 +55,7 @@ func DirectQueueConsume(amqpDSN, queue string) (Consume, error) {
 		}
 
 		// Since there can be multiple consumers, fair distribution of deliveries is required
-		deliveries, err := ch.Consume(queue, "", true, false, false, false, nil)
+		deliveries, err := ch.Consume(queue, "", false, false, false, false, nil)
 
 		return conn, deliveries, err
 	}, nil
