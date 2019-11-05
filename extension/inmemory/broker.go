@@ -49,7 +49,6 @@ func (b *NotificationBroker) Execute(
 	ctx context.Context,
 	queue sql.NotificationQueuer,
 	handler sql.ProjectionTrigger,
-	notification *sql.ProjectionNotification,
 ) error {
 	// Wrap the processNotification in order to know that the first trigger finished
 	handler, handlerDone := b.wrapProcessHandlerForSingleRun(queue, handler)
@@ -116,6 +115,10 @@ func (b *NotificationBroker) startProcessor(
 		notification, stopped := queue.Next(ctx)
 		if stopped {
 			return
+		}
+
+		if notification == nil {
+			continue
 		}
 
 		// Execute the notification
