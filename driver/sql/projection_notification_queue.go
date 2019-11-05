@@ -35,7 +35,7 @@ type (
 	}
 )
 
-func newNotificationQueue(queueBuffer int, retryDelay time.Duration, metrics Metrics) *NotificationQueue {
+func NewNotificationQueue(queueBuffer int, retryDelay time.Duration, metrics Metrics) *NotificationQueue {
 	if retryDelay == 0 {
 		retryDelay = time.Millisecond * 50
 	}

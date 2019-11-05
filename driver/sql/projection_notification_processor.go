@@ -46,7 +46,7 @@ func NewBackgroundProcessor(
 		metrics = NopMetrics
 	}
 	if notificationQueue == nil {
-		notificationQueue = newNotificationQueue(queueBuffer, 0, metrics)
+		notificationQueue = NewNotificationQueue(queueBuffer, 0, metrics)
 	}
 
 	return &ProjectionNotificationProcessor{
