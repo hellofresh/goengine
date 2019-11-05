@@ -3,25 +3,9 @@ package sql
 import (
 	"context"
 	"database/sql"
-	"math"
-	"sync"
 
 	"github.com/hellofresh/goengine"
-	"github.com/pkg/errors"
 )
-
-// StreamProjector is a postgres projector used to execute a projection against an event stream.
-type StreamProjector struct {
-	sync.Mutex
-
-	db       *sql.DB
-	executor *notificationProjector
-	storage  StreamProjectorStorage
-
-	projectionErrorHandler ProjectionErrorCallback
-
-	logger goengine.Logger
-}
 
 // NewStreamProjector creates a new projector for a projection
 func NewStreamProjector(
@@ -32,7 +16,7 @@ func NewStreamProjector(
 	projectorStorage StreamProjectorStorage,
 	projectionErrorHandler ProjectionErrorCallback,
 	logger goengine.Logger,
-) (*StreamProjector, error) {
+) (ProjectionTrigger, error) {
 	switch {
 	case db == nil:
 		return nil, goengine.InvalidArgumentError("db")
@@ -55,7 +39,7 @@ func NewStreamProjector(
 		e.String("projection", projection.Name())
 	})
 
-	executor, err := newNotificationProjector(
+	projector, err := NewNotificationProjector(
 		db,
 		projectorStorage,
 		projection.Handlers(),
@@ -67,61 +51,27 @@ func NewStreamProjector(
 		return nil, err
 	}
 
-	return &StreamProjector{
-		db:                     db,
-		executor:               executor,
-		storage:                projectorStorage,
-		projectionErrorHandler: projectionErrorHandler,
-		logger:                 logger,
-	}, nil
+	return NewNotificationStreamErrorHandler(projector, projectionErrorHandler, logger)
 }
 
-// Run executes the projection and manages the state of the projection
-func (s *StreamProjector) Run(ctx context.Context) error {
-	s.Lock()
-	defer s.Unlock()
-
-	// Check if the context is expired
-	select {
-	default:
-	case <-ctx.Done():
-		return nil
+// NewNotificationAggregateErrorHandler returns a ProjectionTrigger that will check the result of next and handle the errors
+func NewNotificationStreamErrorHandler(
+	next ProjectionTrigger,
+	projectionErrorHandler ProjectionErrorCallback,
+	logger goengine.Logger,
+) (ProjectionTrigger, error) {
+	switch {
+	case next == nil:
+		return nil, goengine.InvalidArgumentError("next")
+	case projectionErrorHandler == nil:
+		return nil, goengine.InvalidArgumentError("projectionErrorHandler")
+	}
+	if logger == nil {
+		logger = goengine.NopLogger
 	}
 
-	if err := s.storage.CreateProjection(ctx, s.db); err != nil {
-		return err
-	}
-
-	return s.processNotification(ctx, nil)
-}
-
-// RunAndListen executes the projection and listens to any changes to the event store
-func (s *StreamProjector) RunAndListen(ctx context.Context, listener Listener) error {
-	s.Lock()
-	defer s.Unlock()
-
-	// Check if the context is expired
-	select {
-	default:
-	case <-ctx.Done():
-		return nil
-	}
-
-	if err := s.storage.CreateProjection(ctx, s.db); err != nil {
-		return err
-	}
-
-	return listener.Listen(ctx, s.processNotification)
-}
-
-func (s *StreamProjector) processNotification(
-	ctx context.Context,
-	notification *ProjectionNotification,
-) error {
-	for i := 0; i < math.MaxInt16; i++ {
-		err := s.executor.Execute(ctx, notification)
-
-		// No error occurred during projection so return
+	return func(ctx context.Context, notification *ProjectionNotification) error {
+		err := next(ctx, notification)
 		if err == nil {
 			return err
 		}
@@ -136,23 +86,18 @@ func (s *StreamProjector) processNotification(
 				e.String("notification.aggregate_id", notification.AggregateID)
 			}
 		}
-		switch resolveErrorAction(s.projectionErrorHandler, notification, err) {
+		switch resolveErrorAction(projectionErrorHandler, notification, err) {
 		case errorRetry:
-			s.logger.Debug("Trigger->ErrorHandler: retrying notification", logFields)
-			continue
+			logger.Debug("Trigger->ErrorHandler: retrying notification", logFields)
+			return next(ctx, notification)
 		case errorIgnore:
-			s.logger.Debug("Trigger->ErrorHandler: ignoring error", logFields)
+			logger.Debug("Trigger->ErrorHandler: ignoring error", logFields)
 			return nil
-		case errorFail, errorFallthrough:
-			s.logger.Debug("Trigger->ErrorHandler: error fallthrough", logFields)
+		default:
+			logger.Debug("Trigger->ErrorHandler: error fallthrough", logFields)
 			return err
 		}
-	}
-
-	return errors.Errorf(
-		"seriously %d retries is enough! maybe it's time to fix your projection or error handling code?",
-		math.MaxInt16,
-	)
+	}, nil
 }
 
 // StreamProjectionEventStreamLoader returns a EventStreamLoader for the StreamProjector
