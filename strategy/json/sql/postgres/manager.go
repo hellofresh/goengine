@@ -85,7 +85,7 @@ func (m *SingleStreamManager) NewStreamProjector(
 	projection goengine.Projection,
 	projectionErrorHandler driverSQL.ProjectionErrorCallback,
 	useLockedField bool,
-) (*driverSQL.StreamProjector, error) {
+) (driverSQL.ProjectionTrigger, error) {
 	eventStore, err := m.NewEventStore()
 	if err != nil {
 		return nil, err
@@ -121,8 +121,8 @@ func (m *SingleStreamManager) NewAggregateProjector(
 	projection goengine.Projection,
 	projectionErrorHandler driverSQL.ProjectionErrorCallback,
 	useLockedField bool,
-	retryDelay time.Duration,
-) (*driverSQL.AggregateProjector, error) {
+	retryDelay *time.Duration,
+) (driverSQL.ProjectionTrigger, error) {
 	eventStore, err := m.NewEventStore()
 	if err != nil {
 		return nil, err
@@ -144,15 +144,18 @@ func (m *SingleStreamManager) NewAggregateProjector(
 		return nil, err
 	}
 
+	var queue driverSQL.NotificationQueuer
+	//TODO:: initialise Queue or SmartQueue based on value of retryDelay
+	queue = driverSQL.NewNotificationQueue(30, *retryDelay, m.metrics)
+
 	return driverSQL.NewAggregateProjector(
 		m.db,
+		queue,
 		driverSQL.AggregateProjectionEventStreamLoader(eventStore, projection.FromStream(), aggregateTypeName),
 		m.payloadTransformer,
 		projection,
 		projectorStorage,
 		projectionErrorHandler,
 		m.logger,
-		m.metrics,
-		retryDelay,
 	)
 }
