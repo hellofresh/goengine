@@ -3,42 +3,32 @@ package sql
 import (
 	"context"
 	"database/sql"
-	"sync"
-	"time"
-
-	"github.com/hellofresh/goengine/aggregate"
-	"github.com/hellofresh/goengine/metadata"
 
 	"github.com/hellofresh/goengine"
+	"github.com/hellofresh/goengine/aggregate"
+	"github.com/hellofresh/goengine/metadata"
 )
 
-// AggregateProjector is a postgres projector used to execute a projection per aggregate instance against an event stream
-type AggregateProjector struct {
-	sync.Mutex
-
-	backgroundProcessor *ProjectionNotificationProcessor
-	executor            *notificationProjector
-	storage             AggregateProjectorStorage
-
-	projectionErrorHandler ProjectionErrorCallback
-
-	db *sql.DB
-
-	logger goengine.Logger
+// aggregateSyncProjector Handles nil notification for the Aggregate Projections
+type aggregateSyncProjector struct {
+	next    ProjectionTrigger
+	db      *sql.DB
+	storage AggregateProjectorStorage
+	queue   ProjectionTrigger
+	logger  goengine.Logger
 }
 
 // NewAggregateProjector creates a new projector for a projection
 func NewAggregateProjector(
 	db *sql.DB,
+	queue NotificationQueuer,
 	eventLoader EventStreamLoader,
 	resolver goengine.MessagePayloadResolver,
 	projection goengine.Projection,
 	projectorStorage AggregateProjectorStorage,
 	projectionErrorHandler ProjectionErrorCallback,
 	logger goengine.Logger,
-	metrics Metrics,
-	retryDelay time.Duration,
-) (*AggregateProjector, error) {
+) (ProjectionTrigger, error) {
 	switch {
 	case db == nil:
 		return nil, goengine.InvalidArgumentError("db")
@@ -50,8 +40,6 @@ func NewAggregateProjector(
 		return nil, goengine.InvalidArgumentError("projection")
 	case projectorStorage == nil:
 		return nil, goengine.InvalidArgumentError("projectorStorage")
-	case projectionErrorHandler == nil:
-		return nil, goengine.InvalidArgumentError("projectionErrorHandler")
 	}
 
 	if logger == nil {
@@ -61,12 +49,7 @@ func NewAggregateProjector(
 		e.String("projection", projection.Name())
 	})
 
-	processor, err := NewBackgroundProcessor(10, 32, logger, metrics, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	executor, err := newNotificationProjector(
+	projector, err := NewNotificationProjector(
 		db,
 		projectorStorage,
 		projection.Handlers(),
@@ -78,97 +61,62 @@ func NewAggregateProjector(
 		return nil, err
 	}
 
-	return &AggregateProjector{
-		backgroundProcessor:    processor,
-		executor:               executor,
-		storage:                projectorStorage,
-		projectionErrorHandler: projectionErrorHandler,
-
-		db: db,
-
-		logger: logger,
-	}, nil
-}
-
-// Run executes the projection and manages the state of the projection
-func (a *AggregateProjector) Run(ctx context.Context) error {
-	a.Lock()
-	defer a.Unlock()
-
-	// Check if the context is expired
-	select {
-	default:
-	case <-ctx.Done():
-		return nil
-	}
-
-	return a.backgroundProcessor.Execute(ctx, a.processNotification, nil)
-}
-
-// RunAndListen executes the projection and listens to any changes to the event store
-func (a *AggregateProjector) RunAndListen(ctx context.Context, listener Listener) error {
-	a.Lock()
-	defer a.Unlock()
-
-	// Check if the context is expired
-	select {
-	default:
-	case <-ctx.Done():
-		return nil
-	}
-
-	stopExecutor := a.backgroundProcessor.Start(ctx, a.processNotification)
-	defer stopExecutor()
-
-	return listener.Listen(ctx, a.backgroundProcessor.Queue)
-}
-
-func (a *AggregateProjector) processNotification(
-	ctx context.Context,
-	notification *ProjectionNotification,
-	queue ProjectionTrigger,
-) error {
-	var (
-		err       error
-		logFields func(e goengine.LoggerEntry)
+	projector, err = NewNotificationAggregateErrorHandler(
+		projector,
+		projectionErrorHandler,
+		queue.ReQueue,
+		func(ctx context.Context, notification *ProjectionNotification) error {
+			return projectorStorage.PersistFailure(db, notification)
+		},
+		logger,
 	)
-	if notification != nil {
-		err = a.executor.Execute(ctx, notification)
-		logFields = func(e goengine.LoggerEntry) {
-			e.Error(err)
-			e.Int64("notification.no", notification.No)
-			e.String("notification.aggregate_id", notification.AggregateID)
-		}
-	} else {
-		err = a.triggerOutOfSyncProjections(ctx, queue)
-		logFields = func(e goengine.LoggerEntry) {
-			e.Error(err)
-		}
+	if err != nil {
+		return nil, err
 	}
 
-	// No error occurred during projection so return
-	if err == nil {
-		return nil
-	}
-
-	// Resolve the action to take based on the error that occurred
-	switch resolveErrorAction(a.projectionErrorHandler, notification, err) {
-	case errorFail:
-		a.logger.Debug("ProcessHandler->ErrorHandler: marking projection as failed", logFields)
-		return a.markProjectionAsFailed(notification)
-	case errorIgnore:
-		a.logger.Debug("ProcessHandler->ErrorHandler: ignoring error", logFields)
-		return nil
-	case errorRetry:
-		a.logger.Debug("ProcessHandler->ErrorHandler: re-queueing notification", logFields)
-		return queue(ctx, notification)
-	}
-
-	a.logger.Debug("ProcessHandler->ErrorHandler: error fallthrough", logFields)
-	return err
+	return NewNotificationAggregateSyncHandler(projector, db, projectorStorage, queue.Queue, logger)
 }
 
-func (a *AggregateProjector) triggerOutOfSyncProjections(ctx context.Context, queue ProjectionTrigger) error {
+// NewNotificationAggregateSyncHandler returns a Projection trigger that will when a nil notification is received
+// find all the missed events and send them to the queue
+func NewNotificationAggregateSyncHandler(
+	next ProjectionTrigger,
+	db *sql.DB,
+	storage AggregateProjectorStorage,
+	queue ProjectionTrigger,
+	logger goengine.Logger,
+) (ProjectionTrigger, error) {
+	switch {
+	case next == nil:
+		return nil, goengine.InvalidArgumentError("next")
+	case db == nil:
+		return nil, goengine.InvalidArgumentError("db")
+	case storage == nil:
+		return nil, goengine.InvalidArgumentError("storage")
+	case queue == nil:
+		return nil, goengine.InvalidArgumentError("queue")
+	}
+
+	if logger == nil {
+		logger = goengine.NopLogger
+	}
+
+	projector := aggregateSyncProjector{
+		next:    next,
+		db:      db,
+		storage: storage,
+		queue:   queue,
+		logger:  logger,
+	}
+	return projector.Handle, nil
+}
+
+// Handle if notification is nil find the missed notifications and queue them
+func (a *aggregateSyncProjector) Handle(ctx context.Context, notification *ProjectionNotification) error {
+	if notification != nil {
+		return a.next(ctx, notification)
+	}
+
 	// A nil notification was received this mean that we need to find and trigger any missed notifications
 	conn, err := AcquireConn(ctx, a.db)
 	if err != nil {
@@ -216,7 +164,7 @@ func (a *AggregateProjector) triggerOutOfSyncProjections(ctx context.Context, qu
 			AggregateID: aggregateID,
 		}
 
-		if err := queue(ctx, notification); err != nil {
+		if err := a.queue(ctx, notification); err != nil {
 			a.logger.Error("failed to queue notification", func(e goengine.LoggerEntry) {
 				e.Error(err)
 				e.Int64("notification.no", notification.No)
@@ -234,22 +182,56 @@ func (a *AggregateProjector) triggerOutOfSyncProjections(ctx context.Context, qu
 	return rows.Close()
 }
 
-func (a *AggregateProjector) markProjectionAsFailed(notification *ProjectionNotification) error {
-	ctx := context.Background()
-	conn, err := AcquireConn(ctx, a.db)
-	if err != nil {
-		return err
+// NewNotificationAggregateErrorHandler returns a ProjectionTrigger that will check the result of next and handle the errors
+func NewNotificationAggregateErrorHandler(
+	next ProjectionTrigger,
+	projectionErrorHandler ProjectionErrorCallback,
+	retry ProjectionTrigger,
+	fail ProjectionTrigger,
+	logger goengine.Logger,
+) (ProjectionTrigger, error) {
+	switch {
+	case next == nil:
+		return nil, goengine.InvalidArgumentError("next")
+	case projectionErrorHandler == nil:
+		return nil, goengine.InvalidArgumentError("projectionErrorHandler")
+	case retry == nil:
+		return nil, goengine.InvalidArgumentError("retry")
+	case fail == nil:
+		return nil, goengine.InvalidArgumentError("fail")
+	}
+	if logger == nil {
+		logger = goengine.NopLogger
 	}
 
-	defer func() {
-		if err := conn.Close(); err != nil {
-			a.logger.Warn("failed to db close failure connection", func(e goengine.LoggerEntry) {
-				e.Error(err)
-			})
+	return func(ctx context.Context, notification *ProjectionNotification) error {
+		err := next(ctx, notification)
+		if err == nil {
+			return err
 		}
-	}()
 
-	return a.storage.PersistFailure(conn, notification)
+		// Resolve the action to take based on the error that occurred
+		logFields := func(e goengine.LoggerEntry) {
+			e.Error(err)
+			e.Int64("notification.no", notification.No)
+			e.String("notification.aggregate_id", notification.AggregateID)
+		}
+
+		switch resolveErrorAction(projectionErrorHandler, notification, err) {
+		case errorFail:
+			logger.Debug("NotificationBrokerErrorHandler: marking projection as failed", logFields)
+			return fail(ctx, notification)
+		case errorIgnore:
+			logger.Debug("NotificationBrokerErrorHandler: ignoring error", logFields)
+			return nil
+		case errorRetry:
+			logger.Debug("NotificationBrokerErrorHandler: re-queueing notification", logFields)
+			return retry(ctx, notification)
+		}
+
+		logger.Debug("NotificationBrokerErrorHandler: error fallthrough", logFields)
+		return err
+	}, nil
 }
 
 // AggregateProjectionEventStreamLoader returns a EventStreamLoader for the AggregateProjector

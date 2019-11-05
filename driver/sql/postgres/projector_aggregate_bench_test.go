@@ -82,7 +82,7 @@ func BenchmarkAggregateProjector_Run(b *testing.B) {
 	defer teardown()
 
 	b.ResetTimer()
-	require.NoError(b, projector.Run(ctx))
+	require.NoError(b, projector(ctx, nil))
 }
 
 func BenchmarkAggregateProjectorWithout_Run(b *testing.B) {
@@ -102,7 +102,7 @@ func BenchmarkAggregateProjectorWithout_Run(b *testing.B) {
 	defer teardown()
 
 	b.ResetTimer()
-	require.NoError(b, projector.Run(ctx))
+	require.NoError(b, projector(ctx, nil))
 }
 
 func setup(
@@ -113,7 +113,7 @@ func setup(
 		projectionStateSerialization driverSQL.ProjectionStateSerialization,
 		logger goengine.Logger,
 	) (driverSQL.AggregateProjectorStorage, error),
-) (*driverSQL.AggregateProjector, func()) {
+) (driverSQL.ProjectionTrigger, func()) {
 	ctx := context.Background()
 	projection := &personProjection{}
 
@@ -171,8 +171,11 @@ func setup(
 		require.NoError(b, err, "failed to create projection tables etc.")
 	}
 
+	queue := driverSQL.NewNotificationQueue(32, 0, driverSQL.NopMetrics)
+
 	projector, err := driverSQL.NewAggregateProjector(
 		db,
+		queue,
 		driverSQL.AggregateProjectionEventStreamLoader(eventStore, eventStream, personTypeName),
 		payloadTransformer,
 		projection,
@@ -181,8 +184,6 @@ func setup(
 			return driverSQL.ProjectionFail
 		},
 		goengine.NopLogger,
-		driverSQL.NopMetrics,
-		0,
 	)
 	require.NoError(b, err, "failed to create aggregate projector")
 
