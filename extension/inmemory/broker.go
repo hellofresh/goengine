@@ -13,6 +13,7 @@ import (
 type (
 	// NotificationBroker picks notifications from Queue and starts trigger processor
 	NotificationBroker struct {
+		sync.WaitGroup
 		sync.Mutex
 		queueProcessors int
 
@@ -49,6 +50,7 @@ func (b *NotificationBroker) Execute(
 	ctx context.Context,
 	queue sql.NotificationQueuer,
 	handler sql.ProjectionTrigger,
+	notification *sql.ProjectionNotification,
 ) error {
 	// Wrap the processNotification in order to know that the first trigger finished
 	handler, handlerDone := b.wrapProcessHandlerForSingleRun(queue, handler)
@@ -58,7 +60,7 @@ func (b *NotificationBroker) Execute(
 	defer stopExecutor()
 
 	// Execute a run of the internal.
-	if err := queue.Queue(ctx, nil); err != nil {
+	if err := queue.Queue(ctx, notification); err != nil {
 		return err
 	}
 
@@ -87,11 +89,10 @@ func (b *NotificationBroker) Start(
 
 	queueClose := queue.Open()
 
-	var wg sync.WaitGroup
-	wg.Add(b.queueProcessors)
+	b.Add(b.queueProcessors)
 	for i := 0; i < b.queueProcessors; i++ {
 		go func() {
-			defer wg.Done()
+			defer b.Done()
 			b.startProcessor(ctx, queue, handler)
 		}()
 	}
@@ -101,7 +102,7 @@ func (b *NotificationBroker) Start(
 
 	return func() {
 		queueClose()
-		wg.Wait()
+		b.Wait()
 		b.Unlock()
 	}
 }
