@@ -49,16 +49,6 @@ func GenerateID() ID {
 	return ID(uuid.New().String())
 }
 
-// IDFromString creates a ID from a string
-func IDFromString(str string) (ID, error) {
-	id, err := uuid.Parse(str)
-	if err != nil {
-		return "", ErrInvalidID
-	}
-
-	return ID(id.String()), nil
-}
-
 // RecordChange record the given event onto the aggregate.Root by wrapping it in an aggregate.Changed
 func RecordChange(aggregateRoot Root, event interface{}) error {
 	aggregateID := aggregateRoot.AggregateID()

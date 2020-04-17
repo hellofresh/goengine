@@ -357,14 +357,10 @@ func (s *aggregateProjectorTestSuite) assertAggregateProjectionStates(expectedPr
 }
 
 func createAggregateIds(ids []string) []aggregate.ID {
-	var err error
 	res := make([]aggregate.ID, len(ids))
 
 	for i, id := range ids {
-		res[i], err = aggregate.IDFromString(id)
-		if err != nil {
-			panic(err)
-		}
+		res[i] = aggregate.ID(id)
 	}
 
 	return res

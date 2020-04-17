@@ -120,7 +120,7 @@ func aggregateIDFromMetadata(meta metadata.Metadata) (aggregate.ID, error) {
 		return "", &InvalidMetadataValueTypeError{key: aggregate.IDKey, value: val, expected: "string"}
 	}
 
-	return aggregate.IDFromString(str)
+	return aggregate.ID(str), nil
 }
 
 func aggregateVersionFromMetadata(meta metadata.Metadata) (uint, error) {
