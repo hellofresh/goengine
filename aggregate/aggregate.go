@@ -1,7 +1,6 @@
 package aggregate
 
 import (
-	"errors"
 	"time"
 
 	"github.com/google/uuid"
@@ -9,11 +8,8 @@ import (
 	"github.com/hellofresh/goengine/metadata"
 )
 
-// ErrInvalidID occurs when a string is not a valid ID
-var ErrInvalidID = errors.New("goengine: an aggregate.ID must be a valid UUID")
-
 type (
-	// ID an UUID for a aggregate.Root instance
+	// ID for a aggregate.Root instance
 	ID string
 
 	// Root is a interface that a AggregateRoot must implement
