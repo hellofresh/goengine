@@ -5,10 +5,15 @@ GoEngine is an Event Sourcing library written for GoLang.
 The goal of this library is to reduce the amount of time you have to spend thinking about the infrastructure so you can focus on  
 implementing your Domains and Business logic!
 
+## Fork
+
+This project was forked to experiment with some assumptions (e.g. can we have an aggregate ID that is not a UUID?) and to improve few things like PSQL code generation.
+These changes will also be raised as PRs to the main repo.
+
 ## Installation
 
 ```BASH
-go get -u github.com/hellofresh/goengine
+go get -u github.com/vimeda/goengine
 ```
 
 ## Documentation
@@ -27,28 +32,6 @@ The following features are planned for the future (in no specific order)
 * Distributes tracing (using [opencensus](https://opencensus.io/) and/or [opentracing](https://opentracing.io/))
 * ...
 
-## Contributing 
+## Contributing
 
-We encourage and support an active, healthy community of contributors — including you! 
-Details are in the [contribution guide](CONTRIBUTING.md) and the [code of conduct](CODE_OF_CONDUCT.md). 
-
-------------------
-<p align="center">
-    <a href="https://hellofresh.com" style="text-decoration:none; margin-right:2rem;">
-    <img height="110" src="https://www.hellofresh.de/images/hellofresh/press/HelloFresh_Logo.png">
-  </a>
-</p>
-
-
-[doc-img]: https://godoc.org/github.com/hellofresh?status.svg
-[doc]: https://godoc.org/github.com/hellofresh/goengine
-[ci-img]: https://travis-ci.org/hellofresh/goengine.svg?branch=master
-[ci]: https://travis-ci.org/hellofresh/goengine
-[cov-img]: https://img.shields.io/codecov/c/github/hellofresh/goengine.svg
-[cov]: https://codecov.io/gh/hellofresh/goengine
-[license-img]: https://img.shields.io/github/license/hellofresh/goengine.svg?style=flat
-[license]: LICENSE
-[go-report-img]:https://goreportcard.com/badge/github.com/hellofresh/goengine
-[go-report]: https://goreportcard.com/report/github.com/hellofresh/goengine
-[goengine-book]: https://goengine.readthedocs.io/en/latest/
-[goengine-book-quick-start]: https://goengine.readthedocs.io/en/latest/quick-start/
+Contributions, issues and feature requests are welcome!<br />Feel free to check [issues page](https://github.com/vimeda/goengine/issues).
