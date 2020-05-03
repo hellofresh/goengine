@@ -28,29 +28,31 @@ BEGIN
     $$;
   END IF;
 END;
-$EXIST$`
+$EXIST$;`
 
 // sqlTriggerEventStreamNotify a helper to create the sql on a event store table
 func sqlTriggerEventStreamNotifyTemplate(eventStreamName goengine.StreamName, eventStreamTable string) string {
+	const query = `DO LANGUAGE plpgsql $EXIST$
+BEGIN
+	IF NOT EXISTS(
+	SELECT TRUE FROM pg_trigger WHERE
+		tgrelid = %[1]s::regclass AND
+		tgname = %[2]s
+	)
+	THEN
+	CREATE TRIGGER %[3]s
+		AFTER INSERT
+		ON %[4]s
+		FOR EACH ROW
+	EXECUTE PROCEDURE event_stream_notify(%[5]s);
+	END IF;
+END;
+$EXIST$;`
+
 	triggerName := fmt.Sprintf("%s_notify", eventStreamTable)
 	/* #nosec G201 */
 	return fmt.Sprintf(
-		`DO LANGUAGE plpgsql $EXIST$
-		 BEGIN
-		   IF NOT EXISTS(
-             SELECT TRUE FROM pg_trigger WHERE
-               tgrelid = %[1]s::regclass AND
-               tgname = %[2]s
-		   )
-		   THEN
-		     CREATE TRIGGER %[3]s
-		       AFTER INSERT
-		       ON %[4]s
-		       FOR EACH ROW
-		     EXECUTE PROCEDURE event_stream_notify(%[5]s);
-		   END IF;
-		 END;
-		 $EXIST$`,
+		query,
 		postgres.QuoteString(eventStreamTable),
 		postgres.QuoteString(triggerName),
 		postgres.QuoteIdentifier(triggerName),
@@ -61,22 +63,20 @@ func sqlTriggerEventStreamNotifyTemplate(eventStreamName goengine.StreamName, ev
 
 // StreamProjectorCreateSchema return the sql statement needed for the postgres database in order to use the StreamProjector
 func StreamProjectorCreateSchema(projectionTable string, streamName goengine.StreamName, streamTable string) []string {
+	const query = `CREATE TABLE IF NOT EXISTS %s (
+	no SERIAL,
+	name VARCHAR(150) UNIQUE NOT NULL,
+	position BIGINT NOT NULL DEFAULT 0,
+	state JSONB NOT NULL DEFAULT ('{}'),
+	locked BOOLEAN NOT NULL DEFAULT (FALSE), 
+	PRIMARY KEY (no)
+);`
+
 	/* #nosec G201 */
 	return []string{
 		sqlFuncEventStreamNotify,
 		sqlTriggerEventStreamNotifyTemplate(streamName, streamTable),
-
-		fmt.Sprintf(
-			`CREATE TABLE IF NOT EXISTS %s (
-				no SERIAL,
-				name VARCHAR(150) UNIQUE NOT NULL,
-				position BIGINT NOT NULL DEFAULT 0,
-				state JSONB NOT NULL DEFAULT ('{}'),
-				locked BOOLEAN NOT NULL DEFAULT (FALSE), 
-				PRIMARY KEY (no)
-			)`,
-			postgres.QuoteIdentifier(projectionTable),
-		),
+		fmt.Sprintf(query, postgres.QuoteIdentifier(projectionTable)),
 	}
 }
 
