@@ -1,37 +1,14 @@
 NO_COLOR=\033[0m
 OK_COLOR=\033[32;01m
 
-PKG_SRC := github.com/hellofresh/goengine
-
-deps:
-	@echo "$(OK_COLOR)==> Installing test dependencies$(NO_COLOR)"
-	@go get -u github.com/onsi/ginkgo/ginkgo
-	@go get -u github.com/onsi/gomega
-
-vet:
-	@echo "$(OK_COLOR)==> checking code correctness with 'go vet' tool$(NO_COLOR)"
-	@go vet ./...
-
-lint: tools.golint
-	@echo "$(OK_COLOR)==> checking code style with 'golint' tool$(NO_COLOR)"
-	@go list ./... | xargs -n 1 golint -set_exit_status
-
-test-integration: lint vet
+test-integration:
 	@echo "$(OK_COLOR)==> Running integration tests$(NO_COLOR)"
-	@STORAGE_DSN=mongodb://localhost:27017/ BROKER_DSN=amqp://guest:guest@localhost:5672/ go run $(PKG_SRC)/cmd/goengine/...
+	@STORAGE_DSN=mongodb://localhost:27017/ BROKER_DSN=amqp://guest:guest@localhost:5672/ go run ./cmd/goengine/...
 
-test-unit: lint vet
+test-unit:
 	@echo "$(OK_COLOR)==> Running unit tests$(NO_COLOR)"
-	@ginkgo -r
+	@go test -cover -coverprofile=coverage.txt -covermode=atomic ./...
 
-#---------------
-#-- tools
-#---------------
-
-tools: tools.golint
-
-tools.golint:
-	@command -v golint >/dev/null ; if [ $$? -ne 0 ]; then \
-		echo "--> installing golint"; \
-		go get golang.org/x/lint/golint; \
-	fi
+lint:
+	@echo "$(OK_COLOR)==> Linting with golangci-lint$(NO_COLOR)"
+	@docker run -it --rm -v $(pwd):/app -w /app golangci/golangci-lint:v1.39.0 golangci-lint run -v

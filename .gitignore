@@ -25,3 +25,4 @@ _testmain.go
 *.prof
 debug
 gin-bin
+coverage.txt
