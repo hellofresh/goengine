@@ -40,6 +40,3 @@ script:
   - go test -tags=integration -race ./...
   - go run -race example/aggregate/*.go
   - go run -race example/repository/*.go
-
-after_success:
-  - bash <(curl -s https://codecov.io/bash)
