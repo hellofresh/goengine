@@ -66,10 +66,6 @@ func TestIDFromString(t *testing.T) {
 				"some string",
 				"some string",
 			},
-			{
-				"UUID with missing minuses",
-				"f4ec75dbc0b04b00a04fa0d9ed18e9fb",
-			},
 		}
 
 		for _, testCase := range testCases {
