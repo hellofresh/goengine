@@ -1,0 +1,50 @@
+name: Testing
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v2
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v2
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    needs: [ lint ]
+
+    services:
+      postgres:
+        image: postgres:10
+        ports:
+          - "5432"
+        env:
+          POSTGRES_USER: goengine
+          POSTGRES_PASSWORD: goengine
+          POSTGRES_DB: goengine
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: ^1.16
+      - name: Check out code
+        uses: actions/checkout@v2
+      - name: Run tests
+        if: success()
+        run: go test -cover ./... -coverprofile=coverage.txt -covermode=atomic
+        env:
+          POSTGRES_DSN: postgres://goengine:goengine@localhost:${{ job.services.postgres.ports[5432] }}/goengine?sslmode=disable
