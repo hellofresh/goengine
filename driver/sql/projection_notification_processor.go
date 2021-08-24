@@ -2,11 +2,11 @@ package sql
 
 import (
 	"context"
+	"errors"
 	"runtime"
 	"sync"
 
 	"github.com/hellofresh/goengine"
-	"github.com/pkg/errors"
 )
 
 type (

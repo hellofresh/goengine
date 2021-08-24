@@ -3,9 +3,10 @@ package sql
 import (
 	"context"
 	"database/sql"
+	"errors"
+	"fmt"
 
 	"github.com/hellofresh/goengine"
-	"github.com/pkg/errors"
 )
 
 // Ensure the notificationProjector.Execute is a ProjectionTrigger
@@ -210,7 +211,7 @@ func wrapProjectionHandlerToTrapError(handler goengine.MessageHandler) goengine.
 			case error:
 				err = x
 			default:
-				err = errors.Errorf("unknown panic: (%T) %v", x, x)
+				err = fmt.Errorf("unknown panic: (%T) %v", x, x)
 			}
 
 			handlerErr = NewProjectionHandlerError(err)

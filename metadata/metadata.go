@@ -2,11 +2,11 @@ package metadata
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/mailru/easyjson"
 	"github.com/mailru/easyjson/jlexer"
 	"github.com/mailru/easyjson/jwriter"
-	"github.com/pkg/errors"
 )
 
 type (
@@ -214,7 +214,7 @@ func marshalJSONKeyValues(out *jwriter.Writer, parent Metadata) {
 
 	plen := len(parentJSON)
 	if parentJSON[1] != '{' || parentJSON[plen-1] != '}' {
-		out.Raw(parentJSON, errors.Errorf("JSON unmarshal failed for Metadata of type %T", parent))
+		out.Raw(parentJSON, fmt.Errorf("JSON unmarshal failed for Metadata of type %T", parent))
 		return
 	}
 
