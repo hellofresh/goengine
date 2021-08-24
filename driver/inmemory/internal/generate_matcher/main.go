@@ -52,7 +52,7 @@ func isSupportedOperator(value interface{}, operator metadata.Operator) bool {
 	switch operator {
 	case metadata.Equals,
 		metadata.NotEquals:
-		switch value.(type) {	
+		switch value.(type) {
 		{{- range $i, $e := .Types }}
 		{{- if eq $i 0 }}
 		case {{ $e }},
@@ -195,7 +195,7 @@ func main() {
 		panic(err)
 	}
 
-	/* #nosec G302 */
+	/* #nosec */
 	f, err := os.OpenFile(matcherPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
 		panic(err)
