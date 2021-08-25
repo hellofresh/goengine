@@ -4,9 +4,12 @@ package test_test
 
 import (
 	"context"
-	"math/rand"
+	"crypto/rand"
+	"math/big"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/suite"
 
 	"github.com/hellofresh/goengine"
 	"github.com/hellofresh/goengine/driver/sql/postgres"
@@ -16,7 +19,6 @@ import (
 	strategySQL "github.com/hellofresh/goengine/strategy/json/sql"
 	strategyPostgres "github.com/hellofresh/goengine/strategy/json/sql/postgres"
 	"github.com/hellofresh/goengine/test/internal"
-	"github.com/stretchr/testify/suite"
 )
 
 type (
@@ -342,14 +344,18 @@ func (s *eventStoreTestSuite) generateAppendMessages(aggregateIDs []goengine.UUI
 			if i > 2 {
 				boolVal = false
 			}
+
+			randInt, err := rand.Int(rand.Reader, big.NewInt(100))
+			s.Require().NoError(err)
+
 			meta := s.appendMeta(map[string]interface{}{
 				"_aggregate_version":             i + 1,
 				"_aggregate_version_less_then_4": boolVal,
 				"_aggregate_type":                "basic",
 				"_aggregate_id":                  aggregateID.String(),
-				"_float_val":                     float64(i) + float64(3.12),
-				"rand_int":                       rand.Intn(100),
-				"rand_float_32":                  rand.Float32(),
+				"_float_val":                     float64(i) + 3.12,
+				"rand_int":                       randInt.Int64(),
+				"rand_float_32":                  float32(randInt.Int64() / 100),
 				"';''; DROP DATABASE events_orders_load;": "ok",
 			})
 			payload := &payloadData{Name: "alice", Balance: i * 11}

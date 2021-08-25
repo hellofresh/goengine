@@ -7,7 +7,7 @@ run:
 
 linters:
   enable:
-    - maligned
+    - govet
     - deadcode
     - errcheck
     - gosec
@@ -15,9 +15,8 @@ linters:
     - gocyclo
     - gofmt
     - goimports
-    - golint
+    - revive
     - ineffassign
-    - interfacer
     - staticcheck
     - structcheck
     - unconvert

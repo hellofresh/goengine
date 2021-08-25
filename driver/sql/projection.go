@@ -3,11 +3,11 @@ package sql
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"time"
 
 	"github.com/mailru/easyjson/jlexer"
 	"github.com/mailru/easyjson/jwriter"
-	"github.com/pkg/errors"
 
 	"github.com/hellofresh/goengine"
 )
@@ -37,7 +37,7 @@ type (
 
 	// ProjectionStateSerialization is an interface describing how a projection state can be initialized, serialized/encoded anf deserialized/decoded
 	ProjectionStateSerialization interface {
-		// init initializes the state
+		// Init initializes the state
 		Init(ctx context.Context) (interface{}, error)
 
 		// DecodeState reconstitute the projection state based on the provided state data
@@ -156,7 +156,7 @@ type nopProjectionStateSerialization struct {
 }
 
 // DecodeState reconstitute the projection state based on the provided state data
-func (nopProjectionStateSerialization) DecodeState(data []byte) (interface{}, error) {
+func (nopProjectionStateSerialization) DecodeState([]byte) (interface{}, error) {
 	return nil, nil
 }
 

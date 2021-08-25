@@ -4,13 +4,14 @@ package sql
 
 import (
 	"context"
+	"errors"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/hellofresh/goengine"
 	"github.com/hellofresh/goengine/aggregate"
-	"github.com/pkg/errors"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestWrapProjectionHandlerToTrapError(t *testing.T) {

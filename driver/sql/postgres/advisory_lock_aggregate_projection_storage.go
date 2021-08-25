@@ -3,12 +3,12 @@ package postgres
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/hellofresh/goengine"
 	driverSQL "github.com/hellofresh/goengine/driver/sql"
-	"github.com/pkg/errors"
 )
 
 var _ driverSQL.AggregateProjectorStorage = &AdvisoryLockAggregateProjectionStorage{}

@@ -3,11 +3,11 @@ package sql
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"math"
 	"sync"
 
 	"github.com/hellofresh/goengine"
-	"github.com/pkg/errors"
 )
 
 // StreamProjector is a postgres projector used to execute a projection against an event stream.
@@ -149,8 +149,8 @@ func (s *StreamProjector) processNotification(
 		}
 	}
 
-	return errors.Errorf(
-		"seriously %d retries is enough! maybe it's time to fix your projection or error handling code?",
+	return fmt.Errorf(
+		"seriously %d retries is enough! maybe it's time to fix your projection or error handling code",
 		math.MaxInt16,
 	)
 }
