@@ -44,7 +44,6 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v2
       - name: Run tests
-        if: success()
         run: go test -cover ./... -coverprofile=coverage.txt -covermode=atomic
         env:
           POSTGRES_DSN: postgres://goengine:goengine@localhost:${{ job.services.postgres.ports[5432] }}/goengine?sslmode=disable
