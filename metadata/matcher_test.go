@@ -1,3 +1,4 @@
+//go:build unit
 // +build unit
 
 package metadata_test
@@ -5,7 +6,7 @@ package metadata_test
 import (
 	"testing"
 
-	"github.com/hellofresh/goengine/metadata"
+	"github.com/hellofresh/goengine/v2/metadata"
 	"github.com/stretchr/testify/assert"
 )
 

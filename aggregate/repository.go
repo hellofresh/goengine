@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 
-	"github.com/hellofresh/goengine"
-	"github.com/hellofresh/goengine/metadata"
+	"github.com/hellofresh/goengine/v2"
+	"github.com/hellofresh/goengine/v2/metadata"
 )
 
 const (

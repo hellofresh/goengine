@@ -3,8 +3,8 @@ package generic
 import (
 	"context"
 
-	"github.com/hellofresh/goengine"
-	"github.com/hellofresh/goengine/metadata"
+	"github.com/hellofresh/goengine/v2"
+	"github.com/hellofresh/goengine/v2/metadata"
 )
 
 // QueryExecutor is used to run a query against a inmemory event store

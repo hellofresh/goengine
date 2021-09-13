@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/hellofresh/goengine"
-	"github.com/hellofresh/goengine/driver/inmemory"
-	"github.com/hellofresh/goengine/extension/logrus"
+	"github.com/hellofresh/goengine/v2"
+	"github.com/hellofresh/goengine/v2/driver/inmemory"
+	"github.com/hellofresh/goengine/v2/extension/logrus"
 )
 
 func main() {

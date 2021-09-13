@@ -1,3 +1,4 @@
+//go:build unit
 // +build unit
 
 package logrus_test
@@ -6,8 +7,8 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/hellofresh/goengine"
-	logrusExtension "github.com/hellofresh/goengine/extension/logrus"
+	"github.com/hellofresh/goengine/v2"
+	logrusExtension "github.com/hellofresh/goengine/v2/extension/logrus"
 	"github.com/sirupsen/logrus"
 	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"

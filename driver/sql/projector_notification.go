@@ -6,7 +6,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/hellofresh/goengine"
+	"github.com/hellofresh/goengine/v2"
 )
 
 // Ensure the notificationProjector.Execute is a ProjectionTrigger

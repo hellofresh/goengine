@@ -3,7 +3,7 @@ package logrus
 import (
 	"sync/atomic"
 
-	"github.com/hellofresh/goengine"
+	"github.com/hellofresh/goengine/v2"
 	"github.com/sirupsen/logrus"
 )
 

@@ -1,4 +1,4 @@
-# GoEngine [![GitHub][license-img]][license] [![GoDoc][doc-img]][doc] [![Build Status][ci-img]][ci] [![Go Report Card][go-report-img]][go-report]
+# GoEngine [![GitHub][license-img]][license] [![GoDoc][doc-img]][doc] [![Go Report Card][go-report-img]][go-report]
 
 GoEngine is an Event Sourcing library written for GoLang.
 
@@ -8,7 +8,7 @@ implementing your Domains and Business logic!
 ## Installation
 
 ```BASH
-go get -u github.com/hellofresh/goengine
+go get -u github.com/hellofresh/goengine/v2
 ```
 
 ## Documentation
@@ -24,7 +24,7 @@ The following features are planned for the future (in no specific order)
 * Support for Snapshots
 * Inmemory Projection support
 * Creating Linked EventStreams
-* Distributes tracing (using [opencensus](https://opencensus.io/) and/or [opentracing](https://opentracing.io/))
+* Distributes tracing (using [OpenTelemetry](https://opentelemetry.io/)
 * ...
 
 ## Contributing 
@@ -41,9 +41,7 @@ Details are in the [contribution guide](CONTRIBUTING.md) and the [code of conduc
 
 
 [doc-img]: https://godoc.org/github.com/hellofresh?status.svg
-[doc]: https://godoc.org/github.com/hellofresh/goengine
-[ci-img]: https://travis-ci.org/hellofresh/goengine.svg?branch=master
-[ci]: https://travis-ci.org/hellofresh/goengine
+[doc]: https://godoc.org/github.com/hellofresh/goengine/v2
 [cov-img]: https://img.shields.io/codecov/c/github/hellofresh/goengine.svg
 [license-img]: https://img.shields.io/github/license/hellofresh/goengine.svg?style=flat
 [license]: LICENSE

@@ -7,7 +7,7 @@ import (
 	"math"
 	"sync"
 
-	"github.com/hellofresh/goengine"
+	"github.com/hellofresh/goengine/v2"
 )
 
 // StreamProjector is a postgres projector used to execute a projection against an event stream.

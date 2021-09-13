@@ -3,7 +3,7 @@ package amqp
 import (
 	"io"
 
-	"github.com/hellofresh/goengine"
+	"github.com/hellofresh/goengine/v2"
 	"github.com/streadway/amqp"
 )
 

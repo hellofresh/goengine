@@ -1,3 +1,4 @@
+//go:build unit
 // +build unit
 
 package postgres
@@ -6,7 +7,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/hellofresh/goengine"
+	"github.com/hellofresh/goengine/v2"
 	"github.com/stretchr/testify/assert"
 )
 

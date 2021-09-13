@@ -1,3 +1,4 @@
+//go:build unit
 // +build unit
 
 package amqp_test
@@ -9,10 +10,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hellofresh/goengine"
-	"github.com/hellofresh/goengine/driver/sql"
-	"github.com/hellofresh/goengine/extension/amqp"
-	goengineLogger "github.com/hellofresh/goengine/extension/logrus"
+	"github.com/hellofresh/goengine/v2"
+	"github.com/hellofresh/goengine/v2/driver/sql"
+	"github.com/hellofresh/goengine/v2/extension/amqp"
+	goengineLogger "github.com/hellofresh/goengine/v2/extension/logrus"
 	"github.com/sirupsen/logrus"
 	"github.com/sirupsen/logrus/hooks/test"
 	libamqp "github.com/streadway/amqp"

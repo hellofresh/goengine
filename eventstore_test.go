@@ -1,3 +1,4 @@
+//go:build unit
 // +build unit
 
 package goengine_test
@@ -8,8 +9,8 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
-	"github.com/hellofresh/goengine"
-	"github.com/hellofresh/goengine/mocks"
+	"github.com/hellofresh/goengine/v2"
+	"github.com/hellofresh/goengine/v2/mocks"
 	"github.com/stretchr/testify/assert"
 )
 

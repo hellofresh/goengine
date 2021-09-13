@@ -3,8 +3,8 @@ package inmemory
 import (
 	"errors"
 
-	"github.com/hellofresh/goengine"
-	"github.com/hellofresh/goengine/internal/reflect"
+	"github.com/hellofresh/goengine/v2"
+	"github.com/hellofresh/goengine/v2/internal/reflect"
 )
 
 var (

@@ -1,3 +1,4 @@
+//go:build unit
 // +build unit
 
 package inmemory_test
@@ -5,9 +6,9 @@ package inmemory_test
 import (
 	"testing"
 
-	"github.com/hellofresh/goengine"
-	"github.com/hellofresh/goengine/driver/inmemory"
-	"github.com/hellofresh/goengine/mocks"
+	"github.com/hellofresh/goengine/v2"
+	"github.com/hellofresh/goengine/v2/driver/inmemory"
+	"github.com/hellofresh/goengine/v2/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

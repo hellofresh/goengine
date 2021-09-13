@@ -1,3 +1,4 @@
+//go:build unit
 // +build unit
 
 package amqp_test
@@ -7,9 +8,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hellofresh/goengine"
-	"github.com/hellofresh/goengine/driver/sql"
-	goengineAmqp "github.com/hellofresh/goengine/extension/amqp"
+	"github.com/hellofresh/goengine/v2"
+	"github.com/hellofresh/goengine/v2/driver/sql"
+	goengineAmqp "github.com/hellofresh/goengine/v2/extension/amqp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

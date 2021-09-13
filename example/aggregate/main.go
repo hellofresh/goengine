@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/hellofresh/goengine/aggregate"
+	"github.com/hellofresh/goengine/v2/aggregate"
 )
 
 var (

@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/hellofresh/goengine"
-	driverSQL "github.com/hellofresh/goengine/driver/sql"
+	"github.com/hellofresh/goengine/v2"
+	driverSQL "github.com/hellofresh/goengine/v2/driver/sql"
 )
 
 var _ driverSQL.StreamProjectorStorage = &AdvisoryLockStreamProjectionStorage{}

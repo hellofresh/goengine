@@ -3,7 +3,7 @@ package aggregate
 import (
 	"sync"
 
-	"github.com/hellofresh/goengine"
+	"github.com/hellofresh/goengine/v2"
 )
 
 var (

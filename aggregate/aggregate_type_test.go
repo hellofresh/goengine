@@ -1,3 +1,4 @@
+//go:build unit
 // +build unit
 
 package aggregate_test
@@ -5,9 +6,9 @@ package aggregate_test
 import (
 	"testing"
 
-	"github.com/hellofresh/goengine"
-	"github.com/hellofresh/goengine/aggregate"
-	mocks "github.com/hellofresh/goengine/mocks/aggregate"
+	"github.com/hellofresh/goengine/v2"
+	"github.com/hellofresh/goengine/v2/aggregate"
+	mocks "github.com/hellofresh/goengine/v2/mocks/aggregate"
 	"github.com/stretchr/testify/assert"
 )
 

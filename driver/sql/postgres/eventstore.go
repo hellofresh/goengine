@@ -7,9 +7,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/hellofresh/goengine"
-	driverSQL "github.com/hellofresh/goengine/driver/sql"
-	"github.com/hellofresh/goengine/metadata"
+	"github.com/hellofresh/goengine/v2"
+	driverSQL "github.com/hellofresh/goengine/v2/driver/sql"
+	"github.com/hellofresh/goengine/v2/metadata"
 )
 
 var (

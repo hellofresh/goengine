@@ -1,3 +1,4 @@
+//go:build unit
 // +build unit
 
 package aggregate_test
@@ -8,9 +9,9 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/hellofresh/goengine"
-	"github.com/hellofresh/goengine/aggregate"
-	"github.com/hellofresh/goengine/metadata"
+	"github.com/hellofresh/goengine/v2"
+	"github.com/hellofresh/goengine/v2/aggregate"
+	"github.com/hellofresh/goengine/v2/metadata"
 	"github.com/stretchr/testify/assert"
 )
 

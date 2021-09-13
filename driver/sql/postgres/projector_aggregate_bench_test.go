@@ -1,3 +1,4 @@
+//go:build unit
 // +build unit
 
 package postgres_test
@@ -9,14 +10,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hellofresh/goengine"
-	"github.com/hellofresh/goengine/aggregate"
-	driverSQL "github.com/hellofresh/goengine/driver/sql"
-	"github.com/hellofresh/goengine/driver/sql/postgres"
-	"github.com/hellofresh/goengine/metadata"
-	"github.com/hellofresh/goengine/strategy/json"
-	strategySQL "github.com/hellofresh/goengine/strategy/json/sql"
-	strategyPostgres "github.com/hellofresh/goengine/strategy/json/sql/postgres"
+	"github.com/hellofresh/goengine/v2"
+	"github.com/hellofresh/goengine/v2/aggregate"
+	driverSQL "github.com/hellofresh/goengine/v2/driver/sql"
+	"github.com/hellofresh/goengine/v2/driver/sql/postgres"
+	"github.com/hellofresh/goengine/v2/metadata"
+	"github.com/hellofresh/goengine/v2/strategy/json"
+	strategySQL "github.com/hellofresh/goengine/v2/strategy/json/sql"
+	strategyPostgres "github.com/hellofresh/goengine/v2/strategy/json/sql/postgres"
 	_ "github.com/lib/pq"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

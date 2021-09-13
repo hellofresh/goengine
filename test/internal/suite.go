@@ -7,9 +7,9 @@ import (
 	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/hellofresh/goengine"
-	logWrapper "github.com/hellofresh/goengine/extension/logrus"
-	"github.com/hellofresh/goengine/extension/prometheus"
+	"github.com/hellofresh/goengine/v2"
+	logWrapper "github.com/hellofresh/goengine/v2/extension/logrus"
+	"github.com/hellofresh/goengine/v2/extension/prometheus"
 )
 
 // Suite is an extension of github.com/stretchr/testify/suite.Suite

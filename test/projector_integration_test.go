@@ -1,3 +1,4 @@
+//go:build integration
 // +build integration
 
 package test_test
@@ -9,14 +10,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hellofresh/goengine"
-	"github.com/hellofresh/goengine/aggregate"
-	"github.com/hellofresh/goengine/driver/sql/postgres"
-	"github.com/hellofresh/goengine/metadata"
-	strategyJSON "github.com/hellofresh/goengine/strategy/json"
-	strategySQL "github.com/hellofresh/goengine/strategy/json/sql"
-	strategyPostgres "github.com/hellofresh/goengine/strategy/json/sql/postgres"
-	"github.com/hellofresh/goengine/test/internal"
+	"github.com/hellofresh/goengine/v2"
+	"github.com/hellofresh/goengine/v2/aggregate"
+	"github.com/hellofresh/goengine/v2/driver/sql/postgres"
+	"github.com/hellofresh/goengine/v2/metadata"
+	strategyJSON "github.com/hellofresh/goengine/v2/strategy/json"
+	strategySQL "github.com/hellofresh/goengine/v2/strategy/json/sql"
+	strategyPostgres "github.com/hellofresh/goengine/v2/strategy/json/sql/postgres"
+	"github.com/hellofresh/goengine/v2/test/internal"
 )
 
 const accountAggregateTypeName = "account"

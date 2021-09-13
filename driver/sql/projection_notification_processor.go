@@ -6,7 +6,7 @@ import (
 	"runtime"
 	"sync"
 
-	"github.com/hellofresh/goengine"
+	"github.com/hellofresh/goengine/v2"
 )
 
 type (
