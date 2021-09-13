@@ -4,7 +4,7 @@ import (
 	"errors"
 	"reflect"
 
-	"github.com/hellofresh/goengine"
+	"github.com/hellofresh/goengine/v2"
 )
 
 // ErrInitiatorMustReturnRoot occurs when a aggregate.Initiator did not return a pointer

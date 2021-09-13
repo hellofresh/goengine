@@ -1,4 +1,4 @@
-module github.com/hellofresh/goengine
+module github.com/hellofresh/goengine/v2
 
 go 1.16
 
@@ -6,6 +6,7 @@ require (
 	github.com/DATA-DOG/go-sqlmock v1.5.0
 	github.com/golang/mock v1.6.0
 	github.com/google/uuid v1.3.0
+	github.com/hellofresh/goengine v0.11.0 // indirect
 	github.com/lib/pq v1.10.2
 	github.com/mailru/easyjson v0.7.7
 	github.com/prometheus/client_golang v1.11.0

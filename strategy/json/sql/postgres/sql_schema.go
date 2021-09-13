@@ -3,8 +3,8 @@ package postgres
 import (
 	"fmt"
 
-	"github.com/hellofresh/goengine"
-	"github.com/hellofresh/goengine/driver/sql/postgres"
+	"github.com/hellofresh/goengine/v2"
+	"github.com/hellofresh/goengine/v2/driver/sql/postgres"
 )
 
 const sqlFuncEventStreamNotify = `DO LANGUAGE plpgsql $EXIST$
@@ -72,7 +72,7 @@ func StreamProjectorCreateSchema(projectionTable string, streamName goengine.Str
 				name VARCHAR(150) UNIQUE NOT NULL,
 				position BIGINT NOT NULL DEFAULT 0,
 				state JSONB NOT NULL DEFAULT ('{}'),
-				locked BOOLEAN NOT NULL DEFAULT (FALSE), 
+				locked BOOLEAN NOT NULL DEFAULT (FALSE),
 				PRIMARY KEY (no)
 			)`,
 			postgres.QuoteIdentifier(projectionTable),

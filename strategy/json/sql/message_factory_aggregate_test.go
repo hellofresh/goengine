@@ -9,12 +9,12 @@ import (
 
 	sqlmock "github.com/DATA-DOG/go-sqlmock"
 	"github.com/golang/mock/gomock"
-	"github.com/hellofresh/goengine"
-	"github.com/hellofresh/goengine/aggregate"
-	"github.com/hellofresh/goengine/metadata"
-	"github.com/hellofresh/goengine/mocks"
-	"github.com/hellofresh/goengine/strategy/json/internal"
-	"github.com/hellofresh/goengine/strategy/json/sql"
+	"github.com/hellofresh/goengine/v2"
+	"github.com/hellofresh/goengine/v2/aggregate"
+	"github.com/hellofresh/goengine/v2/metadata"
+	"github.com/hellofresh/goengine/v2/mocks"
+	"github.com/hellofresh/goengine/v2/strategy/json/internal"
+	"github.com/hellofresh/goengine/v2/strategy/json/sql"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

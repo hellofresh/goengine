@@ -6,11 +6,11 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/hellofresh/goengine"
-	"github.com/hellofresh/goengine/driver/sql"
-	"github.com/hellofresh/goengine/driver/sql/postgres"
-	"github.com/hellofresh/goengine/metadata"
-	"github.com/hellofresh/goengine/strategy/json/internal"
+	"github.com/hellofresh/goengine/v2"
+	"github.com/hellofresh/goengine/v2/driver/sql"
+	"github.com/hellofresh/goengine/v2/driver/sql/postgres"
+	"github.com/hellofresh/goengine/v2/metadata"
+	"github.com/hellofresh/goengine/v2/strategy/json/internal"
 )
 
 var (
@@ -45,7 +45,7 @@ func (s *SingleStreamStrategy) CreateSchema(tableName string) []string {
     event_id UUID NOT NULL,
     event_name VARCHAR(100) NOT NULL,
     payload JSON NOT NULL,
-    metadata JSONB NOT NULL, 
+    metadata JSONB NOT NULL,
     aggregate_type VARCHAR(50) NOT NULL,
 	aggregate_id UUID NOT NULL,
 	aggregate_version SMALLINT NOT NULL,

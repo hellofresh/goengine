@@ -10,8 +10,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/hellofresh/goengine"
-	"github.com/hellofresh/goengine/aggregate"
+	"github.com/hellofresh/goengine/v2"
+	"github.com/hellofresh/goengine/v2/aggregate"
 )
 
 func TestWrapProjectionHandlerToTrapError(t *testing.T) {

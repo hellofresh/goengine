@@ -6,9 +6,9 @@ import (
 	"encoding/json"
 	"testing"
 
-	anotherpayload "github.com/hellofresh/goengine/internal/mocks/another/payload"
-	"github.com/hellofresh/goengine/internal/mocks/payload"
-	strategyJSON "github.com/hellofresh/goengine/strategy/json"
+	anotherpayload "github.com/hellofresh/goengine/v2/internal/mocks/another/payload"
+	"github.com/hellofresh/goengine/v2/internal/mocks/payload"
+	strategyJSON "github.com/hellofresh/goengine/v2/strategy/json"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

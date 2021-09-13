@@ -8,4 +8,4 @@ In order to allow easy adoption for multiple projects the GoEngine library provi
     * [Logrus](logging.md#logrus)
     * [Zap](logging.md#zap)
 
-*The extensions are located in the [extension](https://github.com/hellofresh/goengine/tree/master/extension) directory*
+* The extensions are located in the [extension](https://github.com/hellofresh/goengine/tree/master/extension) directory*

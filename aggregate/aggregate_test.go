@@ -6,9 +6,8 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
-
-	"github.com/hellofresh/goengine/aggregate"
-	mocks "github.com/hellofresh/goengine/mocks/aggregate"
+	"github.com/hellofresh/goengine/v2/aggregate"
+	mocks "github.com/hellofresh/goengine/v2/mocks/aggregate"
 	"github.com/stretchr/testify/assert"
 )
 

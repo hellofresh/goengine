@@ -9,7 +9,7 @@ import (
 	"github.com/mailru/easyjson/jlexer"
 	"github.com/mailru/easyjson/jwriter"
 
-	"github.com/hellofresh/goengine"
+	"github.com/hellofresh/goengine/v2"
 )
 
 type (

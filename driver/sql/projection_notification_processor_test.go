@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
-	"github.com/hellofresh/goengine/driver/sql"
-	mocks "github.com/hellofresh/goengine/mocks/driver/sql"
+	"github.com/hellofresh/goengine/v2/driver/sql"
+	mocks "github.com/hellofresh/goengine/v2/mocks/driver/sql"
 	"github.com/stretchr/testify/require"
 )
 

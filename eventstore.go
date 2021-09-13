@@ -3,7 +3,7 @@ package goengine
 import (
 	"context"
 
-	"github.com/hellofresh/goengine/metadata"
+	"github.com/hellofresh/goengine/v2/metadata"
 )
 
 type (

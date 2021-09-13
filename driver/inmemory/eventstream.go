@@ -3,7 +3,7 @@ package inmemory
 import (
 	"errors"
 
-	"github.com/hellofresh/goengine"
+	"github.com/hellofresh/goengine/v2"
 )
 
 var (

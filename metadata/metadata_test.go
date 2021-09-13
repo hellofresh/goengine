@@ -9,7 +9,7 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/hellofresh/goengine/metadata"
+	"github.com/hellofresh/goengine/v2/metadata"
 	"github.com/mailru/easyjson"
 	"github.com/stretchr/testify/assert"
 )

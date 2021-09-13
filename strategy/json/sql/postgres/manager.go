@@ -4,11 +4,11 @@ import (
 	"database/sql"
 	"time"
 
-	"github.com/hellofresh/goengine"
-	driverSQL "github.com/hellofresh/goengine/driver/sql"
-	"github.com/hellofresh/goengine/driver/sql/postgres"
-	"github.com/hellofresh/goengine/strategy/json"
-	strategySQL "github.com/hellofresh/goengine/strategy/json/sql"
+	"github.com/hellofresh/goengine/v2"
+	driverSQL "github.com/hellofresh/goengine/v2/driver/sql"
+	"github.com/hellofresh/goengine/v2/driver/sql/postgres"
+	"github.com/hellofresh/goengine/v2/strategy/json"
+	strategySQL "github.com/hellofresh/goengine/v2/strategy/json/sql"
 )
 
 // SingleStreamManager is a helper for creating JSON Postgres event stores and projectors

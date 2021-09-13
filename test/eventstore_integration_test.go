@@ -11,14 +11,14 @@ import (
 
 	"github.com/stretchr/testify/suite"
 
-	"github.com/hellofresh/goengine"
-	"github.com/hellofresh/goengine/driver/sql/postgres"
-	"github.com/hellofresh/goengine/metadata"
-	"github.com/hellofresh/goengine/mocks"
-	"github.com/hellofresh/goengine/strategy/json"
-	strategySQL "github.com/hellofresh/goengine/strategy/json/sql"
-	strategyPostgres "github.com/hellofresh/goengine/strategy/json/sql/postgres"
-	"github.com/hellofresh/goengine/test/internal"
+	"github.com/hellofresh/goengine/v2"
+	"github.com/hellofresh/goengine/v2/driver/sql/postgres"
+	"github.com/hellofresh/goengine/v2/metadata"
+	"github.com/hellofresh/goengine/v2/mocks"
+	"github.com/hellofresh/goengine/v2/strategy/json"
+	strategySQL "github.com/hellofresh/goengine/v2/strategy/json/sql"
+	strategyPostgres "github.com/hellofresh/goengine/v2/strategy/json/sql/postgres"
+	"github.com/hellofresh/goengine/v2/test/internal"
 )
 
 type (

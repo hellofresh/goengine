@@ -5,8 +5,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/hellofresh/goengine"
-	"github.com/hellofresh/goengine/metadata"
+	"github.com/hellofresh/goengine/v2"
+	"github.com/hellofresh/goengine/v2/metadata"
 )
 
 // ErrInvalidID occurs when a string is not a valid ID
@@ -23,7 +23,7 @@ type (
 
 		EventApplier
 
-		// ID returns the aggregateID
+		// AggregateID returns the aggregateID
 		AggregateID() ID
 	}
 

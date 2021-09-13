@@ -5,8 +5,8 @@ import (
 	"database/sql"
 	"errors"
 
-	"github.com/hellofresh/goengine"
-	driverSQL "github.com/hellofresh/goengine/driver/sql"
+	"github.com/hellofresh/goengine/v2"
+	driverSQL "github.com/hellofresh/goengine/v2/driver/sql"
 )
 
 var _ driverSQL.ProjectorTransaction = &advisoryLockProjectorTransaction{}

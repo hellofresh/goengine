@@ -5,8 +5,8 @@ package amqp_test
 import (
 	"testing"
 
-	"github.com/hellofresh/goengine"
-	goengineAmqp "github.com/hellofresh/goengine/extension/amqp"
+	"github.com/hellofresh/goengine/v2"
+	goengineAmqp "github.com/hellofresh/goengine/v2/extension/amqp"
 	"github.com/streadway/amqp"
 	"github.com/stretchr/testify/assert"
 )

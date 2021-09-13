@@ -5,7 +5,7 @@ package goengine_test
 import (
 	"testing"
 
-	"github.com/hellofresh/goengine"
+	"github.com/hellofresh/goengine/v2"
 	"github.com/stretchr/testify/assert"
 )
 

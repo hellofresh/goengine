@@ -6,8 +6,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hellofresh/goengine"
-	"github.com/hellofresh/goengine/driver/sql"
+	"github.com/hellofresh/goengine/v2"
+	"github.com/hellofresh/goengine/v2/driver/sql"
 	"github.com/mailru/easyjson"
 	"github.com/streadway/amqp"
 )
