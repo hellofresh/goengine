@@ -8,12 +8,12 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	goengine "github.com/hellofresh/goengine/v2"
 	aggregate "github.com/hellofresh/goengine/v2/aggregate"
 )
 
 // AnotherRoot is a mock of Root interface.
 type AnotherRoot struct {
+	aggregate.BaseRoot
 	ctrl     *gomock.Controller
 	recorder *AnotherRootMockRecorder
 }
@@ -59,44 +59,4 @@ func (m *AnotherRoot) Apply(arg0 *aggregate.Changed) {
 func (mr *AnotherRootMockRecorder) Apply(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Apply", reflect.TypeOf((*AnotherRoot)(nil).Apply), arg0)
-}
-
-// popRecordedEvents mocks base method.
-func (m *AnotherRoot) popRecordedEvents() []*aggregate.Changed {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "popRecordedEvents")
-	ret0, _ := ret[0].([]*aggregate.Changed)
-	return ret0
-}
-
-// popRecordedEvents indicates an expected call of popRecordedEvents.
-func (mr *AnotherRootMockRecorder) popRecordedEvents() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "popRecordedEvents", reflect.TypeOf((*AnotherRoot)(nil).popRecordedEvents))
-}
-
-// recordThat mocks base method.
-func (m *AnotherRoot) recordThat(arg0 aggregate.EventApplier, arg1 *aggregate.Changed) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "recordThat", arg0, arg1)
-}
-
-// recordThat indicates an expected call of recordThat.
-func (mr *AnotherRootMockRecorder) recordThat(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "recordThat", reflect.TypeOf((*AnotherRoot)(nil).recordThat), arg0, arg1)
-}
-
-// replay mocks base method.
-func (m *AnotherRoot) replay(arg0 aggregate.EventApplier, arg1 goengine.EventStream) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "replay", arg0, arg1)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// replay indicates an expected call of replay.
-func (mr *AnotherRootMockRecorder) replay(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "replay", reflect.TypeOf((*AnotherRoot)(nil).replay), arg0, arg1)
 }
