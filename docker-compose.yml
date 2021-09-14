@@ -1,12 +1,19 @@
-version: '2'
+version: '3'
 
 services:
   postgres:
     image: postgres:10.3
     ports:
-    - '8043:5432'
+      - '8043:5432'
+    tmpfs:
+      - /var/lib/postgresql
     environment:
       LC_ALL: C.UTF-8
       POSTGRES_DB: goengine
       POSTGRES_USER: goengine
       POSTGRES_PASSWORD: goengine
+    healthcheck:
+      test: [ "CMD", "pg_isready" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5

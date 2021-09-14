@@ -108,7 +108,7 @@ func TestListener_Listen(t *testing.T) {
 			interval := consumeCalls[i].Sub(consumeCalls[i-1])
 
 			if expectedInterval > interval || interval > (expectedInterval+time.Millisecond*2) {
-				assert.Fail(t, fmt.Sprintf("Invalid interval after consume %d (got %s expected between %s and %s)", i, interval, expectedInterval, (expectedInterval+time.Millisecond)))
+				assert.Fail(t, fmt.Sprintf("Invalid interval after consume %d (got %s expected between %s and %s)", i, interval, expectedInterval, expectedInterval+time.Millisecond))
 			}
 		}
 
