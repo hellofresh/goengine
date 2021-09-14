@@ -147,5 +147,5 @@ func TestChanged_WithMetadata(t *testing.T) {
 
 	assert.Equal(t, expectedMetadata, msgWithTest.Metadata())
 	assert.Equal(t, metadata.New(), msg.Metadata(), "Original metadata should not be changed")
-	assert.NotEqual(t, msg, msgWithTest, "Origional changed message should not be changed")
+	assert.NotEqual(t, msg, msgWithTest, "Original changed message should not be changed")
 }

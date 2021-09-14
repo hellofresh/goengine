@@ -156,7 +156,7 @@ type BankAccountRepository struct {
 // NewBankAccountRepository create a new BankAccountRepository
 func NewBankAccountRepository(store goengine.EventStore, name goengine.StreamName) (
 	*BankAccountRepository, error) {
-	// Create a a aggregate.Type to allow the repository to reconstitute the BankAccount 
+	// Create an aggregate.Type to allow the repository to reconstitute the BankAccount 
 	bankAccountType, err := aggregate.NewType(BankAccountTypeName, func() aggregate.Root { 
 		return &BankAccount{} 
 	})
