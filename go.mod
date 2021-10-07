@@ -3,7 +3,7 @@ module github.com/hellofresh/goengine
 go 1.15
 
 require (
-	github.com/gofrs/uuid v4.0.0+incompatible
+	github.com/google/uuid v1.3.0
 	github.com/onsi/ginkgo v1.16.1
 	github.com/onsi/gomega v1.11.0
 	github.com/streadway/amqp v1.0.0
