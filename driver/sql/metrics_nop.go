@@ -5,8 +5,7 @@ var NopMetrics Metrics = &nopMetrics{}
 
 type nopMetrics struct{}
 
-func (nm *nopMetrics) ReceivedNotification(isNotification bool)                         {}
-func (nm *nopMetrics) QueueNotification(notification *ProjectionNotification)           {}
-func (nm *nopMetrics) StartNotificationProcessing(notification *ProjectionNotification) {}
-func (nm *nopMetrics) FinishNotificationProcessing(notification *ProjectionNotification, success bool) {
-}
+func (nm *nopMetrics) ReceivedNotification(bool)                                  {}
+func (nm *nopMetrics) QueueNotification(*ProjectionNotification)                  {}
+func (nm *nopMetrics) StartNotificationProcessing(*ProjectionNotification)        {}
+func (nm *nopMetrics) FinishNotificationProcessing(*ProjectionNotification, bool) {}

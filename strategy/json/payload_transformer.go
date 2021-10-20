@@ -124,7 +124,7 @@ func (p *PayloadTransformer) RegisterPayloads(payloads map[string]PayloadInitiat
 	return nil
 }
 
-// CreatePayload reconstructs a payload based on it's type and the json data
+// CreatePayload reconstructs a payload based on its type and the json data
 func (p *PayloadTransformer) CreatePayload(typeName string, data interface{}) (interface{}, error) {
 	var dataBytes []byte
 	switch d := data.(type) {

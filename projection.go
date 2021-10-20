@@ -33,7 +33,7 @@ type (
 	//  	}
 	//  }
 	Query interface {
-		// init initializes the state of the Query
+		// Init initializes the state of the Query
 		Init(ctx context.Context) (interface{}, error)
 
 		// Handlers return the handlers for a set of messages

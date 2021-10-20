@@ -47,18 +47,18 @@ type (
 		EncodeState(obj interface{}) ([]byte, error)
 	}
 
-	// ProjectionErrorCallback is a function used to determin what action to take based on a failed projection
+	// ProjectionErrorCallback is a function used to determine what action to take based on a failed projection
 	ProjectionErrorCallback func(err error, notification *ProjectionNotification) ProjectionErrorAction
 
 	// ProjectionErrorAction a type containing the action that the projector should take after an error
 	ProjectionErrorAction int
 
-	// EventStreamLoader loads a event stream based on the provided notification and state
+	// EventStreamLoader loads an event stream based on the provided notification and state
 	EventStreamLoader func(ctx context.Context, conn *sql.Conn, notification *ProjectionNotification, position int64) (goengine.EventStream, error)
 
 	// ProjectorStorage is an interface for handling the projection storage
 	ProjectorStorage interface {
-		// Acquire this function is used to acquire the projection and it's projectionState
+		// Acquire this function is used to acquire the projection and its projectionState.
 		// A projection can only be acquired once and must be released using the returned func
 		Acquire(ctx context.Context, conn *sql.Conn, notification *ProjectionNotification) (ProjectorTransaction, int64, error)
 	}
