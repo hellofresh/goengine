@@ -13,7 +13,7 @@ import (
 
 var _ driverSQL.StreamProjectorStorage = &AdvisoryLockStreamProjectionStorage{}
 
-// AdvisoryLockStreamProjectionStorage is a StreamProjectorStorage that uses a advisory locks to lock a projection
+// AdvisoryLockStreamProjectionStorage is a StreamProjectorStorage that uses an advisory locks to lock a projection
 type AdvisoryLockStreamProjectionStorage struct {
 	projectionName               string
 	projectionStateSerialization driverSQL.ProjectionStateSerialization

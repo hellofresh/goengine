@@ -30,7 +30,7 @@ BEGIN
 END;
 $EXIST$`
 
-// sqlTriggerEventStreamNotify a helper to create the sql on a event store table
+// sqlTriggerEventStreamNotify a helper to create the sql on an event store table
 func sqlTriggerEventStreamNotifyTemplate(eventStreamName goengine.StreamName, eventStreamTable string) string {
 	triggerName := fmt.Sprintf("%s_notify", eventStreamTable)
 	/* #nosec G201 */
@@ -59,7 +59,7 @@ func sqlTriggerEventStreamNotifyTemplate(eventStreamName goengine.StreamName, ev
 	)
 }
 
-// StreamProjectorCreateSchema return the sql statement needed for the postgres database in order to use the StreamProjector
+// StreamProjectorCreateSchema return the sql statements needed for the postgres database in order to use the StreamProjector
 func StreamProjectorCreateSchema(projectionTable string, streamName goengine.StreamName, streamTable string) []string {
 	/* #nosec G201 */
 	return []string{
@@ -80,7 +80,7 @@ func StreamProjectorCreateSchema(projectionTable string, streamName goengine.Str
 	}
 }
 
-// AggregateProjectorCreateSchema return the sql statement needed for the postgres database in order to use the AggregateProjector
+// AggregateProjectorCreateSchema return the sql statements needed for the postgres database in order to use the AggregateProjector
 func AggregateProjectorCreateSchema(projectionTable string, streamName goengine.StreamName, streamTable string) []string {
 	/* #nosec G201 */
 	return []string{

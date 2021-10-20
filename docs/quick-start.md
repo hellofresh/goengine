@@ -338,13 +338,14 @@ import (
 
 	driverSQL "github.com/hellofresh/goengine/v2/driver/sql"
 	"github.com/hellofresh/goengine/v2/extension/pq"
+	"github.com/hellofresh/goengine/v2/strategy/json/sql/postgres"
 )
 
 func main() {
 	// ...
 	
-	var manager postgres.SingleStreamStrategy
-		
+	var manager *postgres.SingleStreamManager
+
 	projector, err := manager.NewStreamProjector(
 		"bank_account_projections", 
 		NewBankTotalsProjection(postgresDB),

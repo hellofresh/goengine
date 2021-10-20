@@ -79,7 +79,7 @@ func NewEventStore(
 	}, nil
 }
 
-// Create creates the database table, index etc needed for the event stream
+// Create creates the database table, index etc. needed for the event stream
 func (e *EventStore) Create(ctx context.Context, streamName goengine.StreamName) error {
 	tableName, err := e.tableName(streamName)
 	if err != nil {
