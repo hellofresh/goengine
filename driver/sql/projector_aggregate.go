@@ -66,7 +66,8 @@ func NewAggregateProjector(
 		return nil, err
 	}
 
-	executor, err := newNotificationProjector(
+	executor, err := NewNotificationProjector(
+		db,
 		db,
 		projectorStorage,
 		projection.Handlers(),

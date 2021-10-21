@@ -25,7 +25,7 @@ type SingleStreamManager struct {
 // NewSingleStreamManager return a new instance of the SingleStreamManager
 func NewSingleStreamManager(db *sql.DB, logger goengine.Logger, metrics driverSQL.Metrics) (*SingleStreamManager, error) {
 	if db == nil {
-		return nil, goengine.InvalidArgumentError("db")
+		return nil, goengine.InvalidArgumentError("rdb")
 	}
 	if logger == nil {
 		logger = goengine.NopLogger
@@ -81,6 +81,7 @@ func (m *SingleStreamManager) PersistenceStrategy() driverSQL.PersistenceStrateg
 
 // NewStreamProjector returns a new stream projector instance
 func (m *SingleStreamManager) NewStreamProjector(
+	rdb *sql.DB,
 	projectionTable string,
 	projection goengine.Projection,
 	projectionErrorHandler driverSQL.ProjectionErrorCallback,
@@ -103,6 +104,7 @@ func (m *SingleStreamManager) NewStreamProjector(
 	}
 
 	return driverSQL.NewStreamProjector(
+		rdb,
 		m.db,
 		driverSQL.StreamProjectionEventStreamLoader(eventStore, projection.FromStream()),
 		m.payloadTransformer,

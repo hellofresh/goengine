@@ -25,7 +25,8 @@ type StreamProjector struct {
 
 // NewStreamProjector creates a new projector for a projection
 func NewStreamProjector(
-	db *sql.DB,
+	rdb *sql.DB,
+	wdb *sql.DB,
 	eventLoader EventStreamLoader,
 	resolver goengine.MessagePayloadResolver,
 	projection goengine.Projection,
@@ -34,7 +35,7 @@ func NewStreamProjector(
 	logger goengine.Logger,
 ) (*StreamProjector, error) {
 	switch {
-	case db == nil:
+	case rdb == nil:
 		return nil, goengine.InvalidArgumentError("db")
 	case eventLoader == nil:
 		return nil, goengine.InvalidArgumentError("eventLoader")
@@ -55,8 +56,9 @@ func NewStreamProjector(
 		e.String("projection", projection.Name())
 	})
 
-	executor, err := newNotificationProjector(
-		db,
+	executor, err := NewNotificationProjector(
+		rdb,
+		wdb,
 		projectorStorage,
 		projection.Handlers(),
 		eventLoader,
@@ -68,7 +70,7 @@ func NewStreamProjector(
 	}
 
 	return &StreamProjector{
-		db:                     db,
+		db:                     wdb,
 		executor:               executor,
 		storage:                projectorStorage,
 		projectionErrorHandler: projectionErrorHandler,

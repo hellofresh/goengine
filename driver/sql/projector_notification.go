@@ -13,7 +13,8 @@ var _ ProjectionTrigger = (&notificationProjector{}).Execute
 
 // notificationProjector contains the logic for transforming a notification into a set of events and projecting them.
 type notificationProjector struct {
-	db *sql.DB
+	rdb *sql.DB
+	wdb *sql.DB
 
 	storage     ProjectorStorage
 	handlers    map[string]goengine.MessageHandler
@@ -24,8 +25,9 @@ type notificationProjector struct {
 }
 
 // newNotificationProjector returns a new notificationProjector
-func newNotificationProjector(
-	db *sql.DB,
+func NewNotificationProjector(
+	rdb *sql.DB,
+	wdb *sql.DB,
 	storage ProjectorStorage,
 	eventHandlers map[string]goengine.MessageHandler,
 	eventLoader EventStreamLoader,
@@ -33,7 +35,7 @@ func newNotificationProjector(
 	logger goengine.Logger,
 ) (*notificationProjector, error) {
 	switch {
-	case db == nil:
+	case wdb == nil:
 		return nil, goengine.InvalidArgumentError("db")
 	case storage == nil:
 		return nil, goengine.InvalidArgumentError("storage")
@@ -50,7 +52,8 @@ func newNotificationProjector(
 	}
 
 	return &notificationProjector{
-		db:          db,
+		wdb:         wdb,
+		rdb:         rdb,
 		storage:     storage,
 		handlers:    wrapProjectionHandlers(eventHandlers),
 		eventLoader: eventLoader,
@@ -68,7 +71,7 @@ func (s *notificationProjector) Execute(ctx context.Context, notification *Proje
 		return nil
 	}
 
-	projectConn, err := AcquireConn(ctx, s.db)
+	projectConn, err := AcquireConn(ctx, s.rdb)
 	if err != nil {
 		return err
 	}
@@ -80,7 +83,7 @@ func (s *notificationProjector) Execute(ctx context.Context, notification *Proje
 		}
 	}()
 
-	streamConn, err := AcquireConn(ctx, s.db)
+	streamConn, err := AcquireConn(ctx, s.wdb)
 	if err != nil {
 		return err
 	}
