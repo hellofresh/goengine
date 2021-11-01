@@ -21,7 +21,7 @@ var (
 	_ goengine.EventStore = &EventStore{}
 )
 
-// EventStore a in memory event store implementation
+// EventStore an in memory event store implementation
 type EventStore struct {
 	sync.RWMutex
 
@@ -37,7 +37,7 @@ func NewEventStore(logger goengine.Logger) *EventStore {
 	}
 }
 
-// Create creates a event stream
+// Create creates an event stream
 func (i *EventStore) Create(ctx context.Context, streamName goengine.StreamName) error {
 	if _, found := i.streams[streamName]; found {
 		return ErrStreamExistsAlready

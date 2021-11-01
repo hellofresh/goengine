@@ -16,7 +16,7 @@ var (
 	_ goengine.MessagePayloadResolver = &PayloadRegistry{}
 )
 
-// PayloadRegistry is a registry containing the mapping of an payload type to a event name
+// PayloadRegistry is a registry containing the mapping of a payload type to an event name
 type PayloadRegistry struct {
 	typeMap map[string]string
 }

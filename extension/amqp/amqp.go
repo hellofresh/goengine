@@ -49,7 +49,7 @@ func DirectQueueConsume(amqpDSN, queue string) (Consume, error) {
 			return nil, nil, err
 		}
 
-		// Indicate we only want 1 message to be acknowledge at a time.
+		// Indicate we only want 1 message to be acknowledged at a time.
 		if err := ch.Qos(1, 0, false); err != nil {
 			return nil, nil, err
 		}

@@ -19,7 +19,7 @@ var (
 	ErrInvalidChangePayload = errors.New("goengine: a changed event must have a payload that is not nil")
 )
 
-// Changed is a message indicating that a aggregate was changed
+// Changed is a message indicating that an aggregate was changed
 type Changed struct {
 	uuid        goengine.UUID
 	aggregateID ID

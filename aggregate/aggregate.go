@@ -13,10 +13,10 @@ import (
 var ErrInvalidID = errors.New("goengine: an aggregate.ID must be a valid UUID")
 
 type (
-	// ID an UUID for a aggregate.Root instance
+	// ID a UUID for a aggregate.Root instance
 	ID string
 
-	// Root is a interface that a AggregateRoot must implement
+	// Root is an interface that a AggregateRoot must implement
 	Root interface {
 		eventSourced
 		eventProducer
@@ -27,7 +27,7 @@ type (
 		AggregateID() ID
 	}
 
-	// EventApplier is a interface so that a Changed event can be applied
+	// EventApplier is an interface so that a Changed event can be applied
 	EventApplier interface {
 		// Apply updates the state of the aggregateRoot based on the recorded event
 		// This method should only be called by the library
@@ -49,7 +49,7 @@ func GenerateID() ID {
 	return ID(uuid.New().String())
 }
 
-// IDFromString creates a ID from a string
+// IDFromString creates an ID from a string
 func IDFromString(str string) (ID, error) {
 	id, err := uuid.Parse(str)
 	if err != nil {

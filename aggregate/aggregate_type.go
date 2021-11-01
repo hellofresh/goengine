@@ -7,7 +7,7 @@ import (
 	"github.com/hellofresh/goengine/v2"
 )
 
-// ErrInitiatorMustReturnRoot occurs when a aggregate.Initiator did not return a pointer
+// ErrInitiatorMustReturnRoot occurs when an aggregate.Initiator did not return a pointer
 var ErrInitiatorMustReturnRoot = errors.New("goengine: the aggregate.Initiator must return a pointer to the aggregate.Root")
 
 type (
@@ -15,7 +15,7 @@ type (
 	// this instance may then be used to reconstitute the state of the aggregate root
 	Initiator func() Root
 
-	// Type an aggregate type represent the type of a aggregate
+	// Type an aggregate type represent the type of aggregate
 	Type struct {
 		name           string
 		initiator      Initiator
@@ -50,7 +50,7 @@ func (t *Type) String() string {
 	return t.name
 }
 
-// IsImplementedBy returns whether the given aggregate root is a instance of this aggregateType
+// IsImplementedBy returns whether the given aggregate root is an instance of this aggregateType
 func (t *Type) IsImplementedBy(root interface{}) bool {
 	if root == nil {
 		return false
@@ -69,7 +69,7 @@ func (t *Type) IsImplementedBy(root interface{}) bool {
 	return t.reflectionType == rootType
 }
 
-// CreateInstance returns an new empty/zero instance of the aggregate root that the type represents
+// CreateInstance returns a new empty/zero instance of the aggregate root that the type represents
 func (t *Type) CreateInstance() Root {
 	return t.initiator()
 }

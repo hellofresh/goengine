@@ -100,7 +100,7 @@ func (r *Repository) GetAggregateRoot(ctx context.Context, aggregateID ID) (Root
 	return root, nil
 }
 
-// enrichEventMetadata add's aggregate_id and aggregate_type as metadata to domainEvent
+// enrichEventMetadata adds aggregate_id and aggregate_type as metadata to domainEvent
 func (r *Repository) enrichMetadata(aggregateEvent *Changed, aggregateID ID) *Changed {
 	domainEvent := aggregateEvent.WithMetadata(IDKey, aggregateID)
 	domainEvent = domainEvent.WithMetadata(TypeKey, r.aggregateType.String())

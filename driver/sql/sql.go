@@ -40,7 +40,7 @@ func AcquireConn(ctx context.Context, db *sql.DB) (*sql.Conn, error) {
 			return nil, ErrConnFailedToAcquire
 		case driver.ErrBadConn:
 			// This is needed due to https://github.com/golang/go/issues/29684
-			// We have a bad connection so we ping the server and try again
+			// We have a bad connection, so we ping the server and try again
 			timeoutCtx, timeoutCancel = context.WithTimeout(ctx, time.Second)
 			err := db.PingContext(timeoutCtx)
 			timeoutCancel()

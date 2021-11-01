@@ -7,7 +7,7 @@ import (
 	"github.com/hellofresh/goengine/v2/metadata"
 )
 
-// QueryExecutor is used to run a query against a inmemory event store
+// QueryExecutor is used to run a query against an inmemory event store
 type QueryExecutor struct {
 	store          goengine.EventStore
 	streamName     goengine.StreamName

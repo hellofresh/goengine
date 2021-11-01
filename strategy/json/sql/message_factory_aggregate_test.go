@@ -97,7 +97,7 @@ func TestAggregateChangedFactory_CreateFromRows(t *testing.T) {
 				messageFactory, err := sql.NewAggregateChangedFactory(payloadFactory)
 				require.NoError(t, err)
 
-				// Finally recreate the messages
+				// Finally, recreate the messages
 				stream, err := messageFactory.CreateEventStream(rows)
 
 				asserts := assert.New(t)
@@ -125,7 +125,7 @@ func TestAggregateChangedFactory_CreateFromRows(t *testing.T) {
 		messageFactory, err := sql.NewAggregateChangedFactory(mocks.NewMessagePayloadFactory(ctrl))
 		require.NoError(t, err)
 
-		// Finally recreate the messages
+		// Finally, recreate the messages
 		msgs, err := messageFactory.CreateEventStream(nil)
 
 		// Check result
@@ -300,7 +300,7 @@ func TestAggregateChangedFactory_CreateFromRows(t *testing.T) {
 				messageFactory, err := sql.NewAggregateChangedFactory(payloadFactory)
 				require.NoError(t, err)
 
-				// Finally recreate the messages
+				// Finally, recreate the messages
 				stream, err := messageFactory.CreateEventStream(rows)
 
 				asserts := assert.New(t)

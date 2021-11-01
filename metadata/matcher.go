@@ -29,7 +29,7 @@ var (
 )
 
 type (
-	// Operator represents a operation for a constraint
+	// Operator represents an operation for a constraint
 	Operator string
 
 	// Matcher is a struct used to register constraints that should be applied
