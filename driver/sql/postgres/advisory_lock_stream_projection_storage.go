@@ -97,7 +97,7 @@ func (s *AdvisoryLockStreamProjectionStorage) CreateProjection(ctx context.Conte
 }
 
 // Acquire returns a driverSQL.ProjectorTransaction and the position of the projection within the event stream when a
-// lock is acquire for the specified aggregate_id. Otherwise an error is returned indicating why the lock could not be acquired.
+// lock is acquired for the specified aggregate_id. Otherwise, an error is returned indicating why the lock could not be acquired.
 func (s *AdvisoryLockStreamProjectionStorage) Acquire(
 	ctx context.Context,
 	conn *sql.Conn,
@@ -139,7 +139,7 @@ func (s *AdvisoryLockStreamProjectionStorage) Acquire(
 
 	if locked {
 		// The projection was locked by another process that died and for this reason not unlocked
-		// In this case a application needs to decide what to do to avoid invalid projection states
+		// In this case an application needs to decide what to do to avoid invalid projection states
 		if err := s.releaseProjectionConnectionLock(conn); err != nil {
 			s.logger.Error("failed to release lock for a projection with a locked row", func(e goengine.LoggerEntry) {
 				logFields(e)

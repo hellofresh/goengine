@@ -8,10 +8,10 @@ import (
 )
 
 type (
-	// UUID is a 128 bit (16 byte) Universal Unique IDentifier as defined in RFC4122
+	// UUID is a 128 bit (16 byte) Universal Unique Identifier as defined in RFC4122
 	UUID = uuid.UUID
 
-	// Message is a interface describing a message.
+	// Message is an interface describing a message.
 	// A message can be a command, domain event or some other type of message.
 	Message interface {
 		// UUID returns the identifier of this message

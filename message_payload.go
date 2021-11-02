@@ -9,7 +9,7 @@ type (
 
 	// MessagePayloadFactory is used to reconstruct message payloads
 	MessagePayloadFactory interface {
-		// CreatePayload returns a reconstructed payload or a error
+		// CreatePayload returns a reconstructed payload or an error
 		CreatePayload(payloadType string, data interface{}) (interface{}, error)
 	}
 

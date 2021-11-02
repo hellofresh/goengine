@@ -14,7 +14,7 @@ import (
 
 var _ sql.ProjectionTrigger = (&NotificationPublisher{}).Publish
 
-// NotificationPublisher is responsible of publishing a notification to queue
+// NotificationPublisher is responsible for publishing a notification to queue
 type NotificationPublisher struct {
 	amqpDSN              string
 	queue                string

@@ -194,7 +194,7 @@ func wrapProjectionHandlers(handlers map[string]goengine.MessageHandler) map[str
 }
 
 // wrapProjectionHandlerToTrapError wraps a projection handler with error catching code.
-// This ensures a projection handler can return a error or panic without destroying the executor
+// This ensures a projection handler can return an error or panic without destroying the executor
 func wrapProjectionHandlerToTrapError(handler goengine.MessageHandler) goengine.MessageHandler {
 	return func(ctx context.Context, state interface{}, message goengine.Message) (returnState interface{}, handlerErr error) {
 		defer func() {
@@ -227,7 +227,7 @@ func wrapProjectionHandlerToTrapError(handler goengine.MessageHandler) goengine.
 	}
 }
 
-// eventStreamHandlerIterator is a iterator used to project a support message
+// eventStreamHandlerIterator is an iterator used to project a support message
 type eventStreamHandlerIterator struct {
 	stream   goengine.EventStream
 	handlers map[string]goengine.MessageHandler

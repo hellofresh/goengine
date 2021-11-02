@@ -101,7 +101,7 @@ func (m *MetadataMatcher) Matches(metadata metadata.Metadata) bool {
 
 // Matches returns true if the value satisfies the constraint
 func (c *metadataConstraint) Matches(val interface{}) (bool, error) {
-	// Ensure the value's are of the same type
+	// Ensure the values are of the same type
 	if valType := reflect.TypeOf(val); valType != c.valueType {
 		// The types do not match let's see if they can be converted
 		if !valType.ConvertibleTo(c.valueType) {

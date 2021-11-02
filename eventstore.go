@@ -51,7 +51,7 @@ type (
 	}
 )
 
-// ReadEventStream reads the entire event stream and returns it's content as a slice.
+// ReadEventStream reads the entire event stream and returns its content as a slice.
 // The main purpose of the function is for testing and debugging.
 func ReadEventStream(stream EventStream) ([]Message, []int64, error) {
 	var messages []Message
