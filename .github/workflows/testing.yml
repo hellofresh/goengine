@@ -16,6 +16,8 @@ jobs:
         uses: actions/checkout@v3
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v2
+        with:
+          only-new-issues: ${{ github.event_name == 'pull_request' }}
 
   go-test:
     name: Go ${{ matrix.go }} Test
