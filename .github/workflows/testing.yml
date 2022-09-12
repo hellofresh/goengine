@@ -44,12 +44,12 @@ jobs:
           --health-retries 5
 
     steps:
+      - name: Check out code
+        uses: actions/checkout@v3
       - name: Set up Go
         uses: actions/setup-go@v3
         with:
           go-version: ${{ matrix.go }}
-      - name: Check out code
-        uses: actions/checkout@v3
 
       - name: Run unit tests
         run: make test-unit
@@ -90,12 +90,12 @@ jobs:
           --health-retries 5
 
     steps:
+      - name: Check out code
+        uses: actions/checkout@v3
       - name: Set up Go
         uses: actions/setup-go@v3
         with:
           go-version-file: ./go.mod
-      - name: Check out code
-        uses: actions/checkout@v3
 
       - name: Setup psql
         run: |

@@ -11,8 +11,11 @@ import (
 	"testing"
 	"time"
 
-	sqlmock "github.com/DATA-DOG/go-sqlmock"
+	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/hellofresh/goengine/v2"
 	"github.com/hellofresh/goengine/v2/aggregate"
 	driverSQL "github.com/hellofresh/goengine/v2/driver/sql"
@@ -22,8 +25,6 @@ import (
 	"github.com/hellofresh/goengine/v2/mocks"
 	mockSQL "github.com/hellofresh/goengine/v2/mocks/driver/sql"
 	strategyPostgres "github.com/hellofresh/goengine/v2/strategy/json/sql/postgres"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestNewEventStore(t *testing.T) {
@@ -384,8 +385,11 @@ func TestEventStore_Load(t *testing.T) {
 }
 
 func mockHasStreamQuery(result bool, mock sqlmock.Sqlmock) {
-	mockRows := sqlmock.NewRows([]string{"type"}).AddRow(result)
-	mock.ExpectQuery(`SELECT EXISTS\((.+)`).WithArgs("events_orders").WillReturnRows(mockRows)
+	schemaRows := sqlmock.NewRows([]string{"current_schema"}).AddRow("public")
+	mock.ExpectQuery(`select current_schema()`).WillReturnRows(schemaRows)
+
+	existsRows := sqlmock.NewRows([]string{"type"}).AddRow(result)
+	mock.ExpectQuery(`SELECT EXISTS\((.+)`).WithArgs("public", "events_orders").WillReturnRows(existsRows)
 }
 
 func mockMessages(ctrl *gomock.Controller) (*mocks.MessagePayloadConverter, []goengine.Message) {
