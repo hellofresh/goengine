@@ -1,3 +1,4 @@
+---
 name: Testing
 
 on:
@@ -12,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v2
 
@@ -23,7 +24,7 @@ jobs:
 
     strategy:
       matrix:
-        go: [ '~1.17', '~1.18' ]
+        go: [ '1.17', '1.18', '1.19' ]
 
     services:
       postgres:
@@ -42,11 +43,12 @@ jobs:
 
     steps:
       - name: Set up Go
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v3
         with:
           go-version: ${{ matrix.go }}
       - name: Check out code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
+
       - name: Run unit tests
         run: make test-unit
       - name: Run examples tests
@@ -64,3 +66,48 @@ jobs:
     steps:
       - name: Done
         run: echo "All Golang versions tests are Green!"
+
+  test-non-public-schema:
+    name: Test non-public PG schema
+    runs-on: ubuntu-latest
+    needs: [ lint ]
+
+    services:
+      postgres:
+        image: postgres:10
+        ports:
+          - "5432"
+        env:
+          POSTGRES_USER: goengine
+          POSTGRES_PASSWORD: goengine
+          POSTGRES_DB: goengine
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version-file: ./go.mod
+      - name: Check out code
+        uses: actions/checkout@v3
+
+      - name: Setup psql
+        run: |
+          apt-get update
+          apt-get install --yes --no-install-recommends postgresql-client
+      - name: Create non-public schema
+        run: |
+          psql -h localhost -U goengine -p ${{ job.services.postgres.ports[5432] }} -d goengine -c 'CREATE SCHEMA custom;'
+
+      - name: Run unit tests
+        run: make test-unit
+      - name: Run examples tests
+        run: make test-examples
+      - name: Run integration tests
+        run: make test-integration
+        env:
+          POSTGRES_DSN: 'postgres://goengine:goengine@localhost:${{ job.services.postgres.ports[5432] }}/goengine?sslmode=disable&search_path=custom'

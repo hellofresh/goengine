@@ -137,10 +137,14 @@ func (s *PostgresSuite) DB() *sql.DB {
 
 // DBTableExists return true if the provided table name exists in the public table schema of the suite's database
 func (s *PostgresSuite) DBTableExists(tableName string) bool {
+	var currentSchema string
+	err := s.db.QueryRow(`select current_schema()`).Scan(&currentSchema)
+	s.Require().NoError(err, "failed to get current schema")
+
 	var exists bool
-	err := s.db.QueryRow(
-		`SELECT EXISTS(SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = $1)`,
-		tableName,
+	err = s.db.QueryRow(
+		`SELECT EXISTS(SELECT 1 FROM information_schema.tables WHERE table_schema = $1 AND table_name = $2)`,
+		currentSchema, tableName,
 	).Scan(&exists)
 
 	s.Require().NoError(err, "failed to check if table %s exists", tableName)

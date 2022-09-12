@@ -58,10 +58,15 @@ func (s *eventStoreTestSuite) TestCreate() {
 
 	s.True(s.DBTableExists("events_orders"))
 
+	var currentSchema string
+	err = s.DB().QueryRowContext(ctx, `select current_schema()`).Scan(&currentSchema)
+	s.Require().NoError(err, "failed to get current schema")
+
 	var indexesCount int
 	err = s.DB().QueryRowContext(
 		ctx,
-		`SELECT COUNT(*) FROM pg_indexes WHERE schemaname = 'public' AND tablename = 'events_orders';`,
+		`SELECT COUNT(*) FROM pg_indexes WHERE schemaname = $1 AND tablename = 'events_orders'`,
+		currentSchema,
 	).Scan(&indexesCount)
 	s.Require().NoError(err)
 	s.Equal(4, indexesCount)
