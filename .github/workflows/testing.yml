@@ -97,14 +97,6 @@ jobs:
         with:
           go-version-file: ./go.mod
 
-      - name: Setup psql
-        run: |
-          apt-get update
-          apt-get install --yes --no-install-recommends postgresql-client
-      - name: Create non-public schema
-        run: |
-          psql -h localhost -U goengine -p ${{ job.services.postgres.ports[5432] }} -d goengine -c 'CREATE SCHEMA custom;'
-
       - name: Run unit tests
         run: make test-unit
       - name: Run examples tests
@@ -112,4 +104,5 @@ jobs:
       - name: Run integration tests
         run: make test-integration
         env:
+          # integration tests suite creates new DB per test run and initialises schema as well
           POSTGRES_DSN: 'postgres://goengine:goengine@localhost:${{ job.services.postgres.ports[5432] }}/goengine?sslmode=disable&search_path=custom'
