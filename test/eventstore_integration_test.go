@@ -92,14 +92,14 @@ func (s *eventStoreTestSuite) TestHasStream() {
 }
 
 func (s *eventStoreTestSuite) TestAppendTo() {
-	agregateID := goengine.GenerateUUID()
+	aggregateID := goengine.GenerateUUID()
 	ctx := context.Background()
 	streamName := goengine.StreamName("orders_my")
 
 	err := s.eventStore.Create(ctx, streamName)
 	s.Require().NoError(err)
 
-	messages := s.generateAppendMessages([]goengine.UUID{agregateID})
+	messages := s.generateAppendMessages([]goengine.UUID{aggregateID})
 	err = s.eventStore.AppendTo(ctx, streamName, messages)
 	s.Require().NoError(err)
 
