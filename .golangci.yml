@@ -8,7 +8,6 @@ run:
 linters:
   enable:
     - govet
-    - deadcode
     - errcheck
     - gosec
     - goconst
@@ -18,9 +17,7 @@ linters:
     - revive
     - ineffassign
     - staticcheck
-    - structcheck
     - unconvert
-    - varcheck
     - vet
     - vetshadow
 
@@ -36,3 +33,7 @@ issues:
       text: "Error return value of \\`streamEvents.Close\\` is not checked"
       linters:
         - errcheck
+
+    - linters:
+        - revive
+      text: "package-comments:"
