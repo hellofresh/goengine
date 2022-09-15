@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/mailru/easyjson"
-	"github.com/streadway/amqp"
+	amqp "github.com/rabbitmq/amqp091-go"
 
 	"github.com/hellofresh/goengine/v2"
 	"github.com/hellofresh/goengine/v2/driver/sql"

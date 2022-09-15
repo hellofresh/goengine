@@ -3,8 +3,9 @@ package amqp
 import (
 	"io"
 
+	amqp "github.com/rabbitmq/amqp091-go"
+
 	"github.com/hellofresh/goengine/v2"
-	"github.com/streadway/amqp"
 )
 
 // NotificationChannel represents a channel for notifications

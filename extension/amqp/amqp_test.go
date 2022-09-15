@@ -6,10 +6,11 @@ package amqp_test
 import (
 	"testing"
 
+	amqp "github.com/rabbitmq/amqp091-go"
+	"github.com/stretchr/testify/assert"
+
 	"github.com/hellofresh/goengine/v2"
 	goengineAmqp "github.com/hellofresh/goengine/v2/extension/amqp"
-	"github.com/streadway/amqp"
-	"github.com/stretchr/testify/assert"
 )
 
 type mockAcknowledger struct {

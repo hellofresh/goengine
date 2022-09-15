@@ -91,14 +91,14 @@ func (c *dbController) enableDatabaseAccess(t *testing.T, databaseName string) {
 	require.NoError(t, err, "test.postgres: Unable to allow connections to the db")
 }
 
-const postgressAppName = "goengine_dev_tests"
+const postgresAppName = "goengine_dev_tests"
 
 var (
 	_ suite.SetupTestSuite    = &PostgresSuite{}
 	_ suite.TearDownTestSuite = &PostgresSuite{}
 )
 
-// PostgresSuite a testify suite that will create and drop a database before and after a test
+// PostgresSuite testify suite that will create and drop a database before and after a test
 type PostgresSuite struct {
 	Suite
 
@@ -107,6 +107,7 @@ type PostgresSuite struct {
 	controller *dbController
 	db         *sql.DB
 	dbName     string
+	schemaName string
 }
 
 // SetupTest creates a database before a test
@@ -119,6 +120,13 @@ func (s *PostgresSuite) SetupTest() {
 	dsnMatches := postgresDSNDatabaseMatch(s.PostgresDSN)
 	s.dbName = s.PostgresDSN[dsnMatches[2]:dsnMatches[3]]
 
+	schemaMatch := postgresDSNSchemaMatch(s.PostgresDSN)
+	// custom schema is set - remember it to create later
+	if len(schemaMatch) > 0 {
+		// trim schema name quotes from the matched positions - that's why we get +/-1 here
+		s.schemaName = s.PostgresDSN[schemaMatch[2]+1 : schemaMatch[3]-1]
+	}
+
 	// Create the schema to use
 	s.controller.Create(s.T(), s.dbName)
 }
@@ -130,6 +138,11 @@ func (s *PostgresSuite) DB() *sql.DB {
 		s.db, err = sql.Open("postgres", s.PostgresDSN)
 		s.Require().NoError(err, "test.postgres: Connection failed")
 		s.Require().NoError(s.db.Ping(), "test.postgres: Failed to Ping db")
+
+		if s.schemaName != "" {
+			_, err = s.db.Exec("CREATE SCHEMA IF NOT EXISTS " + s.schemaName)
+			s.Require().NoError(err, "test.postgres: Failed to create db schema")
+		}
 	}
 
 	return s.db
@@ -137,10 +150,14 @@ func (s *PostgresSuite) DB() *sql.DB {
 
 // DBTableExists return true if the provided table name exists in the public table schema of the suite's database
 func (s *PostgresSuite) DBTableExists(tableName string) bool {
+	var currentSchema string
+	err := s.db.QueryRow(`select current_schema()`).Scan(&currentSchema)
+	s.Require().NoError(err, "failed to get current schema")
+
 	var exists bool
-	err := s.db.QueryRow(
-		`SELECT EXISTS(SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = $1)`,
-		tableName,
+	err = s.db.QueryRow(
+		`SELECT EXISTS(SELECT 1 FROM information_schema.tables WHERE table_schema = $1 AND table_name = $2)`,
+		currentSchema, tableName,
 	).Scan(&exists)
 
 	s.Require().NoError(err, "failed to check if table %s exists", tableName)
@@ -158,7 +175,7 @@ func (s *PostgresSuite) DBQueryIsRunningWithTimeout(queryRegex *regexp.Regexp, t
 			ctx,
 			`SELECT query FROM pg_stat_activity WHERE datname = $1 AND application_name=$2`,
 			s.dbName,
-			postgressAppName,
+			postgresAppName,
 		)
 		if err != nil {
 			return false, err
@@ -209,9 +226,9 @@ func postgresDSN(t *testing.T) string {
 	// Set the connection application name
 	if strings.Contains(parsedDSN, "application_name") {
 		parsedDSN = regexp.MustCompile("application_name=([^ ]|$)*").
-			ReplaceAllString(parsedDSN, "application_name="+postgressAppName)
+			ReplaceAllString(parsedDSN, "application_name="+postgresAppName)
 	} else {
-		parsedDSN += " application_name=" + postgressAppName
+		parsedDSN += " application_name=" + postgresAppName
 	}
 
 	parsedDSN = regexp.MustCompile(`dbname='((?:(\\ )|[^ ])+)'`).
@@ -223,6 +240,14 @@ func postgresDSN(t *testing.T) string {
 // postgresDSNDatabaseMatch locate the dbname within the dsn and return the indexes
 func postgresDSNDatabaseMatch(dsn string) []int {
 	r := regexp.MustCompile(`dbname=(((\\ )|[^ ])+)`)
+	matches := r.FindStringSubmatchIndex(dsn)
+
+	return matches
+}
+
+// postgresDSNSchemaMatch locate the search_path within the dsn and return the indexes
+func postgresDSNSchemaMatch(dsn string) []int {
+	r := regexp.MustCompile(`search_path=(((\\ )|[^ ])+)`)
 	matches := r.FindStringSubmatchIndex(dsn)
 
 	return matches

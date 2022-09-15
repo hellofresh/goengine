@@ -281,14 +281,21 @@ func (e *EventStore) tableName(s goengine.StreamName) (string, error) {
 }
 
 func (e *EventStore) tableExists(ctx context.Context, tableName string) bool {
-	var exists bool
-	err := e.db.QueryRowContext(
-		ctx,
-		`SELECT EXISTS(SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = $1)`,
-		tableName,
-	).Scan(&exists)
+	var currentSchema string
+	if err := e.db.QueryRowContext(ctx, `select current_schema()`).Scan(&currentSchema); err != nil {
+		e.logger.Warn("error on getting current schema", func(e goengine.LoggerEntry) {
+			e.Error(err)
+		})
 
-	if err != nil {
+		return false
+	}
+
+	var exists bool
+	if err := e.db.QueryRowContext(
+		ctx,
+		`SELECT EXISTS(SELECT 1 FROM information_schema.tables WHERE table_schema = $1 AND table_name = $2)`,
+		currentSchema, tableName,
+	).Scan(&exists); err != nil {
 		e.logger.Warn("error on reading from information_schema", func(e goengine.LoggerEntry) {
 			e.Error(err)
 			e.String("table", tableName)
