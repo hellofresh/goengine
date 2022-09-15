@@ -10,15 +10,16 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hellofresh/goengine/v2"
-	"github.com/hellofresh/goengine/v2/driver/sql"
-	"github.com/hellofresh/goengine/v2/extension/amqp"
-	goengineLogger "github.com/hellofresh/goengine/v2/extension/logrus"
 	"github.com/sirupsen/logrus"
 	"github.com/sirupsen/logrus/hooks/test"
 	libamqp "github.com/streadway/amqp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/hellofresh/goengine/v2"
+	"github.com/hellofresh/goengine/v2/driver/sql"
+	"github.com/hellofresh/goengine/v2/extension/amqp"
+	goengineLogger "github.com/hellofresh/goengine/v2/extension/logrus"
 )
 
 func TestListener_Listen(t *testing.T) {
@@ -79,20 +80,23 @@ func TestListener_Listen(t *testing.T) {
 		ctx, ctxCancel := context.WithTimeout(context.Background(), time.Second)
 		defer ctxCancel()
 
-		var consumeCalls []time.Time
+		var waitCalls []time.Duration
 		consume := func() (io.Closer, <-chan libamqp.Delivery, error) {
-			consumeCalls = append(consumeCalls, time.Now())
-			if len(consumeCalls) == 5 {
+			if len(waitCalls) == 5 {
 				ctxCancel()
 			}
 
-			return nil, nil, fmt.Errorf("failure %d", len(consumeCalls))
+			return nil, nil, fmt.Errorf("failure %d", len(waitCalls))
 		}
 
 		logger, loggerHook := getLogger()
 
 		listener, err := amqp.NewListener(consume, time.Millisecond, 6*time.Millisecond, logger)
 		ensure.NoError(err)
+
+		listener.WithWaitFn(func(d time.Duration) {
+			waitCalls = append(waitCalls, d)
+		})
 
 		err = listener.Listen(ctx, func(ctx context.Context, notification *sql.ProjectionNotification) error {
 			ensure.Fail("Trigger should ever be called")
@@ -101,25 +105,17 @@ func TestListener_Listen(t *testing.T) {
 
 		ensure.Equal(context.Canceled, err)
 
-		reconnectIntervals := []time.Duration{time.Millisecond, time.Millisecond * 2, time.Millisecond * 4, time.Millisecond * 6, time.Millisecond * 6}
-		ensure.Len(consumeCalls, len(reconnectIntervals))
-		for i := 1; i < len(reconnectIntervals); i++ {
-			expectedInterval := reconnectIntervals[i-1]
-			interval := consumeCalls[i].Sub(consumeCalls[i-1])
-
-			if expectedInterval > interval || interval > (expectedInterval+time.Millisecond*2) {
-				assert.Fail(t, fmt.Sprintf("Invalid interval after consume %d (got %s expected between %s and %s)", i, interval, expectedInterval, expectedInterval+time.Millisecond))
-			}
-		}
+		reconnectIntervals := []time.Duration{time.Millisecond, time.Millisecond * 2, time.Millisecond * 4, time.Millisecond * 6, time.Millisecond * 6, time.Millisecond * 6}
+		ensure.Equal(waitCalls, reconnectIntervals)
 
 		// Ensure we get log output
 		logEntries := loggerHook.AllEntries()
-		ensure.Len(logEntries, len(reconnectIntervals))
+		ensure.Len(logEntries, len(waitCalls))
 		for i, log := range logEntries {
 			assert.Equal(t, log.Level, logrus.ErrorLevel)
 			assert.Equal(t, log.Message, "failed to start consuming amqp messages")
-			assert.Equal(t, fmt.Errorf("failure %d", i+1), log.Data["error"])
-			assert.Equal(t, reconnectIntervals[i].String(), log.Data["reconnect_in"])
+			assert.Equal(t, fmt.Errorf("failure %d", i), log.Data["error"])
+			assert.Equal(t, waitCalls[i].String(), log.Data["reconnect_in"])
 		}
 	})
 

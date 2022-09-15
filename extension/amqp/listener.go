@@ -5,10 +5,11 @@ import (
 	"io"
 	"time"
 
-	"github.com/hellofresh/goengine/v2"
-	"github.com/hellofresh/goengine/v2/driver/sql"
 	"github.com/mailru/easyjson"
 	"github.com/streadway/amqp"
+
+	"github.com/hellofresh/goengine/v2"
+	"github.com/hellofresh/goengine/v2/driver/sql"
 )
 
 // Ensure Listener implements sql.Listener
@@ -24,6 +25,7 @@ type (
 		minReconnectInterval time.Duration
 		maxReconnectInterval time.Duration
 		logger               goengine.Logger
+		waitFn               func(time.Duration)
 	}
 )
 
@@ -48,7 +50,13 @@ func NewListener(
 		minReconnectInterval: minReconnectInterval,
 		maxReconnectInterval: maxReconnectInterval,
 		logger:               logger,
+		waitFn:               time.Sleep,
 	}, nil
+}
+
+// WithWaitFn replaces the default function called to wait (time.Sleep)
+func (l *Listener) WithWaitFn(fn func(time.Duration)) {
+	l.waitFn = fn
 }
 
 // Listen receives messages from a queue, transforms them into a sql.ProjectionNotification and calls the trigger
@@ -69,7 +77,7 @@ func (l *Listener) Listen(ctx context.Context, trigger sql.ProjectionTrigger) er
 				entry.String("reconnect_in", reconnectInterval.String())
 			})
 
-			time.Sleep(reconnectInterval)
+			l.waitFn(reconnectInterval)
 			reconnectInterval *= 2
 			if reconnectInterval > l.maxReconnectInterval {
 				reconnectInterval = l.maxReconnectInterval
@@ -85,7 +93,7 @@ func (l *Listener) Listen(ctx context.Context, trigger sql.ProjectionTrigger) er
 		case <-ctx.Done():
 			return context.Canceled
 		default:
-			time.Sleep(time.Until(nextReconnect))
+			l.waitFn(time.Until(nextReconnect))
 		}
 	}
 }
