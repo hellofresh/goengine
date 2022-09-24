@@ -1,5 +1,4 @@
 //go:build gomod
-// +build gomod
 
 package mocks
 

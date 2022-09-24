@@ -1,5 +1,4 @@
 //go:build unit
-// +build unit
 
 package inmemory_test
 
@@ -8,14 +7,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/sirupsen/logrus/hooks/test"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/hellofresh/goengine/v2"
 	"github.com/hellofresh/goengine/v2/driver/inmemory"
 	"github.com/hellofresh/goengine/v2/extension/logrus"
 	"github.com/hellofresh/goengine/v2/metadata"
 	"github.com/hellofresh/goengine/v2/mocks"
-	"github.com/sirupsen/logrus/hooks/test"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestNewEventStore(t *testing.T) {
@@ -162,7 +162,10 @@ func TestEventStore_Load(t *testing.T) {
 
 			stream, err := store.Load(ctx, testCase.loadFrom, 1, testCase.loadCount, testCase.matcher)
 			require.NoError(t, err)
-			defer stream.Close()
+			defer func() {
+				err := stream.Close()
+				assert.NoError(t, err)
+			}()
 
 			messages, messageNumbers, err := goengine.ReadEventStream(stream)
 

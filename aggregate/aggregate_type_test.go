@@ -1,15 +1,15 @@
 //go:build unit
-// +build unit
 
 package aggregate_test
 
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/hellofresh/goengine/v2"
 	"github.com/hellofresh/goengine/v2/aggregate"
 	mocks "github.com/hellofresh/goengine/v2/mocks/aggregate"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestType(t *testing.T) {
@@ -24,7 +24,7 @@ func TestType(t *testing.T) {
 		if !asserts.NoError(err, "No error should be returned") {
 			return
 		}
-		asserts.NotEmpty(aggregateType, "A aggregate.Type should be returned")
+		asserts.NotEmpty(aggregateType, "An aggregate.Type should be returned")
 		asserts.Equal("mock", aggregateType.String(), "Expected name to be set")
 		asserts.True(
 			aggregateType.IsImplementedBy(&mocks.Root{}),

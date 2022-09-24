@@ -1,15 +1,15 @@
 //go:build unit
-// +build unit
 
 package inmemory_test
 
 import (
 	"testing"
 
-	"github.com/hellofresh/goengine/v2/driver/inmemory"
-	anotherpayload "github.com/hellofresh/goengine/v2/internal/mocks/another/payload"
-	"github.com/hellofresh/goengine/v2/internal/mocks/payload"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/hellofresh/goengine/v2/driver/inmemory"
+	anotherPayload "github.com/hellofresh/goengine/v2/internal/mocks/another/payload"
+	"github.com/hellofresh/goengine/v2/internal/mocks/payload"
 )
 
 func TestPayloadRegistry(t *testing.T) {
@@ -28,7 +28,7 @@ func TestPayloadRegistry(t *testing.T) {
 		{
 			"another payload",
 			"another_payload",
-			anotherpayload.Payload{},
+			anotherPayload.Payload{},
 		},
 	}
 

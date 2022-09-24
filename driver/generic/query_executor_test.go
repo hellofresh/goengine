@@ -1,5 +1,4 @@
 //go:build unit
-// +build unit
 
 package generic_test
 
@@ -9,13 +8,14 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/hellofresh/goengine/v2"
 	"github.com/hellofresh/goengine/v2/driver/generic"
 	"github.com/hellofresh/goengine/v2/driver/inmemory"
 	"github.com/hellofresh/goengine/v2/metadata"
 	"github.com/hellofresh/goengine/v2/mocks"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestNewQueryExecutor(t *testing.T) {

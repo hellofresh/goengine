@@ -1,5 +1,4 @@
 //go:build unit
-// +build unit
 
 package goengine_test
 
@@ -9,9 +8,10 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/assert"
+
 	"github.com/hellofresh/goengine/v2"
 	"github.com/hellofresh/goengine/v2/mocks"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestReadEventStream(t *testing.T) {

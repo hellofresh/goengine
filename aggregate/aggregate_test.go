@@ -1,5 +1,4 @@
 //go:build unit
-// +build unit
 
 package aggregate_test
 
@@ -7,19 +6,20 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/assert"
+
 	"github.com/hellofresh/goengine/v2/aggregate"
 	mocks "github.com/hellofresh/goengine/v2/mocks/aggregate"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestGenerateID(t *testing.T) {
 	asserts := assert.New(t)
 
 	firstID := aggregate.GenerateID()
-	asserts.NotEmpty(firstID, "A aggregate.ID should not be empty")
+	asserts.NotEmpty(firstID, "An aggregate.ID should not be empty")
 
 	secondID := aggregate.GenerateID()
-	asserts.NotEmpty(secondID, "A aggregate.ID should not be empty")
+	asserts.NotEmpty(secondID, "An aggregate.ID should not be empty")
 
 	asserts.NotEqual(firstID, secondID, "Expected GenerateID() to return a different ID")
 }

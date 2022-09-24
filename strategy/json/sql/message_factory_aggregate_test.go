@@ -1,5 +1,4 @@
 //go:build unit
-// +build unit
 
 package sql_test
 
@@ -8,16 +7,17 @@ import (
 	"testing"
 	"time"
 
-	sqlmock "github.com/DATA-DOG/go-sqlmock"
+	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/hellofresh/goengine/v2"
 	"github.com/hellofresh/goengine/v2/aggregate"
 	"github.com/hellofresh/goengine/v2/metadata"
 	"github.com/hellofresh/goengine/v2/mocks"
 	"github.com/hellofresh/goengine/v2/strategy/json/internal"
 	"github.com/hellofresh/goengine/v2/strategy/json/sql"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 type nameChanged struct {
@@ -86,12 +86,18 @@ func TestAggregateChangedFactory_CreateFromRows(t *testing.T) {
 				// A little overhead but we need to query in order to get sql.Rows
 				db, dbMock, err := sqlmock.New()
 				require.NoError(t, err)
-				defer db.Close()
+				defer func() {
+					err := db.Close()
+					assert.NoError(t, err)
+				}()
 
 				dbMock.ExpectQuery("SELECT").WillReturnRows(mockRows)
 				rows, err := db.Query("SELECT")
 				require.NoError(t, err)
-				defer rows.Close()
+				defer func() {
+					err := rows.Close()
+					assert.NoError(t, err)
+				}()
 
 				// Create the factory
 				messageFactory, err := sql.NewAggregateChangedFactory(payloadFactory)
@@ -104,7 +110,10 @@ func TestAggregateChangedFactory_CreateFromRows(t *testing.T) {
 				if !asserts.NoError(err) {
 					return
 				}
-				defer stream.Close()
+				defer func() {
+					err := stream.Close()
+					assert.NoError(t, err)
+				}()
 
 				messages, messageNumbers, err := goengine.ReadEventStream(stream)
 				if !asserts.NoError(err) || !asserts.NoError(stream.Err()) {
@@ -289,12 +298,18 @@ func TestAggregateChangedFactory_CreateFromRows(t *testing.T) {
 				// A little overhead but we need to query in order to get sql.Rows
 				db, dbMock, err := sqlmock.New()
 				require.NoError(t, err)
-				defer db.Close()
+				defer func() {
+					err := db.Close()
+					assert.NoError(t, err)
+				}()
 
 				dbMock.ExpectQuery("SELECT").WillReturnRows(mockRows)
 				rows, err := db.Query("SELECT")
 				require.NoError(t, err)
-				defer rows.Close()
+				defer func() {
+					err := rows.Close()
+					assert.NoError(t, err)
+				}()
 
 				// Create the factory
 				messageFactory, err := sql.NewAggregateChangedFactory(payloadFactory)
@@ -307,7 +322,10 @@ func TestAggregateChangedFactory_CreateFromRows(t *testing.T) {
 				if !asserts.NoError(err) {
 					return
 				}
-				defer stream.Close()
+				defer func() {
+					err := stream.Close()
+					assert.NoError(t, err)
+				}()
 
 				// Read the stream
 				messages, _, err := goengine.ReadEventStream(stream)

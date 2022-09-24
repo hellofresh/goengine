@@ -1,5 +1,4 @@
 //go:build unit
-// +build unit
 
 package postgres_test
 
@@ -10,6 +9,10 @@ import (
 	"testing"
 	"time"
 
+	_ "github.com/lib/pq"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/hellofresh/goengine/v2"
 	"github.com/hellofresh/goengine/v2/aggregate"
 	driverSQL "github.com/hellofresh/goengine/v2/driver/sql"
@@ -18,9 +21,6 @@ import (
 	"github.com/hellofresh/goengine/v2/strategy/json"
 	strategySQL "github.com/hellofresh/goengine/v2/strategy/json/sql"
 	strategyPostgres "github.com/hellofresh/goengine/v2/strategy/json/sql/postgres"
-	_ "github.com/lib/pq"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 var (

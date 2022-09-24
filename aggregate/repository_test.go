@@ -1,5 +1,4 @@
 //go:build unit
-// +build unit
 
 package aggregate_test
 
@@ -10,14 +9,15 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/hellofresh/goengine/v2"
 	"github.com/hellofresh/goengine/v2/aggregate"
 	"github.com/hellofresh/goengine/v2/driver/inmemory"
 	"github.com/hellofresh/goengine/v2/metadata"
 	"github.com/hellofresh/goengine/v2/mocks"
 	aggregateMocks "github.com/hellofresh/goengine/v2/mocks/aggregate"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestNewRepository(t *testing.T) {
@@ -61,7 +61,7 @@ func TestNewRepository(t *testing.T) {
 				goengine.InvalidArgumentError("streamName"),
 			},
 			{
-				"requires a aggregate type",
+				"requires an aggregate type",
 				&mocks.EventStore{},
 				"event_stream",
 				nil,
@@ -149,7 +149,7 @@ func TestRepository_SaveAggregateRoot(t *testing.T) {
 }
 
 func TestRepository_GetAggregateRoot(t *testing.T) {
-	t.Run("load and reconstitute a AggregateRoot", func(t *testing.T) {
+	t.Run("load and reconstitute an AggregateRoot", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
@@ -222,7 +222,7 @@ func TestRepository_GetAggregateRoot(t *testing.T) {
 		root, err := repo.GetAggregateRoot(ctx, rootID)
 
 		assert.NoError(t, err)
-		assert.NotNil(t, root, "Expected a aggregate root")
+		assert.NotNil(t, root, "Expected an aggregate root")
 	})
 
 	t.Run("load failures", func(t *testing.T) {

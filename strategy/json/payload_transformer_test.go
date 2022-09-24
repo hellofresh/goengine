@@ -1,5 +1,4 @@
 //go:build unit
-// +build unit
 
 package json_test
 
@@ -7,11 +6,12 @@ import (
 	"encoding/json"
 	"testing"
 
-	anotherpayload "github.com/hellofresh/goengine/v2/internal/mocks/another/payload"
-	"github.com/hellofresh/goengine/v2/internal/mocks/payload"
-	strategyJSON "github.com/hellofresh/goengine/v2/strategy/json"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	anotherPayload "github.com/hellofresh/goengine/v2/internal/mocks/another/payload"
+	"github.com/hellofresh/goengine/v2/internal/mocks/payload"
+	strategyJSON "github.com/hellofresh/goengine/v2/strategy/json"
 )
 
 type simpleType struct {
@@ -30,7 +30,7 @@ func TestPayloadTransformer(t *testing.T) {
 			}),
 		)
 
-		name, data, err := transformer.ConvertPayload(anotherpayload.Payload{})
+		name, data, err := transformer.ConvertPayload(anotherPayload.Payload{})
 		asserts.Equal(err, strategyJSON.ErrPayloadNotRegistered)
 		asserts.Equal("", name)
 		asserts.Equal([]byte(nil), data)

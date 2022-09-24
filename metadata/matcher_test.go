@@ -1,13 +1,13 @@
 //go:build unit
-// +build unit
 
 package metadata_test
 
 import (
 	"testing"
 
-	"github.com/hellofresh/goengine/v2/metadata"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/hellofresh/goengine/v2/metadata"
 )
 
 type internalConstraint struct {

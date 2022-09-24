@@ -1,16 +1,16 @@
 //go:build unit
-// +build unit
 
 package prometheus_test
 
 import (
 	"testing"
 
-	"github.com/hellofresh/goengine/v2/driver/sql"
-	goenginePrometheus "github.com/hellofresh/goengine/v2/extension/prometheus"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/hellofresh/goengine/v2/driver/sql"
+	goenginePrometheus "github.com/hellofresh/goengine/v2/extension/prometheus"
 )
 
 func TestMetrics_QueueAndFinishNotification(t *testing.T) {

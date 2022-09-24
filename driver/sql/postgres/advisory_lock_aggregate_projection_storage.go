@@ -13,7 +13,7 @@ import (
 
 var _ driverSQL.AggregateProjectorStorage = &AdvisoryLockAggregateProjectionStorage{}
 
-// AdvisoryLockAggregateProjectionStorage is a AggregateProjectorStorage that uses an advisory locks to lock a projection
+// AdvisoryLockAggregateProjectionStorage is an AggregateProjectorStorage that uses an advisory locks to lock a projection
 type AdvisoryLockAggregateProjectionStorage struct {
 	stateSerialization driverSQL.ProjectionStateSerialization
 	useLockField       bool

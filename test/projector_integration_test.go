@@ -1,5 +1,4 @@
 //go:build integration
-// +build integration
 
 package test_test
 
@@ -98,7 +97,7 @@ func (s *projectorSuite) SetupTest() {
 	s.PostgresSuite.SetupTest()
 	db := s.DB()
 
-	s.eventStream = goengine.StreamName("event_stream")
+	s.eventStream = "event_stream"
 
 	// Create payload transformer
 	s.payloadTransformer = strategyJSON.NewPayloadTransformer()

@@ -1,13 +1,13 @@
 //go:build unit
-// +build unit
 
 package goengine_test
 
 import (
 	"testing"
 
-	"github.com/hellofresh/goengine/v2"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/hellofresh/goengine/v2"
 )
 
 func TestGenerateUUID(t *testing.T) {
