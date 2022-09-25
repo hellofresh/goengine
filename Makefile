@@ -4,6 +4,9 @@
 ### --------------------------------------------------------------------------------------------------------------------
 BUILD_DIR ?= $(CURDIR)/out
 
+# Include mocks tasks
+include $(CURDIR)/mocks/mocks.mk
+
 POSTGRES_DSN ?= "postgres://goengine:goengine@localhost:8043/goengine?sslmode=disable&client_encoding=UTF8"
 
 ### --------------------------------------------------------------------------------------------------------------------
@@ -21,6 +24,7 @@ all: clean deps test
 
 clean:
 	$(call title, "Cleaning")
+	rm -rf "${MOCKS_BIN}"
 	go clean -v
 
 #-----------------------------------------------------------------------------------------------------------------------
@@ -31,6 +35,12 @@ clean:
 deps:
 	$(call title, "Installing dependencies")
 	go mod vendor
+
+# regenerate mocks used for testing
+mocks: $(mocks/mockgen)
+	$(call title, "Regenerating mocks")
+	go generate mocks/mocks.go
+.PHONY: mocks
 
 #-----------------------------------------------------------------------------------------------------------------------
 # Testing

@@ -8,12 +8,12 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
+	goengine "github.com/hellofresh/goengine/v2"
 	aggregate "github.com/hellofresh/goengine/v2/aggregate"
 )
 
 // Root is a mock of Root interface.
 type Root struct {
-	aggregate.BaseRoot
 	ctrl     *gomock.Controller
 	recorder *RootMockRecorder
 }
@@ -59,4 +59,44 @@ func (m *Root) Apply(arg0 *aggregate.Changed) {
 func (mr *RootMockRecorder) Apply(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Apply", reflect.TypeOf((*Root)(nil).Apply), arg0)
+}
+
+// popRecordedEvents mocks base method.
+func (m *Root) popRecordedEvents() []*aggregate.Changed {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "popRecordedEvents")
+	ret0, _ := ret[0].([]*aggregate.Changed)
+	return ret0
+}
+
+// popRecordedEvents indicates an expected call of popRecordedEvents.
+func (mr *RootMockRecorder) popRecordedEvents() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "popRecordedEvents", reflect.TypeOf((*Root)(nil).popRecordedEvents))
+}
+
+// recordThat mocks base method.
+func (m *Root) recordThat(arg0 aggregate.EventApplier, arg1 *aggregate.Changed) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "recordThat", arg0, arg1)
+}
+
+// recordThat indicates an expected call of recordThat.
+func (mr *RootMockRecorder) recordThat(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "recordThat", reflect.TypeOf((*Root)(nil).recordThat), arg0, arg1)
+}
+
+// replay mocks base method.
+func (m *Root) replay(arg0 aggregate.EventApplier, arg1 goengine.EventStream) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "replay", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// replay indicates an expected call of replay.
+func (mr *RootMockRecorder) replay(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "replay", reflect.TypeOf((*Root)(nil).replay), arg0, arg1)
 }
