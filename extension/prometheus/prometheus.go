@@ -6,9 +6,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
+
 	"github.com/hellofresh/goengine/v2"
 	"github.com/hellofresh/goengine/v2/driver/sql"
-	"github.com/prometheus/client_golang/prometheus"
 )
 
 const (

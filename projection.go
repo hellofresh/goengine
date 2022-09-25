@@ -15,9 +15,11 @@ type (
 	//  }
 	//
 	//  type TotalDepositQuery struct {}
+	//
 	//  func (q *TotalDepositQuery) Init(ctx context.Context) (interface{}, error) {
 	//  	return TotalDepositState{}, nil
 	//  }
+	//
 	//  func (q *TotalDepositQuery) Handlers() interface{} {
 	//  	return map[string]MessageHandler{
 	//  		"deposited": func(ctx context.Context, state interface{}, message goengine.Message) (interface{}, error) {

@@ -3,8 +3,9 @@ package logrus
 import (
 	"sync/atomic"
 
-	"github.com/hellofresh/goengine/v2"
 	"github.com/sirupsen/logrus"
+
+	"github.com/hellofresh/goengine/v2"
 )
 
 type wrapper struct {
