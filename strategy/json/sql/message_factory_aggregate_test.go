@@ -87,6 +87,7 @@ func TestAggregateChangedFactory_CreateFromRows(t *testing.T) {
 				db, dbMock, err := sqlmock.New()
 				require.NoError(t, err)
 				defer func() {
+					dbMock.ExpectClose()
 					err := db.Close()
 					assert.NoError(t, err)
 				}()
@@ -299,6 +300,7 @@ func TestAggregateChangedFactory_CreateFromRows(t *testing.T) {
 				db, dbMock, err := sqlmock.New()
 				require.NoError(t, err)
 				defer func() {
+					dbMock.ExpectClose()
 					err := db.Close()
 					assert.NoError(t, err)
 				}()
