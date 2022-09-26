@@ -1,5 +1,4 @@
 //go:build unit
-// +build unit
 
 package amqp_test
 
@@ -8,11 +7,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hellofresh/goengine/v2"
-	"github.com/hellofresh/goengine/v2/driver/sql"
-	goengineAmqp "github.com/hellofresh/goengine/v2/extension/amqp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/hellofresh/goengine/v2"
+	"github.com/hellofresh/goengine/v2/driver/sql"
+	goengineAMQP "github.com/hellofresh/goengine/v2/extension/amqp"
 )
 
 func TestNotificationPublisher_Publish(t *testing.T) {
@@ -26,10 +26,10 @@ func TestNotificationPublisher_Publish(t *testing.T) {
 	t.Run("Invalid arguments", func(t *testing.T) {
 		logger, _ := getLogger()
 
-		_, err := goengineAmqp.NewNotificationPublisher("http://localhost:5672/", "my-queue", 3, 4, logger, connection, channel)
+		_, err := goengineAMQP.NewNotificationPublisher("http://localhost:5672/", "my-queue", 3, 4, logger, connection, channel)
 		assert.Equal(t, goengine.InvalidArgumentError("amqpDSN"), err)
 
-		_, err = goengineAmqp.NewNotificationPublisher("amqp://localhost:5672/", "", 3, 4, logger, connection, channel)
+		_, err = goengineAMQP.NewNotificationPublisher("amqp://localhost:5672/", "", 3, 4, logger, connection, channel)
 		assert.Equal(t, goengine.InvalidArgumentError("queue"), err)
 
 	})
@@ -38,7 +38,7 @@ func TestNotificationPublisher_Publish(t *testing.T) {
 		ensure := require.New(t)
 		logger, loggerHook := getLogger()
 
-		publisher, err := goengineAmqp.NewNotificationPublisher("amqp://localhost:5672/", "my-queue", 3, 4, logger, connection, channel)
+		publisher, err := goengineAMQP.NewNotificationPublisher("amqp://localhost:5672/", "my-queue", 3, 4, logger, connection, channel)
 		ensure.NoError(err)
 		err = publisher.Publish(ctx, nil)
 		ensure.Nil(err)
@@ -50,7 +50,7 @@ func TestNotificationPublisher_Publish(t *testing.T) {
 		ensure := require.New(t)
 		logger, loggerHook := getLogger()
 
-		publisher, err := goengineAmqp.NewNotificationPublisher("amqp://localhost:5672/", "my-queue", 3, 4, logger, connection, channel)
+		publisher, err := goengineAMQP.NewNotificationPublisher("amqp://localhost:5672/", "my-queue", 3, 4, logger, connection, channel)
 		ensure.NoError(err)
 
 		err = publisher.Publish(ctx, &sql.ProjectionNotification{No: 1, AggregateID: "8150276e-34fe-49d9-aeae-a35af0040a4f"})

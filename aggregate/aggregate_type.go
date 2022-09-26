@@ -11,7 +11,7 @@ import (
 var ErrInitiatorMustReturnRoot = errors.New("goengine: the aggregate.Initiator must return a pointer to the aggregate.Root")
 
 type (
-	// Initiator creates a new empty instance of a aggregate.Root
+	// Initiator creates a new empty instance of an aggregate.Root
 	// this instance may then be used to reconstitute the state of the aggregate root
 	Initiator func() Root
 
@@ -29,7 +29,7 @@ func NewType(name string, initiator Initiator) (*Type, error) {
 		return nil, goengine.InvalidArgumentError("name")
 	}
 
-	// In order to avoid strange behavior the Initiator must return a pointer to a aggregate.Root instance
+	// In order to avoid strange behavior the Initiator must return a pointer to an aggregate.Root instance
 	newRoot := initiator()
 	reflectionType := reflect.TypeOf(newRoot)
 	if reflectionType == nil || reflect.ValueOf(newRoot).IsNil() || reflectionType.Kind() != reflect.Ptr {

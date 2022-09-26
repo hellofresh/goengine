@@ -1,5 +1,4 @@
 //go:build unit
-// +build unit
 
 package metadata_test
 
@@ -10,9 +9,10 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/hellofresh/goengine/v2/metadata"
 	"github.com/mailru/easyjson"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/hellofresh/goengine/v2/metadata"
 )
 
 func TestNew(t *testing.T) {

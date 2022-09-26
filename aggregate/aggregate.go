@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+
 	"github.com/hellofresh/goengine/v2"
 	"github.com/hellofresh/goengine/v2/metadata"
 )
@@ -13,10 +14,10 @@ import (
 var ErrInvalidID = errors.New("goengine: an aggregate.ID must be a valid UUID")
 
 type (
-	// ID a UUID for a aggregate.Root instance
+	// ID a UUID for an aggregate.Root instance
 	ID string
 
-	// Root is an interface that a AggregateRoot must implement
+	// Root is an interface that an AggregateRoot must implement
 	Root interface {
 		eventSourced
 		eventProducer

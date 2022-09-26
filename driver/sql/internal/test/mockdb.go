@@ -1,5 +1,4 @@
 //go:build unit
-// +build unit
 
 package test
 
@@ -7,7 +6,7 @@ import (
 	"database/sql"
 	"testing"
 
-	sqlmock "github.com/DATA-DOG/go-sqlmock"
+	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/stretchr/testify/require"
 )
 

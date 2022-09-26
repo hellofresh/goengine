@@ -1,8 +1,9 @@
 package zap
 
 import (
-	"github.com/hellofresh/goengine/v2"
 	"go.uber.org/zap"
+
+	"github.com/hellofresh/goengine/v2"
 )
 
 type wrapper struct {

@@ -1,5 +1,4 @@
 //go:build unit
-// +build unit
 
 package zap_test
 
@@ -7,12 +6,13 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/hellofresh/goengine/v2"
-	zapExtension "github.com/hellofresh/goengine/v2/extension/zap"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"go.uber.org/zap/zaptest/observer"
+
+	"github.com/hellofresh/goengine/v2"
+	zapExtension "github.com/hellofresh/goengine/v2/extension/zap"
 )
 
 func TestWrap_LogEntry(t *testing.T) {

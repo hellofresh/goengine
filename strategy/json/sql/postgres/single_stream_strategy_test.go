@@ -1,5 +1,4 @@
 //go:build unit
-// +build unit
 
 package postgres_test
 
@@ -10,13 +9,14 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/hellofresh/goengine/v2"
 	"github.com/hellofresh/goengine/v2/metadata"
 	"github.com/hellofresh/goengine/v2/mocks"
 	"github.com/hellofresh/goengine/v2/strategy/json/internal"
 	"github.com/hellofresh/goengine/v2/strategy/json/sql/postgres"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestNewPostgresStrategy(t *testing.T) {

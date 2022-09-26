@@ -1,16 +1,16 @@
 //go:build unit
-// +build unit
 
 package inmemory_test
 
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/hellofresh/goengine/v2"
 	"github.com/hellofresh/goengine/v2/driver/inmemory"
 	"github.com/hellofresh/goengine/v2/mocks"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestEventStream(t *testing.T) {

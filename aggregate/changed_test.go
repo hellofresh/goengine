@@ -1,5 +1,4 @@
 //go:build unit
-// +build unit
 
 package aggregate_test
 
@@ -7,12 +6,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/hellofresh/goengine/v2"
 	"github.com/hellofresh/goengine/v2/aggregate"
 	"github.com/hellofresh/goengine/v2/metadata"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestReconstituteChange(t *testing.T) {

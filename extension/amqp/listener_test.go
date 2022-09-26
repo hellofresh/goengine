@@ -1,5 +1,4 @@
 //go:build unit
-// +build unit
 
 package amqp_test
 
@@ -10,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	libamqp "github.com/rabbitmq/amqp091-go"
+	libAMQP "github.com/rabbitmq/amqp091-go"
 	"github.com/sirupsen/logrus"
 	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
@@ -29,20 +28,20 @@ func TestListener_Listen(t *testing.T) {
 		ctx, ctxCancel := context.WithTimeout(context.Background(), time.Second)
 		defer ctxCancel()
 
-		delivery1 := libamqp.Delivery{
+		delivery1 := libAMQP.Delivery{
 			Body: []byte(`{"no": 1, "aggregate_id": "8150276e-34fe-49d9-aeae-a35af0040a4f"}`),
 		}
 		delivery1.Acknowledger = mockAcknowledger{}
 
-		delivery2 := libamqp.Delivery{
+		delivery2 := libAMQP.Delivery{
 			Body: []byte(`{"no": 2, "aggregate_id": "8150276e-34fe-49d9-aeae-a35af0040a4f"}`),
 		}
 		delivery2.Acknowledger = mockAcknowledger{}
 
 		consumeCalls := 0
-		consume := func() (io.Closer, <-chan libamqp.Delivery, error) {
+		consume := func() (io.Closer, <-chan libAMQP.Delivery, error) {
 			consumeCalls++
-			ch := make(chan libamqp.Delivery, 2)
+			ch := make(chan libAMQP.Delivery, 2)
 			ch <- delivery1
 			ch <- delivery2
 			return nil, ch, nil
@@ -81,7 +80,7 @@ func TestListener_Listen(t *testing.T) {
 		defer ctxCancel()
 
 		var waitCalls []time.Duration
-		consume := func() (io.Closer, <-chan libamqp.Delivery, error) {
+		consume := func() (io.Closer, <-chan libAMQP.Delivery, error) {
 			if len(waitCalls) == 5 {
 				ctxCancel()
 			}
@@ -126,18 +125,18 @@ func TestListener_Listen(t *testing.T) {
 		defer ctxCancel()
 
 		consumeCalls := 0
-		delivery1 := libamqp.Delivery{
+		delivery1 := libAMQP.Delivery{
 			Body: []byte(`{"no": 1, "aggregate_id": "8150276e-34fe-49d9-aeae-a35af0040a4f"}`),
 		}
 		delivery1.Acknowledger = mockAcknowledger{}
 
-		delivery2 := libamqp.Delivery{
+		delivery2 := libAMQP.Delivery{
 			Body: []byte(`{"no": 2, "aggregate_id": "8150276e-34fe-49d9-aeae-a35af0040a4f"}`),
 		}
 		delivery2.Acknowledger = mockAcknowledger{}
-		consume := func() (io.Closer, <-chan libamqp.Delivery, error) {
+		consume := func() (io.Closer, <-chan libAMQP.Delivery, error) {
 			consumeCalls++
-			ch := make(chan libamqp.Delivery, 2)
+			ch := make(chan libAMQP.Delivery, 2)
 			ch <- delivery1
 			ch <- delivery2
 			close(ch)

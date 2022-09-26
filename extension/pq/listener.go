@@ -5,10 +5,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hellofresh/goengine/v2"
-	"github.com/hellofresh/goengine/v2/driver/sql"
 	"github.com/lib/pq"
 	"github.com/mailru/easyjson"
+
+	"github.com/hellofresh/goengine/v2"
+	"github.com/hellofresh/goengine/v2/driver/sql"
 )
 
 // Ensure Listener implements sql.Listener
