@@ -3,6 +3,8 @@ package mocks
 import (
 	"time"
 
+	_ "github.com/golang/mock/mockgen/model" // required by mockgen to generate mocks
+
 	"github.com/hellofresh/goengine/v2"
 	"github.com/hellofresh/goengine/v2/metadata"
 )
