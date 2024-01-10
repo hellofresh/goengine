@@ -5,7 +5,7 @@ go 1.19
 require (
 	github.com/DATA-DOG/go-sqlmock v1.5.0
 	github.com/golang/mock v1.6.0
-	github.com/google/uuid v1.3.0
+	github.com/google/uuid v1.5.0
 	github.com/lib/pq v1.10.7
 	github.com/mailru/easyjson v0.7.7
 	github.com/prometheus/client_golang v1.13.0
