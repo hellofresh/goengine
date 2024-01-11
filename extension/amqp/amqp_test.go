@@ -58,7 +58,7 @@ func (ch mockChannel) Consume(
 ) (<-chan amqp.Delivery, error) {
 	return make(chan amqp.Delivery), nil
 }
-func (ch mockChannel) Qos(_, _ int, global bool) error {
+func (ch mockChannel) Qos(_, _ int, _ bool) error {
 	return nil
 }
 
