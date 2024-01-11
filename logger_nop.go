@@ -8,18 +8,18 @@ var NopLogger Logger = &nopLogger{}
 type nopLogger struct {
 }
 
-func (nopLogger) Error(msg string, fields func(LoggerEntry)) {
+func (nopLogger) Error(_ string, _ func(LoggerEntry)) {
 }
 
-func (nopLogger) Warn(msg string, fields func(LoggerEntry)) {
+func (nopLogger) Warn(_ string, _ func(LoggerEntry)) {
 }
 
-func (nopLogger) Info(msg string, fields func(LoggerEntry)) {
+func (nopLogger) Info(_ string, _ func(LoggerEntry)) {
 }
 
-func (nopLogger) Debug(msg string, fields func(LoggerEntry)) {
+func (nopLogger) Debug(_ string, _ func(LoggerEntry)) {
 }
 
-func (n *nopLogger) WithFields(fields func(LoggerEntry)) Logger {
+func (n *nopLogger) WithFields(_ func(LoggerEntry)) Logger {
 	return n
 }

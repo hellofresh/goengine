@@ -38,7 +38,7 @@ func NewEventStore(logger goengine.Logger) *EventStore {
 }
 
 // Create creates an event stream
-func (i *EventStore) Create(ctx context.Context, streamName goengine.StreamName) error {
+func (i *EventStore) Create(_ context.Context, streamName goengine.StreamName) error {
 	if _, found := i.streams[streamName]; found {
 		return ErrStreamExistsAlready
 	}
@@ -49,7 +49,7 @@ func (i *EventStore) Create(ctx context.Context, streamName goengine.StreamName)
 }
 
 // HasStream returns true if the stream exists
-func (i *EventStore) HasStream(ctx context.Context, streamName goengine.StreamName) bool {
+func (i *EventStore) HasStream(_ context.Context, streamName goengine.StreamName) bool {
 	_, found := i.streams[streamName]
 
 	return found
@@ -57,7 +57,7 @@ func (i *EventStore) HasStream(ctx context.Context, streamName goengine.StreamNa
 
 // Load returns a list of events based on the provided conditions
 func (i *EventStore) Load(
-	ctx context.Context,
+	_ context.Context,
 	streamName goengine.StreamName,
 	fromNumber int64,
 	count *uint,

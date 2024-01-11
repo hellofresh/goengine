@@ -63,7 +63,7 @@ var (
 	_ easyjson.Marshaler = new(emptyData)
 )
 
-func (*emptyData) Value(key string) interface{} {
+func (*emptyData) Value(_ string) interface{} {
 	return nil
 }
 
