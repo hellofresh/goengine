@@ -65,7 +65,7 @@ func WithConstraint(parent Matcher, field string, operator Operator, value inter
 	}
 }
 
-func (*emptyMatcher) Iterate(_ func(constraint Constraint)) {
+func (*emptyMatcher) Iterate(func(constraint Constraint)) {
 }
 
 func (c *constraintMatcher) Iterate(callback func(constraint Constraint)) {
