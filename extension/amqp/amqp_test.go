@@ -15,15 +15,15 @@ import (
 type mockAcknowledger struct {
 }
 
-func (ack mockAcknowledger) Ack(tag uint64, multiple bool) error {
+func (ack mockAcknowledger) Ack(uint64, bool) error {
 	return nil
 }
 
-func (ack mockAcknowledger) Nack(tag uint64, multiple bool, requeue bool) error {
+func (ack mockAcknowledger) Nack(uint64, bool, bool) error {
 	return nil
 }
 
-func (ack mockAcknowledger) Reject(tag uint64, requeue bool) error {
+func (ack mockAcknowledger) Reject(uint64, bool) error {
 	return nil
 }
 
@@ -37,25 +37,11 @@ func (cn mockConnection) Close() error {
 	return nil
 }
 
-func (ch mockChannel) Publish(
-	exchange string,
-	queue string,
-	mandatory bool,
-	immediate bool,
-	msg amqp.Publishing,
-) error {
+func (ch mockChannel) Publish(string, string, bool, bool, amqp.Publishing) error {
 	return nil
 }
 
-func (ch mockChannel) Consume(
-	queue,
-	consumer string,
-	autoAck,
-	exclusive,
-	noLocal,
-	noWait bool,
-	args amqp.Table,
-) (<-chan amqp.Delivery, error) {
+func (ch mockChannel) Consume(string, string, bool, bool, bool, bool, amqp.Table) (<-chan amqp.Delivery, error) {
 	return make(chan amqp.Delivery), nil
 }
 func (ch mockChannel) Qos(int, int, bool) error {

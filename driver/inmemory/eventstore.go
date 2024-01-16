@@ -96,7 +96,7 @@ func (i *EventStore) Load(
 }
 
 // AppendTo appends the provided messages to the stream
-func (i *EventStore) AppendTo(ctx context.Context, streamName goengine.StreamName, streamEvents []goengine.Message) error {
+func (i *EventStore) AppendTo(_ context.Context, streamName goengine.StreamName, streamEvents []goengine.Message) error {
 	i.Lock()
 	defer i.Unlock()
 

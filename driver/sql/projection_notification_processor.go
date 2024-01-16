@@ -58,7 +58,7 @@ func NewBackgroundProcessor(
 }
 
 // Execute starts the background worker and wait for the notification to be executed
-func (b *ProjectionNotificationProcessor) Execute(ctx context.Context, handler ProcessHandler, notification *ProjectionNotification) error {
+func (b *ProjectionNotificationProcessor) Execute(ctx context.Context, handler ProcessHandler, _ *ProjectionNotification) error {
 	// Wrap the processNotification in order to know that the first trigger finished
 	handler, handlerDone := b.wrapProcessHandlerForSingleRun(handler)
 

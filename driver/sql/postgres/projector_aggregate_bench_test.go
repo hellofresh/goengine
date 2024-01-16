@@ -46,7 +46,7 @@ type (
 	}
 )
 
-func (*personProjection) Init(ctx context.Context) (interface{}, error) {
+func (*personProjection) Init(context.Context) (interface{}, error) {
 	return nil, nil
 }
 
@@ -183,7 +183,6 @@ func setup(
 		},
 		goengine.NopLogger,
 		driverSQL.NopMetrics,
-		0,
 	)
 	require.NoError(b, err, "failed to create aggregate projector")
 
