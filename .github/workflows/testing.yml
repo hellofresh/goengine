@@ -15,7 +15,7 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v3
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v2
+        uses: golangci/golangci-lint-action@v3
         with:
           only-new-issues: ${{ github.event_name == 'pull_request' }}
 
