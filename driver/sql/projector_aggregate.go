@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"sync"
-	"time"
 
 	"github.com/hellofresh/goengine/v2"
 	"github.com/hellofresh/goengine/v2/aggregate"
@@ -36,7 +35,6 @@ func NewAggregateProjector(
 	projectionErrorHandler ProjectionErrorCallback,
 	logger goengine.Logger,
 	metrics Metrics,
-	retryDelay time.Duration,
 ) (*AggregateProjector, error) {
 	switch {
 	case db == nil:

@@ -58,7 +58,7 @@ func NewNotificationPublisher(
 }
 
 // Publish sends a ProjectionNotification to Queue
-func (p *NotificationPublisher) Publish(ctx context.Context, notification *sql.ProjectionNotification) error {
+func (p *NotificationPublisher) Publish(_ context.Context, notification *sql.ProjectionNotification) error {
 	reconnectInterval := p.minReconnectInterval
 	// Ignore nil notifications since this is not supported
 	// Skipping as we may receive a nil notification from dispatcher for the first time

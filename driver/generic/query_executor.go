@@ -50,7 +50,7 @@ func NewQueryExecutor(store goengine.EventStore, streamName goengine.StreamName,
 }
 
 // Reset sets the executor to it's initial state
-func (e *QueryExecutor) Reset(ctx context.Context) {
+func (e *QueryExecutor) Reset(context.Context) {
 	e.state = nil
 	e.offset = 0
 }

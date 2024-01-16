@@ -112,7 +112,6 @@ func (s *aggregateProjectorTestSuite) TestRunAndListen() {
 		},
 		s.GetLogger(),
 		s.Metrics,
-		0,
 	)
 	s.Require().NoError(err, "failed to create projector")
 
@@ -211,7 +210,6 @@ func (s *aggregateProjectorTestSuite) TestRunAndListen() {
 			},
 			s.GetLogger(),
 			s.Metrics,
-			0,
 		)
 		s.Require().NoError(err, "failed to create projector")
 
@@ -267,7 +265,6 @@ func (s *aggregateProjectorTestSuite) TestRun() {
 		},
 		s.GetLogger(),
 		s.Metrics,
-		0,
 	)
 	s.Require().NoError(err, "failed to create projector")
 

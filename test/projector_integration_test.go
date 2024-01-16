@@ -41,7 +41,7 @@ type (
 	}
 )
 
-func (p *DepositedProjection) Init(ctx context.Context) (interface{}, error) {
+func (p *DepositedProjection) Init(context.Context) (interface{}, error) {
 	return depositedProjectionState{}, nil
 }
 
@@ -119,7 +119,7 @@ func (s *projectorSuite) SetupTest() {
 	err = s.eventStore.Create(ctx, s.eventStream)
 	s.Require().NoError(err, "failed on create event stream")
 
-	// Setup the projection tables etc.
+	// Set up the projection tables etc.
 	s.eventStoreTable, err = persistenceStrategy.GenerateTableName(s.eventStream)
 	s.Require().NoError(err, "failed to generate eventstream table name")
 }
