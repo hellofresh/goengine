@@ -28,6 +28,6 @@ require (
 	github.com/prometheus/procfs v0.8.0 // indirect
 	go.uber.org/multierr v1.10.0 // indirect
 	golang.org/x/sys v0.0.0-20220909162455-aba9fc2a8ff2 // indirect
-	google.golang.org/protobuf v1.28.1 // indirect
+	google.golang.org/protobuf v1.33.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
