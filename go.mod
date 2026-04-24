@@ -7,7 +7,7 @@ require (
 	github.com/golang/mock v1.6.0
 	github.com/google/uuid v1.5.0
 	github.com/lib/pq v1.10.9
-	github.com/mailru/easyjson v0.7.7
+	github.com/mailru/easyjson v0.9.2
 	github.com/prometheus/client_golang v1.13.0
 	github.com/rabbitmq/amqp091-go v1.9.0
 	github.com/sirupsen/logrus v1.9.3
