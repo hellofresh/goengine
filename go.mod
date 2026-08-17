@@ -1,6 +1,6 @@
 module github.com/hellofresh/goengine/v2
 
-go 1.19
+go 1.23
 
 require (
 	github.com/DATA-DOG/go-sqlmock v1.5.2
@@ -10,7 +10,7 @@ require (
 	github.com/mailru/easyjson v0.9.2
 	github.com/prometheus/client_golang v1.13.0
 	github.com/rabbitmq/amqp091-go v1.13.0
-	github.com/sirupsen/logrus v1.9.4
+	github.com/sirupsen/logrus v1.10.0
 	github.com/stretchr/testify v1.11.1
 	go.uber.org/zap v1.28.0
 )
