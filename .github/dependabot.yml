@@ -4,4 +4,24 @@ updates:
     directory: "/"
     rebase-strategy: "disabled"
     schedule:
-      interval: "daily"
+      interval: "monthly"
+    groups:
+      stable-updates:
+        update-types:
+          - "major"
+          - "minor"
+          - "patch"
+
+  - directory: "/"
+    package-ecosystem: "github-actions"
+    schedule:
+      interval: "monthly"
+      timezone: "Europe/Berlin"
+      time: "05:00"
+    rebase-strategy: "disabled"
+    groups:
+      stable-updates:
+        update-types:
+          - "major"
+          - "minor"
+          - "patch"
