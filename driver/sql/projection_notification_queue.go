@@ -80,6 +80,17 @@ func (nq *NotificationQueue) Next(ctx context.Context) (*ProjectionNotification,
 		case <-ctx.Done():
 			return nil, true
 		case notification := <-nq.queue:
+			// Receiving from a closed queue channel returns the zero value (nil). This must
+			// not be handled as a notification, as doing so would trigger the ProcessHandler
+			// for a nil notification while the processor is shutting down, causing the
+			// handler to fail queueing out-of-sync notifications. Once the queue was closed
+			// the processor should always be stopped.
+			select {
+			case <-nq.done:
+				return nil, true
+			default:
+			}
+
 			if notification != nil && notification.ValidAfter.After(time.Now()) {
 				nq.queueNotification(notification)
 				continue
