@@ -1,39 +1,39 @@
+version: "2"
 run:
   build-tags:
     - unit
     - integration
-  skip-files:
-    - driver/inmemory/matcher_gen.go
-
 linters:
   enable:
-    - govet
-    - errcheck
-    - gosec
     - goconst
     - gocyclo
+    - gosec
+    - revive
+    - unconvert
+  exclusions:
+    generated: lax
+    rules:
+      - linters:
+          - errcheck
+        path: _test\.go
+      - linters:
+          - errcheck
+        path: aggregate/repository.go
+        text: Error return value of \`streamEvents.Close\` is not checked
+      - linters:
+          - revive
+        text: 'package-comments:'
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  enable:
     - gofmt
     - goimports
-    - revive
-    - ineffassign
-    - staticcheck
-    - unconvert
-    - vet
-    - vetshadow
-
-issues:
-  exclude-use-default: false
-  exclude-rules:
-    - path: _test\.go
-      linters:
-        - errcheck
-
-    # Ignore the streamEvents.Close errcheck warning since we do not want to introduce a logger for repositories just yet
-    - path: aggregate/repository.go
-      text: "Error return value of \\`streamEvents.Close\\` is not checked"
-      linters:
-        - errcheck
-
-    - linters:
-        - revive
-      text: "package-comments:"
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
