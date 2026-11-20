@@ -45,9 +45,9 @@ jobs:
 
     steps:
       - name: Check out code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v7
       - name: Set up Go
-        uses: actions/setup-go@v3
+        uses: actions/setup-go@v7
         with:
           go-version: ${{ matrix.go }}
 
@@ -91,9 +91,9 @@ jobs:
 
     steps:
       - name: Check out code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v7
       - name: Set up Go
-        uses: actions/setup-go@v3
+        uses: actions/setup-go@v7
         with:
           go-version-file: ./go.mod
 
